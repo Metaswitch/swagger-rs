@@ -20,7 +20,7 @@ pub mod base64_format;
 #[derive(Clone, Debug)]
 pub struct Authorization {
     pub subject: String,
-    pub scopes: BTreeSet<String>,
+    pub scopes: Option<BTreeSet<String>>,
 }
 impl iron::typemap::Key for Authorization {
     type Value = Authorization;
