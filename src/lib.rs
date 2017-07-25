@@ -17,7 +17,7 @@ pub mod base64_format;
 
 /// Storage of authorization parameters for an incoming request, used for
 /// REST API authorization.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Authorization {
     pub subject: String,
     pub scopes: Option<BTreeSet<String>>,
@@ -28,7 +28,7 @@ impl iron::typemap::Key for Authorization {
 
 /// Storage of raw authentication data, used both for storing incoming
 /// request authentication, and for authenticating outgoing client requests.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AuthData {
     /// HTTP Basic auth.
     Basic(hyper::header::Basic),
