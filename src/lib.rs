@@ -1,7 +1,12 @@
 //! Support crate for Swagger codegen.
 
+#[cfg(feature = "serdejson")]
 extern crate serde;
+#[cfg(feature = "serdejson")]
 extern crate serde_json;
+#[cfg(feature = "serdejson")]
+#[macro_use]
+extern crate serde_derive;
 extern crate base64;
 
 #[macro_use]
@@ -132,6 +137,7 @@ impl From<String> for ApiError {
     }
 }
 
+#[cfg(feature = "serdejson")]
 impl From<serde_json::Error> for ApiError {
     fn from(e: serde_json::Error) -> Self {
         ApiError(format!("Response body did not match the schema: {}", e))
