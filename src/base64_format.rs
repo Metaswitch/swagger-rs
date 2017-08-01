@@ -1,23 +1,49 @@
-use serde::ser::Serializer;
+// These functions are only used if the API uses base64-encoded properties, so allow them to be
+// dead code.
+#![allow(dead_code)]
+#[cfg(feature = "serdejson")]
+use serde::ser::{Serialize, Serializer};
+#[cfg(feature = "serdejson")]
 use serde::de::{Deserialize, Deserializer, Error};
 use base64::{encode, decode};
+#[cfg(feature = "serdejson")]
+use std::ops::{Deref,DerefMut};
 
-/// Seralize an object as base64.
-pub fn serialize_with<S>(obj: &Vec<u8>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.serialize_str(&encode(obj))
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub struct ByteArray(pub Vec<u8>);
+
+#[cfg(feature = "serdejson")]
+impl Serialize for ByteArray {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        serializer.serialize_str(&encode(&self.0))
+    }
 }
 
-/// Deserialize an object from base64.
-pub fn deserialize_with<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = try!(String::deserialize(deserializer));
-    match decode(&s) {
-        Ok(bin) => Ok(bin),
-        _ => Err(D::Error::custom("invalid base64")),
+#[cfg(feature = "serdejson")]
+impl<'de> Deserialize<'de> for ByteArray {
+    fn deserialize<D>(deserializer: D) -> Result<ByteArray, D::Error>
+        where D: Deserializer<'de>
+    {
+        let s = try!(String::deserialize(deserializer));
+        match decode(&s) {
+            Ok(bin) => Ok(ByteArray(bin)),
+            _ => Err(D::Error::custom("invalid base64")),
+        }
+    }
+}
+
+impl Deref for ByteArray {
+    type Target = Vec<u8>;
+    fn deref(&self) -> &Vec<u8> {
+        &self.0
+    }
+}
+
+impl DerefMut for ByteArray {
+    fn deref_mut(&mut self) -> &mut Vec<u8> {
+        &mut self.0
     }
 }

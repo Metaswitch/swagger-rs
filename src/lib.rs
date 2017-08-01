@@ -14,6 +14,11 @@ use std::error;
 
 /// Module for encoding API properties in base64.
 pub mod base64_format;
+pub use base64_format::ByteArray;
+
+/// Module for encoding Nullable properties.
+pub mod nullable_format;
+pub use nullable_format::Nullable;
 
 /// Storage of authorization parameters for an incoming request, used for
 /// REST API authorization.
