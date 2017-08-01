@@ -609,7 +609,7 @@ impl<'de, T> Deserialize<'de> for Nullable<T>
     }
 }
 
-pub(crate) fn default_optional_nullable<T>() -> Option<Nullable<T>> {
+pub fn default_optional_nullable<T>() -> Option<Nullable<T>> {
     None
 }
 
