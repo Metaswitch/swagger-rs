@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Metaswitch Networks Ltd"]
 license = "Apache-2.0"
 
+[badges.travis-ci]
+repository = "Metaswitch/swagger-rs"
+
 [dependencies]
 serde = "1.0"
 serde_json = "1.0"
