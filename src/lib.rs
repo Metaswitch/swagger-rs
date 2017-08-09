@@ -5,6 +5,7 @@ extern crate serde;
 #[cfg(feature = "serdejson")]
 extern crate serde_json;
 #[cfg(feature = "serdejson")]
+#[cfg(test)]
 #[macro_use]
 extern crate serde_derive;
 extern crate base64;

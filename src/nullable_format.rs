@@ -576,9 +576,9 @@ impl<T> Serialize for Nullable<T>
         where
             S: Serializer,
     {
-        match self {
-            &Nullable::Present(ref inner) => serializer.serialize_some(&inner),
-            &Nullable::Null => serializer.serialize_none(),
+        match *self {
+            Nullable::Present(ref inner) => serializer.serialize_some(&inner),
+            Nullable::Null => serializer.serialize_none(),
         }
     }
 }
