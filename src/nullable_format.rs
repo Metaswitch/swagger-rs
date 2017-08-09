@@ -4,7 +4,7 @@
 #[cfg(feature = "serdejson")]
 use serde::ser::{Serialize, Serializer};
 #[cfg(feature = "serdejson")]
-use serde::de::{Deserializer,Deserialize, DeserializeOwned};
+use serde::de::{Deserializer, Deserialize, DeserializeOwned};
 #[cfg(feature = "serdejson")]
 use serde::de::Error as SerdeError;
 
@@ -459,7 +459,8 @@ impl<T> Nullable<T> {
     /// fn nobody() -> Nullable<&'static str> { Nullable::Null }
     /// fn vikings() -> Nullable<&'static str> { Nullable::Present("vikings") }
     ///
-    /// assert_eq!(Nullable::Present("barbarians").or_else(vikings), Nullable::Present("barbarians"));
+    /// assert_eq!(Nullable::Present("barbarians").or_else(vikings),
+    ///            Nullable::Present("barbarians"));
     /// assert_eq!(Nullable::Null.or_else(vikings), Nullable::Present("vikings"));
     /// assert_eq!(Nullable::Null.or_else(nobody), Nullable::Null);
     /// ```
@@ -558,7 +559,9 @@ fn expect_failed(msg: &str) -> ! {
 impl<T> Default for Nullable<T> {
     /// Returns None.
     #[inline]
-    fn default() -> Nullable<T> { Nullable::Null }
+    fn default() -> Nullable<T> {
+        Nullable::Null
+    }
 }
 
 impl<T> From<T> for Nullable<T> {
@@ -569,12 +572,12 @@ impl<T> From<T> for Nullable<T> {
 
 #[cfg(feature = "serdejson")]
 impl<T> Serialize for Nullable<T>
-    where
-        T: Serialize,
+where
+    T: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         match *self {
             Nullable::Present(ref inner) => serializer.serialize_some(&inner),
@@ -585,26 +588,29 @@ impl<T> Serialize for Nullable<T>
 
 #[cfg(feature = "serdejson")]
 impl<'de, T> Deserialize<'de> for Nullable<T>
-    where T: DeserializeOwned
+where
+    T: DeserializeOwned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Nullable<T>, D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
-        //In order to deserialize a required, but nullable, value, we first have to check whether
-        //the value is present at all. To do this, we deserialize to a serde_json::Value, which fails
-        //if the value is missing, or gives serde_json::Value::Null if the value is present.
-        //If that succeeds as null, we can easily return a Null.
-        //If that succeeds as some value, we deserialize that value and return a Present.
-        //If that errors, we return the error.
-        let presence: Result<::serde_json::Value, _> = ::serde::Deserialize::deserialize(deserializer);
+        // In order to deserialize a required, but nullable, value, we first have to check whether
+        // the value is present at all. To do this, we deserialize to a serde_json::Value, which
+        // fails if the value is missing, or gives serde_json::Value::Null if the value is present.
+        // If that succeeds as null, we can easily return a Null.
+        // If that succeeds as some value, we deserialize that value and return a Present.
+        // If that errors, we return the error.
+        let presence: Result<::serde_json::Value, _> =
+            ::serde::Deserialize::deserialize(deserializer);
         match presence {
             Ok(::serde_json::Value::Null) => Ok(Nullable::Null),
             Ok(some_value) => {
                 ::serde_json::from_value(some_value)
                     .map(Nullable::Present)
                     .map_err(SerdeError::custom)
-            },
-            Err(x) => Err(x)
+            }
+            Err(x) => Err(x),
         }
     }
 }
@@ -617,9 +623,9 @@ pub fn default_optional_nullable<T>() -> Option<Nullable<T>> {
 pub fn deserialize_optional_nullable<'de, D, T>(
     deserializer: D,
 ) -> Result<Option<Nullable<T>>, D::Error>
-    where
-        D: Deserializer<'de>,
-        T: Deserialize<'de>,
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
 {
     Option::<T>::deserialize(deserializer).map(|val| match val {
         Some(inner) => Some(Nullable::Present(inner)),
@@ -634,14 +640,12 @@ mod serde_tests {
 
     // Set up:
     #[derive(Clone, Debug, Deserialize, Serialize)]
-    struct NullableStringStruct
-    {
+    struct NullableStringStruct {
         item: Nullable<String>,
     }
 
     #[derive(Clone, Debug, Deserialize, Serialize)]
-    struct OptionalNullableStringStruct
-    {
+    struct OptionalNullableStringStruct {
         #[serde(deserialize_with = "deserialize_optional_nullable")]
         #[serde(default = "default_optional_nullable")]
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -649,15 +653,13 @@ mod serde_tests {
     }
 
     #[derive(Clone, Debug, Deserialize, Serialize)]
-    struct NullableObjectStruct
-    {
-        item: Nullable<NullableStringStruct>
+    struct NullableObjectStruct {
+        item: Nullable<NullableStringStruct>,
     }
 
     #[derive(Clone, Debug, Deserialize, Serialize)]
-    struct OptionalNullableObjectStruct
-    {
-        item: Option<Nullable<NullableStringStruct>>
+    struct OptionalNullableObjectStruct {
+        item: Option<Nullable<NullableStringStruct>>,
     }
 
     // Helper:
@@ -674,7 +676,8 @@ mod serde_tests {
             println!("Struct:       {:?}", thing);
 
             let json_redux: ::serde_json::Value =
-                ::serde_json::to_value(thing.clone()).expect("Reserialization to JSON Value failed");
+                ::serde_json::to_value(thing.clone())
+                    .expect("Reserialization to JSON Value failed");
             println!("JSON Redux:   {:?}", json_redux);
 
             let string_redux =

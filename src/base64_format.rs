@@ -7,7 +7,7 @@ use serde::ser::{Serialize, Serializer};
 use serde::de::{Deserialize, Deserializer, Error};
 #[cfg(feature = "serdejson")]
 use base64::{encode, decode};
-use std::ops::{Deref,DerefMut};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct ByteArray(pub Vec<u8>);
@@ -15,8 +15,8 @@ pub struct ByteArray(pub Vec<u8>);
 #[cfg(feature = "serdejson")]
 impl Serialize for ByteArray {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         serializer.serialize_str(&encode(&self.0))
     }
@@ -25,7 +25,8 @@ impl Serialize for ByteArray {
 #[cfg(feature = "serdejson")]
 impl<'de> Deserialize<'de> for ByteArray {
     fn deserialize<D>(deserializer: D) -> Result<ByteArray, D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         let s = try!(String::deserialize(deserializer));
         match decode(&s) {
