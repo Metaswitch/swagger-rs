@@ -12,14 +12,17 @@ repository = "Metaswitch/swagger-rs"
 
 
 [features]
-default = ["serdejson"]
+default = ["serdejson", "serdexml"]
 
 serdejson = ["serde", "serde_json", "serde_derive"]
+
+serdexml = ["serde", "serde_derive", "serde-xml-rs"]
 
 [dependencies]
 serde = { version = "1.0", optional = true }
 serde_json = { version = "1.0", optional = true }
 serde_derive = { version = "1.0", optional = true }
+serde-xml-rs = { git = "ssh://git.datcon.co.uk/open-source.core/serde-xml-rs.git" , branch = "serialize", optional = true }
 hyper = "0.10"
 base64 = "0.5"
 iron = "0.5"
