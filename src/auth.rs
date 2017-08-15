@@ -38,3 +38,25 @@ pub enum AuthData {
 impl iron::typemap::Key for AuthData {
     type Value = AuthData;
 }
+
+/// Dummy implementation of an Iron middleware to insert authorization data,
+/// allowing all access to an endpoint with the subject "alice".
+#[derive(Debug)]
+pub struct AllowAllMiddleware(String);
+
+impl AllowAllMiddleware {
+    /// Create a middleware that authorizes with the configured subject.
+    pub fn new<S: Into<String>>(subject: S) -> AllowAllMiddleware {
+        AllowAllMiddleware(subject.into())
+    }
+}
+
+impl iron::middleware::BeforeMiddleware for AllowAllMiddleware {
+    fn before(&self, req: &mut iron::Request) -> iron::IronResult<()> {
+        req.extensions.insert::<Authorization>(Authorization {
+            subject: self.0.clone(),
+            scopes: Scopes::All,
+        });
+        Ok(())
+    }
+}
