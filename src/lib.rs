@@ -14,7 +14,6 @@ extern crate base64;
 extern crate hyper;
 extern crate iron;
 
-use std::collections::BTreeSet;
 use std::fmt;
 use std::error;
 
@@ -26,31 +25,8 @@ pub use base64_format::ByteArray;
 pub mod nullable_format;
 pub use nullable_format::Nullable;
 
-/// Storage of authorization parameters for an incoming request, used for
-/// REST API authorization.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Authorization {
-    pub subject: String,
-    pub scopes: Option<BTreeSet<String>>,
-}
-impl iron::typemap::Key for Authorization {
-    type Value = Authorization;
-}
-
-/// Storage of raw authentication data, used both for storing incoming
-/// request authentication, and for authenticating outgoing client requests.
-#[derive(Clone, Debug, PartialEq)]
-pub enum AuthData {
-    /// HTTP Basic auth.
-    Basic(hyper::header::Basic),
-    /// HTTP Bearer auth, used for OAuth2.
-    Bearer(hyper::header::Bearer),
-    /// Header-based or query parameter-based API key auth.
-    ApiKey(String),
-}
-impl iron::typemap::Key for AuthData {
-    type Value = AuthData;
-}
+pub mod auth;
+pub use auth::{Authorization, AuthData};
 
 /// Request context, both as received in a server handler or as sent in a
 /// client request. When REST microservices are chained, the Context passes
