@@ -16,7 +16,9 @@ use std::mem;
 /// Nullable implements many of the same methods as the Option type (map, unwrap, etc).
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum Nullable<T> {
+    /// Null value
     Null,
+    /// Value is present
     Present(T),
 }
 
@@ -615,10 +617,13 @@ where
     }
 }
 
+/// Serde helper function to create a default `Option<Nullable<T>>` while
+/// deserializing
 pub fn default_optional_nullable<T>() -> Option<Nullable<T>> {
     None
 }
 
+/// Serde helper function to deserialize into an `Option<Nullable<T>>`
 #[cfg(feature = "serdejson")]
 pub fn deserialize_optional_nullable<'de, D, T>(
     deserializer: D,

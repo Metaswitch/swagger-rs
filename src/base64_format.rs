@@ -10,6 +10,7 @@ use base64::{encode, decode};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
+/// Base64-encoded byte array
 pub struct ByteArray(pub Vec<u8>);
 
 #[cfg(feature = "serdejson")]
