@@ -14,6 +14,9 @@ extern crate base64;
 extern crate hyper;
 extern crate iron;
 
+/// Re-export for use in context extensions
+pub extern crate typemap;
+
 use std::fmt;
 use std::error;
 
@@ -40,6 +43,9 @@ pub struct Context {
     pub authorization: Option<Authorization>,
     /// Raw authentication data, for use in making HTTP requests as a client.
     pub auth_data: Option<AuthData>,
+
+    /// Arbitrary data as retrieved from middlewares.
+    pub extensions: ContextExtensions,
 }
 
 impl Context {
@@ -80,6 +86,44 @@ impl Context {
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
     (XSpanId, "X-Span-ID") => [String]
+}
+
+/// Storage for arbitrary context extensions from middlewares in the HTTP stack
+/// before a handler runs.
+///
+/// Implements `Deref` and `DerefMut` so it can be used like a `TypeMap`,
+/// however this is a separate type to enable a `Clone`, `Debug` and `Default`
+/// implementation as required by the `Context`, which `TypeMap` cannot provide
+/// alone.
+#[derive(Clone)]
+pub struct ContextExtensions(typemap::CloneMap);
+
+impl std::ops::Deref for ContextExtensions {
+    type Target = typemap::CloneMap;
+    fn deref(&self) -> &typemap::CloneMap {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for ContextExtensions {
+    fn deref_mut(&mut self) -> &mut typemap::CloneMap {
+        &mut self.0
+    }
+}
+
+impl iron::typemap::Key for ContextExtensions {
+    type Value = ContextExtensions;
+}
+
+impl fmt::Debug for ContextExtensions {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ContextExtensions")
+    }
+}
+
+impl Default for ContextExtensions {
+    fn default() -> ContextExtensions {
+        ContextExtensions(typemap::CloneMap::custom())
+    }
 }
 
 /// Very simple error type - just holds a description of the error. This is useful for human
