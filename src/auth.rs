@@ -1,7 +1,6 @@
 //! Authentication and authorization data structures
 
 use std::collections::BTreeSet;
-use chrono::{DateTime, Utc};
 use iron;
 use hyper;
 
@@ -18,34 +17,8 @@ pub enum Scopes {
 /// REST API authorization.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Authorization {
-    /// Subject of the request.
     pub subject: String,
-
-    /// Authorization scopes available to the subject.
     pub scopes: Scopes,
-
-    /// The authentication mechanism that provided this authorization data.
-    ///
-    /// In cases where authentication is delegated to other microservices via
-    /// assertion headers, this field stores the original authentication
-    /// mechanism that initially authenticated the subject.
-    pub auth_type: String,
-
-    /// Issuer of this request.
-    ///
-    /// When a system is operating on behalf of a subject, the subject field
-    /// contains the subject of the request, while the issuer field contains
-    /// the system that issued the request.
-    pub issuer: Option<String>,
-
-    /// Expiry deadline for this authorization data.
-    ///
-    /// This is used when the authorization data is cached, used to start a
-    /// session, or is used to construct a token passed back to the client.
-    ///
-    /// A `None` indicates that this authorization data must not be cached, and
-    /// is considered only valid for the current request.
-    pub expiry_deadline: Option<DateTime<Utc>>,
 }
 impl iron::typemap::Key for Authorization {
     type Value = Authorization;
@@ -83,9 +56,6 @@ impl iron::middleware::BeforeMiddleware for AllowAllMiddleware {
         req.extensions.insert::<Authorization>(Authorization {
             subject: self.0.clone(),
             scopes: Scopes::All,
-            auth_type: "bypass".to_string(),
-            issuer: None,
-            expiry_deadline: None,
         });
         Ok(())
     }
