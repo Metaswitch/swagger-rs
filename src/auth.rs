@@ -17,7 +17,9 @@ pub enum Scopes {
 /// REST API authorization.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Authorization {
+    /// Authenticated subject of the request
     pub subject: String,
+    /// Authorization scopes of the authenticated subject
     pub scopes: Scopes,
 }
 impl iron::typemap::Key for Authorization {

@@ -1,5 +1,8 @@
 //! Support crate for Swagger codegen.
 
+#![warn(missing_docs, missing_debug_implementations)]
+#![deny(unused_extern_crates)]
+
 #[cfg(feature = "serdejson")]
 extern crate serde;
 #[cfg(feature = "serdejson")]
@@ -92,7 +95,8 @@ pub struct ApiError(pub String);
 
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        (self as &fmt::Debug).fmt(f)
+        let debug: &fmt::Debug = self;
+        debug.fmt(f)
     }
 }
 
