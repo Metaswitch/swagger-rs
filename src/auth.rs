@@ -17,10 +17,16 @@ pub enum Scopes {
 /// REST API authorization.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Authorization {
-    /// Authenticated subject of the request
+    /// Subject for which authorization is granted
+    /// (i.e., what may be accessed.)
     pub subject: String,
-    /// Authorization scopes of the authenticated subject
+    /// Scopes for which authorization is granted
+    /// (i.e., what types of access are permitted).
     pub scopes: Scopes,
+    /// Authenticated identity of the party to which
+    /// authorization has been granted, if available
+    /// (i.e., who is doing the accessing).
+    pub issuer: Option<String>,
 }
 impl iron::typemap::Key for Authorization {
     type Value = Authorization;
@@ -58,6 +64,7 @@ impl iron::middleware::BeforeMiddleware for AllowAllMiddleware {
         req.extensions.insert::<Authorization>(Authorization {
             subject: self.0.clone(),
             scopes: Scopes::All,
+            issuer: None,
         });
         Ok(())
     }
