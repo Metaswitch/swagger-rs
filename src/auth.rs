@@ -20,12 +20,21 @@ pub struct Authorization {
     /// Subject for which authorization is granted
     /// (i.e., what may be accessed.)
     pub subject: String,
+
     /// Scopes for which authorization is granted
     /// (i.e., what types of access are permitted).
     pub scopes: Scopes,
-    /// Authenticated identity of the party to which
-    /// authorization has been granted, if available
-    /// (i.e., who is doing the accessing).
+
+    /// Identity of the party to whom authorization was granted, if available
+    /// (i.e., who is responsible for the access).
+    ///
+    /// In an OAuth environment, this is the identity of the client which
+    /// issued an authorization request to the resource owner (end-user),
+    /// and which has been directly authorized by the resource owner
+    /// to access the protected resource. If the client delegates that
+    /// authorization to another service (e.g., a proxy or other delegate),
+    /// the `issuer` is still the original client which was authorized by
+    /// the resource owner.
     pub issuer: Option<String>,
 }
 impl iron::typemap::Key for Authorization {
