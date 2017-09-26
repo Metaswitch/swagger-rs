@@ -66,12 +66,12 @@ impl<'a, T> ContextWrapper<'a, T> {
     }
 
     /// Borrows the API.
-    pub fn api<'b>(&'b self) -> &'b T {
-        &self.api
+    pub fn api(&self) -> &T {
+        self.api
     }
 
     /// Borrows the context.
-    pub fn context<'b>(&'b self) -> &'b Context {
+    pub fn context(&self) -> &Context {
         &self.context
     }
 }
