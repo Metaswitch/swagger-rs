@@ -1,7 +1,7 @@
 //! Module for API context management.
 
-use ::hyper;
-use ::auth::{Authorization, AuthData};
+use hyper;
+use auth::{Authorization, AuthData};
 
 /// Request context, both as received in a server handler or as sent in a
 /// client request. When REST microservices are chained, the Context passes
@@ -62,7 +62,7 @@ pub struct ContextWrapper<'a, T: 'a> {
 impl<'a, T> ContextWrapper<'a, T> {
     /// Create a new ContextWrapper, binding the API and context.
     pub fn new(api: &'a T, context: Context) -> ContextWrapper<'a, T> {
-        ContextWrapper{api, context}
+        ContextWrapper { api, context }
     }
 
     /// Borrows the API.
@@ -77,7 +77,10 @@ impl<'a, T> ContextWrapper<'a, T> {
 }
 
 /// Trait to extend an API to make it easy to bind it to a context.
-pub trait ContextWrapperExt<'a> where Self: Sized {
+pub trait ContextWrapperExt<'a>
+where
+    Self: Sized,
+{
     /// Binds this API to a context.
     fn with_context(self: &'a Self, context: Context) -> ContextWrapper<'a, Self> {
         ContextWrapper::<Self>::new(self, context)
