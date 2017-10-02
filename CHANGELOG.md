@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.7.0] - 2017-10-02
+### Added
+- `ContextWrapper` - wraps an `Api` with a `Context`
+
 ## [0.6.0] - 2017-09-25
 ### Changed
 - Authorization struct now has new field `issuer`.
