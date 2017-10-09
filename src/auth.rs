@@ -1,8 +1,9 @@
 //! Authentication and authorization data structures
 
 use std::collections::BTreeSet;
-use iron;
 use hyper;
+use hyper::{Request, Response, Error};
+use super::Context;
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -37,9 +38,6 @@ pub struct Authorization {
     /// the resource owner.
     pub issuer: Option<String>,
 }
-impl iron::typemap::Key for Authorization {
-    type Value = Authorization;
-}
 
 /// Storage of raw authentication data, used both for storing incoming
 /// request authentication, and for authenticating outgoing client requests.
@@ -52,29 +50,49 @@ pub enum AuthData {
     /// Header-based or query parameter-based API key auth.
     ApiKey(String),
 }
-impl iron::typemap::Key for AuthData {
-    type Value = AuthData;
+
+/// Dummy Authenticator, that blindly inserts authorization data, allowing all
+/// access to an endpoint with the specified subject.
+#[derive(Debug)]
+pub struct AllowAllAuthenticator<T>
+where
+    T: hyper::server::Service<Request = (Request, Context), Response = Response, Error = Error>,
+{
+    inner: T,
+    subject: String,
 }
 
-/// Dummy implementation of an Iron middleware to insert authorization data,
-/// allowing all access to an endpoint with the subject "alice".
-#[derive(Debug)]
-pub struct AllowAllMiddleware(String);
-
-impl AllowAllMiddleware {
+impl<T> AllowAllAuthenticator<T>
+where
+    T: hyper::server::Service<
+        Request = (Request, Context),
+        Response = Response,
+        Error = Error,
+    >,
+{
     /// Create a middleware that authorizes with the configured subject.
-    pub fn new<S: Into<String>>(subject: S) -> AllowAllMiddleware {
-        AllowAllMiddleware(subject.into())
+    pub fn new<S: Into<String>>(inner: T, subject: S) -> AllowAllAuthenticator<T> {
+        AllowAllAuthenticator {
+            inner,
+            subject: subject.into(),
+        }
     }
 }
 
-impl iron::middleware::BeforeMiddleware for AllowAllMiddleware {
-    fn before(&self, req: &mut iron::Request) -> iron::IronResult<()> {
-        req.extensions.insert::<Authorization>(Authorization {
-            subject: self.0.clone(),
+impl<T> hyper::server::Service for AllowAllAuthenticator<T>
+    where T: hyper::server::Service<Request=(Request,Context), Response=Response, Error=Error> {
+    type Request = (Request, AuthData);
+    type Response = Response;
+    type Error = Error;
+    type Future = T::Future;
+
+    fn call(&self, (req, _): Self::Request) -> Self::Future {
+        let mut context = Context::default();
+        context.authorization = Some(Authorization{
+            subject: self.subject.clone(),
             scopes: Scopes::All,
             issuer: None,
         });
-        Ok(())
+        self.inner.call((req, context))
     }
 }
