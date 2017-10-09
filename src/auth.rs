@@ -51,6 +51,22 @@ pub enum AuthData {
     ApiKey(String),
 }
 
+/// No Authenticator, that does not insert any authorization data, denying all
+/// access to endpoints that require authentication.
+#[derive(Debug)]
+pub struct NoAuthentication<T>(T) where T: hyper::server::Service<Request = (Request, Context), Response = Response, Error = Error>;
+
+impl<T> hyper::server::Service for NoAuthentication<T> where T: hyper::server::Service<Request = (Request, Context), Response = Response, Error = Error> {
+    type Request = Request;
+    type Response = Response;
+    type Error = Error;
+    type Future = T::Future;
+
+    fn call(&self, req: Self::Request) -> Self::Future {
+        self.0.call((req, Context::default()))
+    }
+}
+
 /// Dummy Authenticator, that blindly inserts authorization data, allowing all
 /// access to an endpoint with the specified subject.
 #[derive(Debug)]
