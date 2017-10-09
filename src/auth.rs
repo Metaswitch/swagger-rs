@@ -97,7 +97,7 @@ where
 
 impl<T> hyper::server::Service for AllowAllAuthenticator<T>
     where T: hyper::server::Service<Request=(Request,Context), Response=Response, Error=Error> {
-    type Request = (Request, AuthData);
+    type Request = (Request, Option<AuthData>);
     type Response = Response;
     type Error = Error;
     type Future = T::Future;
