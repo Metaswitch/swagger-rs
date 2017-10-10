@@ -54,9 +54,23 @@ pub enum AuthData {
 /// No Authenticator, that does not insert any authorization data, denying all
 /// access to endpoints that require authentication.
 #[derive(Debug)]
-pub struct NoAuthentication<T>(T) where T: hyper::server::Service<Request = (Request, Context), Response = Response, Error = Error>;
+pub struct NoAuthentication<T>(pub T)
+where
+    T: hyper::server::Service<
+        Request = (Request, Context),
+        Response = Response,
+        Error = Error,
+    >;
 
-impl<T> hyper::server::Service for NoAuthentication<T> where T: hyper::server::Service<Request = (Request, Context), Response = Response, Error = Error> {
+impl<T> hyper::server::Service for NoAuthentication<T>
+where
+    T: hyper::server::Service<
+        Request = (Request,
+                   Context),
+        Response = Response,
+        Error = Error,
+    >,
+{
     type Request = Request;
     type Response = Response;
     type Error = Error;
