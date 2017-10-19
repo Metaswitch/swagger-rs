@@ -1,6 +1,7 @@
 //! Authentication and authorization data structures
 
 use std::collections::BTreeSet;
+use std::io;
 use hyper;
 use hyper::{Request, Response, Error};
 use super::Context;
@@ -54,13 +55,26 @@ pub enum AuthData {
 /// No Authenticator, that does not insert any authorization data, denying all
 /// access to endpoints that require authentication.
 #[derive(Debug)]
-pub struct NoAuthentication<T>(pub T)
+pub struct NoAuthentication<T>(pub T);
+
+impl<T> hyper::server::NewService for NoAuthentication<T>
 where
-    T: hyper::server::Service<
-        Request = (Request, Context),
+    T: hyper::server::NewService<
+        Request = (Request,
+                   Context),
         Response = Response,
         Error = Error,
-    >;
+    >,
+{
+    type Request = Request;
+    type Response = Response;
+    type Error = Error;
+    type Instance = NoAuthentication<T::Instance>;
+
+    fn new_service(&self) -> Result<Self::Instance, io::Error> {
+        self.0.new_service().map(|s| NoAuthentication(s))
+    }
+}
 
 impl<T> hyper::server::Service for NoAuthentication<T>
 where
@@ -84,28 +98,30 @@ where
 /// Dummy Authenticator, that blindly inserts authorization data, allowing all
 /// access to an endpoint with the specified subject.
 #[derive(Debug)]
-pub struct AllowAllAuthenticator<T>
-where
-    T: hyper::server::Service<Request = (Request, Context), Response = Response, Error = Error>,
-{
+pub struct AllowAllAuthenticator<T> {
     inner: T,
     subject: String,
 }
 
-impl<T> AllowAllAuthenticator<T>
-where
-    T: hyper::server::Service<
-        Request = (Request, Context),
-        Response = Response,
-        Error = Error,
-    >,
-{
+impl<T> AllowAllAuthenticator<T> {
     /// Create a middleware that authorizes with the configured subject.
-    pub fn new<S: Into<String>>(inner: T, subject: S) -> AllowAllAuthenticator<T> {
+    pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T> {
         AllowAllAuthenticator {
             inner,
             subject: subject.into(),
         }
+    }
+}
+
+impl<T> hyper::server::NewService for AllowAllAuthenticator<T>
+    where T: hyper::server::NewService<Request=(Request,Context), Response=Response, Error=Error> {
+    type Request = (Request, Option<AuthData>);
+    type Response = Response;
+    type Error = Error;
+    type Instance = AllowAllAuthenticator<T::Instance>;
+
+    fn new_service(&self) -> Result<Self::Instance, io::Error> {
+        self.inner.new_service().map(|s| AllowAllAuthenticator::new(s, self.subject.clone()))
     }
 }
 
