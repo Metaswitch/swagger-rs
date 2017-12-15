@@ -2,6 +2,7 @@
 
 use hyper;
 use auth::{Authorization, AuthData};
+extern crate slog;
 
 /// Request context, both as received in a server handler or as sent in a
 /// client request. When REST microservices are chained, the Context passes
@@ -15,6 +16,24 @@ pub struct Context {
     pub authorization: Option<Authorization>,
     /// Raw authentication data, for use in making HTTP requests as a client.
     pub auth_data: Option<AuthData>,
+    logger: Option<slog::Logger>,
+}
+
+/// Trait for retrieving a logger from a struct.
+pub trait HasLogger {
+    /// Retrieve the context logger
+    fn get_logger(&self) -> &Option<slog::Logger>;
+    fn set_logger(&mut self, logger: slog::Logger);
+}
+
+impl HasLogger for Context {
+    fn get_logger(&self) -> &Option<slog::Logger> {
+        &self.logger
+    }
+
+    fn set_logger(&mut self, logger: slog::Logger) {
+        self.logger = Some(logger);
+    }
 }
 
 impl Context {
