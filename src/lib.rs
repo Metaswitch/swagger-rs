@@ -15,7 +15,6 @@ extern crate base64;
 
 #[macro_use]
 extern crate hyper;
-extern crate iron;
 
 use std::fmt;
 use std::error;

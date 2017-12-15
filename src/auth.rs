@@ -1,8 +1,10 @@
 //! Authentication and authorization data structures
 
 use std::collections::BTreeSet;
-use iron;
+use std::io;
 use hyper;
+use hyper::{Request, Response, Error};
+use super::Context;
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -37,9 +39,6 @@ pub struct Authorization {
     /// the resource owner.
     pub issuer: Option<String>,
 }
-impl iron::typemap::Key for Authorization {
-    type Value = Authorization;
-}
 
 /// Storage of raw authentication data, used both for storing incoming
 /// request authentication, and for authenticating outgoing client requests.
@@ -52,29 +51,94 @@ pub enum AuthData {
     /// Header-based or query parameter-based API key auth.
     ApiKey(String),
 }
-impl iron::typemap::Key for AuthData {
-    type Value = AuthData;
-}
 
-/// Dummy implementation of an Iron middleware to insert authorization data,
-/// allowing all access to an endpoint with the subject "alice".
+/// No Authenticator, that does not insert any authorization data, denying all
+/// access to endpoints that require authentication.
 #[derive(Debug)]
-pub struct AllowAllMiddleware(String);
+pub struct NoAuthentication<T>(pub T);
 
-impl AllowAllMiddleware {
-    /// Create a middleware that authorizes with the configured subject.
-    pub fn new<S: Into<String>>(subject: S) -> AllowAllMiddleware {
-        AllowAllMiddleware(subject.into())
+impl<T> hyper::server::NewService for NoAuthentication<T>
+where
+    T: hyper::server::NewService<
+        Request = (Request,
+                   Context),
+        Response = Response,
+        Error = Error,
+    >,
+{
+    type Request = Request;
+    type Response = Response;
+    type Error = Error;
+    type Instance = NoAuthentication<T::Instance>;
+
+    fn new_service(&self) -> Result<Self::Instance, io::Error> {
+        self.0.new_service().map(|s| NoAuthentication(s))
     }
 }
 
-impl iron::middleware::BeforeMiddleware for AllowAllMiddleware {
-    fn before(&self, req: &mut iron::Request) -> iron::IronResult<()> {
-        req.extensions.insert::<Authorization>(Authorization {
-            subject: self.0.clone(),
+impl<T> hyper::server::Service for NoAuthentication<T>
+where
+    T: hyper::server::Service<
+        Request = (Request,
+                   Context),
+        Response = Response,
+        Error = Error,
+    >,
+{
+    type Request = Request;
+    type Response = Response;
+    type Error = Error;
+    type Future = T::Future;
+
+    fn call(&self, req: Self::Request) -> Self::Future {
+        self.0.call((req, Context::default()))
+    }
+}
+
+/// Dummy Authenticator, that blindly inserts authorization data, allowing all
+/// access to an endpoint with the specified subject.
+#[derive(Debug)]
+pub struct AllowAllAuthenticator<T> {
+    inner: T,
+    subject: String,
+}
+
+impl<T> AllowAllAuthenticator<T> {
+    /// Create a middleware that authorizes with the configured subject.
+    pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T> {
+        AllowAllAuthenticator {
+            inner,
+            subject: subject.into(),
+        }
+    }
+}
+
+impl<T> hyper::server::NewService for AllowAllAuthenticator<T>
+    where T: hyper::server::NewService<Request=(Request,Context), Response=Response, Error=Error> {
+    type Request = (Request, Option<AuthData>);
+    type Response = Response;
+    type Error = Error;
+    type Instance = AllowAllAuthenticator<T::Instance>;
+
+    fn new_service(&self) -> Result<Self::Instance, io::Error> {
+        self.inner.new_service().map(|s| AllowAllAuthenticator::new(s, self.subject.clone()))
+    }
+}
+
+impl<T> hyper::server::Service for AllowAllAuthenticator<T>
+    where T: hyper::server::Service<Request=(Request,Context), Response=Response, Error=Error> {
+    type Request = (Request, Option<AuthData>);
+    type Response = Response;
+    type Error = Error;
+    type Future = T::Future;
+
+    fn call(&self, (req, _): Self::Request) -> Self::Future {
+        let mut context = Context::default();
+        context.authorization = Some(Authorization{
+            subject: self.subject.clone(),
             scopes: Scopes::All,
             issuer: None,
         });
-        Ok(())
+        self.inner.call((req, context))
     }
 }
