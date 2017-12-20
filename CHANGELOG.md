@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.8.0] - 2017-12-15
+### Added
+- Asynchronous HTTP client/server support
+
+### Removed
+- Synchronous HTTP client/server support - if you're still using synchronous swagger-codegen, stay at 0.7.0
+
+### Changed
+- `AllowAllMiddleware` (an Iron middleware) has been replaced by `AllowAllAuthenticator` (a Hyper Service wrapper)
+
 ## [0.7.0] - 2017-10-02
 ### Added
 - `ContextWrapper` - wraps an `Api` with a `Context`
@@ -20,6 +30,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.5.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.8.0...HEAD
+[0.8.0]: https://github.com/Metaswitch/swagger-rs/compare/0.7.0...0.8.0
+[0.7.0]: https://github.com/Metaswitch/swagger-rs/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/Metaswitch/swagger-rs/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/Metaswitch/swagger-rs/compare/0.4.0...0.5.0
