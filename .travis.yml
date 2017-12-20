@@ -4,9 +4,9 @@ rust:
   - beta
   - nightly
 before_script:
-  - |
-    RUST_VERSION=$(cargo read-manifest | jq -er .version)
-  - |
+  - | # Ensure CHANGELOG is up-to-date:
+    ROOT_PACKAGE=swagger;
+    RUST_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -er "[.packages[] | select(.name == \"$ROOT_PACKAGE\") | .version][0]");
     (grep -q "## \[$RUST_VERSION\] -" CHANGELOG.md || (echo "Missing CHANGELOG entry for version $RUST_VERSION"; /bin/false)) &&
     (grep -q "\[Unreleased\]: .*/$RUST_VERSION\.\.\.HEAD$" CHANGELOG.md || (echo "Unreleased tag in CHANGELOG footer not updated for version $RUST_VERSION"; /bin/false)) &&
     (grep -q "\[$RUST_VERSION\]: .*\.\.\.$RUST_VERSION$" CHANGELOG.md || (echo "Missing tag for version $RUST_VERSION in CHANGELOG footer"; /bin/false)) &&
