@@ -72,7 +72,7 @@ where
     type Instance = NoAuthentication<T::Instance>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.0.new_service().map(|s| NoAuthentication(s))
+        self.0.new_service().map(NoAuthentication)
     }
 }
 
