@@ -33,6 +33,8 @@ pub use auth::{Authorization, AuthData};
 pub mod context;
 pub use context::{Context, ContextWrapper};
 
+use hyper::client::Connect;
+
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
     (XSpanId, "X-Span-ID") => [String]
@@ -76,4 +78,11 @@ impl From<serde_json::Error> for ApiError {
     fn from(e: serde_json::Error) -> Self {
         ApiError(format!("Response body did not match the schema: {}", e))
     }
+}
+
+/// Trait used by clients to wrap HttpConnectors and TlsConnectors, used when
+/// instantiating a client.
+pub trait WrapConnector {
+    /// Wrap a connector in another, i.e. MyConnector<HttpConnector>
+    fn wrap_connector<T: Connect, S: Connect>(T) -> S;
 }
