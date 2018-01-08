@@ -82,7 +82,9 @@ impl From<serde_json::Error> for ApiError {
 
 /// Trait used by clients to wrap HttpConnectors and TlsConnectors, used when
 /// instantiating a client.
-pub trait WrapConnector {
+pub trait WrapConnector<T> {
+    /// The final type after wrapping
+    type Response: Connect;
     /// Wrap a connector in another, i.e. MyConnector<HttpConnector>
-    fn wrap_connector<T: Connect, S: Connect>(T) -> S;
+    fn wrap_connector(&self, inner: T) -> Self::Response;
 }

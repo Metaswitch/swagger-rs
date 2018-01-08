@@ -23,6 +23,8 @@ pub struct Context {
 pub trait HasLogger {
     /// Retrieve the context logger
     fn get_logger(&self) -> &Option<slog::Logger>;
+
+    /// Set the context logger
     fn set_logger(&mut self, logger: slog::Logger);
 }
 
