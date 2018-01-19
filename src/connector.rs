@@ -1,0 +1,89 @@
+extern crate hyper_tls;
+extern crate tokio_core;
+extern crate openssl;
+extern crate native_tls;
+
+use std::path::Path;
+
+use hyper;
+use self::tokio_core::reactor::Handle;
+
+/// Returns a function which creates an http-connector. Used for instantiating
+/// clients with custom connectors
+pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Send + Sync> {
+    Box::new(move |handle: &Handle| {
+        hyper::client::HttpConnector::new(4, handle)
+    })
+}
+/// Returns a function which creates an https-connector
+///
+/// # Arguments
+///
+/// * `ca_certificate` - Path to CA certificate used to authenticate the server
+pub fn https_connector<CA>(
+    ca_certificate: CA,
+) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+where
+    CA: AsRef<Path>,
+{
+    let ca_certificate = ca_certificate.as_ref().to_owned();
+    Box::new(move |handle: &Handle| {
+        // SSL implementation
+        let mut ssl = openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls())
+            .unwrap();
+
+        // Server authentication
+        ssl.set_ca_file(ca_certificate.clone()).unwrap();
+
+        let builder: native_tls::TlsConnectorBuilder =
+            native_tls::backend::openssl::TlsConnectorBuilderExt::from_openssl(ssl);
+        let mut connector = hyper::client::HttpConnector::new(4, &handle);
+        connector.enforce_http(false);
+        let connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
+            (connector, builder.build().unwrap()).into();
+        connector
+    })
+}
+/// Returns a function which creates https-connectors for mutually authenticated connections.
+/// # Arguments
+///
+/// * `ca_certificate` - Path to CA certificate used to authenticate the server
+/// * `client_key` - Path to the client private key
+/// * `client_certificate` - Path to the client's public certificate associated with the private key
+pub fn https_mutual_connector<CA, K, C>(
+    ca_certificate: CA,
+    client_key: K,
+    client_certificate: C,
+) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+where
+    CA: AsRef<Path>,
+    K: AsRef<Path>,
+    C: AsRef<Path>,
+{
+    let ca_certificate = ca_certificate.as_ref().to_owned();
+    let client_key = client_key.as_ref().to_owned();
+    let client_certificate = client_certificate.as_ref().to_owned();
+    Box::new(move |handle: &Handle| {
+        // SSL implementation
+        let mut ssl = openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls())
+            .unwrap();
+
+        // Server authentication
+        ssl.set_ca_file(ca_certificate.clone()).unwrap();
+
+        // Client authentication
+        ssl.set_private_key_file(client_key.clone(), openssl::x509::X509_FILETYPE_PEM)
+            .unwrap();
+        ssl.set_certificate_chain_file(client_certificate.clone())
+            .unwrap();
+        ssl.check_private_key().unwrap();
+
+        let builder: native_tls::TlsConnectorBuilder =
+            native_tls::backend::openssl::TlsConnectorBuilderExt::from_openssl(ssl);
+        let mut connector = hyper::client::HttpConnector::new(4, &handle);
+        connector.enforce_http(false);
+        let connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
+            (connector, builder.build().unwrap()).into();
+        connector
+    })
+}
