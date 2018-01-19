@@ -1,3 +1,4 @@
+//! Utility methods for instantiating common connectors for clients.
 extern crate hyper_tls;
 extern crate tokio_core;
 extern crate openssl;
