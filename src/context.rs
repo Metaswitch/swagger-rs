@@ -22,14 +22,14 @@ pub struct Context {
 /// Trait for retrieving a logger from a struct.
 pub trait HasLogger {
     /// Retrieve the context logger
-    fn get_logger(&self) -> &Option<slog::Logger>;
+    fn logger(&self) -> &Option<slog::Logger>;
 
     /// Set the context logger
     fn set_logger(&mut self, logger: slog::Logger);
 }
 
 impl HasLogger for Context {
-    fn get_logger(&self) -> &Option<slog::Logger> {
+    fn logger(&self) -> &Option<slog::Logger> {
         &self.logger
     }
 

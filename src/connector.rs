@@ -16,6 +16,7 @@ pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Sen
         hyper::client::HttpConnector::new(4, handle)
     })
 }
+
 /// Returns a function which creates an https-connector
 ///
 /// # Arguments
@@ -38,13 +39,14 @@ where
 
         let builder: native_tls::TlsConnectorBuilder =
             native_tls::backend::openssl::TlsConnectorBuilderExt::from_openssl(ssl);
-        let mut connector = hyper::client::HttpConnector::new(4, &handle);
+        let mut connector = hyper::client::HttpConnector::new(4, handle);
         connector.enforce_http(false);
         let connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
             (connector, builder.build().unwrap()).into();
         connector
     })
 }
+
 /// Returns a function which creates https-connectors for mutually authenticated connections.
 /// # Arguments
 ///
@@ -81,7 +83,7 @@ where
 
         let builder: native_tls::TlsConnectorBuilder =
             native_tls::backend::openssl::TlsConnectorBuilderExt::from_openssl(ssl);
-        let mut connector = hyper::client::HttpConnector::new(4, &handle);
+        let mut connector = hyper::client::HttpConnector::new(4, handle);
         connector.enforce_http(false);
         let connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
             (connector, builder.build().unwrap()).into();
