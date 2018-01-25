@@ -33,6 +33,10 @@ pub use auth::{Authorization, AuthData};
 pub mod context;
 pub use context::{Context, ContextWrapper};
 
+/// Module with utilities for creating connectors with hyper.
+pub mod connector;
+pub use connector::{http_connector, https_connector, https_mutual_connector};
+
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
     (XSpanId, "X-Span-ID") => [String]
