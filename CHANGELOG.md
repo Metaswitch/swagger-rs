@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.9.0] - 2018-01-25
+### Added
+- Connector functions for instantiating easy-mode clients
+- The ability to pass in a `slog::Logger` with Context
+
 ## [0.8.1] - 2017-12-20
 ### Changed
 - Fix build error and clippy warning.
@@ -34,7 +39,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.8.1...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.9.0...HEAD
+[0.9.0]: https://github.com/Metaswitch/swagger-rs/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/Metaswitch/swagger-rs/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/Metaswitch/swagger-rs/compare/0.7.0...0.8.0
 [0.7.0]: https://github.com/Metaswitch/swagger-rs/compare/0.6.0...0.7.0
