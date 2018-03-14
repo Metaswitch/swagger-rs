@@ -36,7 +36,7 @@ impl NotFound for Response {
     }
 }
 
-/// Trait for wrapping hyper NewServices to uniformize the return type of new_service().
+/// Trait for wrapping hyper NewServices to make the return type of new_service() uniform.
 /// This is necessary in order for the NewServices with different Instance types to
 /// be stored in a single collection.
 pub trait BoxedNewService<U, V, W> {
