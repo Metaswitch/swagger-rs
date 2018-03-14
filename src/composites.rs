@@ -1,6 +1,6 @@
 use std::io;
 use hyper::server::{Service, NewService};
-use hyper::Request;
+use hyper::{Request, Response, StatusCode};
 use futures::Future;
 use context::Context;
 
@@ -17,6 +17,16 @@ impl HasPath for Request {
 impl HasPath for (Request, Context) {
     fn path(&self) -> &str {
         self.0.path()
+    }
+}
+
+pub trait HasNotFound {
+    fn not_found() -> Self;
+}
+
+impl HasNotFound for Response {
+    fn not_found() -> Self {
+        Response::new().with_status(StatusCode::NotFound)
     }
 }
 
@@ -41,9 +51,9 @@ where
     }
 }
 
-pub struct CompositeNewService<U: HasPath, V, W>(Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>);
+pub struct CompositeNewService<U: HasPath, V: HasNotFound, W>(Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>);
 
-impl<U: HasPath, V, W> CompositeNewService<U, V, W> {
+impl<U: HasPath, V: HasNotFound, W> CompositeNewService<U, V, W> {
     pub fn new() -> Self {
         CompositeNewService(Vec::new())
     }
@@ -57,7 +67,7 @@ impl<U: HasPath, V, W> CompositeNewService<U, V, W> {
     }
 }
 
-pub struct CompositeService<U: HasPath, V, W>(
+pub struct CompositeService<U: HasPath, V: HasNotFound, W>(
     Vec<
         (&'static str,
          Box<
@@ -71,35 +81,25 @@ pub struct CompositeService<U: HasPath, V, W>(
     >
 );
 
-impl<U: HasPath, V, W> NewService for CompositeNewService<U, V, W> {
+impl<U: HasPath, V: HasNotFound, W> NewService for CompositeNewService<U, V, W> {
     type Request = U;
     type Response = V;
     type Error = W;
     type Instance = CompositeService<U, V, W>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        // Call new service on each entry in hashmap, and return a new hashmap
-        let mut vec: Vec<
-            (&'static str,
-             Box<
-                Service<
-                    Request = U,
-                    Response = V,
-                    Error = W,
-                    Future = Box<Future<Item = V, Error = W>>,
-                >,
-            >),
-        > = Vec::new();
-
-        for &(key, ref value) in self.0.iter() {
-            vec.push((key, value.boxed_new_service()));
-        }
+        let vec = self.0
+            .iter()
+            .map(|&(base_path, ref value)| {
+                (base_path, value.boxed_new_service())
+            })
+            .collect();
 
         Ok(CompositeService(vec))
     }
 }
 
-impl<U: HasPath, V, W> Service for CompositeService<U, V, W> {
+impl<U: HasPath, V: HasNotFound, W> Service for CompositeService<U, V, W> {
     type Request = U;
     type Response = V;
     type Error = W;
