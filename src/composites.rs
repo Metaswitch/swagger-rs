@@ -4,6 +4,7 @@ use hyper::{Request, Response, StatusCode};
 use futures::{future, Future};
 use context::Context;
 
+
 pub trait HasPath {
     fn path(&self) -> &str;
 }
@@ -33,7 +34,17 @@ impl HasNotFound for Response {
 pub trait BoxedNewService<U, V, W> {
     fn boxed_new_service(
         &self,
-    ) -> Box<Service<Request = U, Response = V, Error = W, Future = Box<Future<Item = V, Error = W>>>>;
+    ) -> Result<
+        Box<
+            Service<
+                Request = U,
+                Response = V,
+                Error = W,
+                Future = Box<Future<Item = V, Error = W>>,
+            >,
+        >,
+        io::Error,
+    >;
 }
 
 impl<T, U, V, W> BoxedNewService<U, V, W> for T
@@ -45,9 +56,19 @@ where
 {
     fn boxed_new_service(
         &self,
-    ) -> Box<Service<Request = U, Response = V, Error = W, Future = Box<Future<Item = V, Error = W>>>> {
-        let new_service = self.new_service().unwrap();
-        Box::new(new_service)
+    ) -> Result<
+        Box<
+            Service<
+                Request = U,
+                Response = V,
+                Error = W,
+                Future = Box<Future<Item = V, Error = W>>,
+            >,
+        >,
+        io::Error,
+    > {
+        let service = self.new_service()?;
+        Ok(Box::new(service))
     }
 }
 
@@ -88,12 +109,18 @@ impl<U: HasPath, V: HasNotFound + 'static, W: 'static> NewService for CompositeN
     type Instance = CompositeService<U, V, W>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        let vec = self.0
-            .iter()
-            .map(|&(base_path, ref new_service)| {
-                (base_path, new_service.boxed_new_service())
-            })
-            .collect();
+        let mut vec = Vec::new();
+
+        for &(base_path, ref new_service) in self.0.iter() {
+            vec.push((base_path, new_service.boxed_new_service()?))
+        }
+
+        // let vec = self.0
+        //     .iter()
+        //     .map(|&(base_path, ref new_service)| {
+        //         (base_path, new_service.boxed_new_service()?)
+        //     })
+        //     .collect();
 
         Ok(CompositeService(vec))
     }
