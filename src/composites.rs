@@ -1,7 +1,7 @@
 use std::io;
 use hyper::server::{Service, NewService};
 use hyper::{Request, Response, StatusCode};
-use futures::Future;
+use futures::{future, Future};
 use context::Context;
 
 pub trait HasPath {
@@ -51,7 +51,7 @@ where
     }
 }
 
-pub struct CompositeNewService<U: HasPath, V: HasNotFound, W>(Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>);
+pub struct CompositeNewService<U: HasPath, V: HasNotFound + 'static, W: 'static>(Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>);
 
 impl<U: HasPath, V: HasNotFound, W> CompositeNewService<U, V, W> {
     pub fn new() -> Self {
@@ -67,7 +67,7 @@ impl<U: HasPath, V: HasNotFound, W> CompositeNewService<U, V, W> {
     }
 }
 
-pub struct CompositeService<U: HasPath, V: HasNotFound, W>(
+pub struct CompositeService<U: HasPath, V: HasNotFound + 'static, W: 'static>(
     Vec<
         (&'static str,
          Box<
@@ -81,7 +81,7 @@ pub struct CompositeService<U: HasPath, V: HasNotFound, W>(
     >
 );
 
-impl<U: HasPath, V: HasNotFound, W> NewService for CompositeNewService<U, V, W> {
+impl<U: HasPath, V: HasNotFound + 'static, W: 'static> NewService for CompositeNewService<U, V, W> {
     type Request = U;
     type Response = V;
     type Error = W;
@@ -90,8 +90,8 @@ impl<U: HasPath, V: HasNotFound, W> NewService for CompositeNewService<U, V, W> 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
         let vec = self.0
             .iter()
-            .map(|&(base_path, ref value)| {
-                (base_path, value.boxed_new_service())
+            .map(|&(base_path, ref new_service)| {
+                (base_path, new_service.boxed_new_service())
             })
             .collect();
 
@@ -99,7 +99,7 @@ impl<U: HasPath, V: HasNotFound, W> NewService for CompositeNewService<U, V, W> 
     }
 }
 
-impl<U: HasPath, V: HasNotFound, W> Service for CompositeService<U, V, W> {
+impl<U: HasPath, V: HasNotFound + 'static, W: 'static> Service for CompositeService<U, V, W> {
     type Request = U;
     type Response = V;
     type Error = W;
@@ -107,6 +107,19 @@ impl<U: HasPath, V: HasNotFound, W> Service for CompositeService<U, V, W> {
 
     fn call(&self, req: Self::Request) -> Self::Future {
 
-        ((self.0)[0].1).call(req)
+        let mut result = None;
+
+        for &(base_path, ref service) in self.0.iter() {
+            if req.path().starts_with(base_path) {
+                result = Some(service.call(req));
+                break;
+            }
+        }
+
+        if let Some(result) = result {
+            result
+        } else {
+            Box::new(future::ok(V::not_found()))
+        }
     }
 }
