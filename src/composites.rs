@@ -3,6 +3,7 @@ use hyper::server::{Service, NewService};
 use hyper::{Request, Response, StatusCode};
 use futures::{future, Future};
 use context::Context;
+
 pub trait HasPath {
     fn path(&self) -> &str;
 }
