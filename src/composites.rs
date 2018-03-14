@@ -1,9 +1,8 @@
-use std::io;
+use std::{io, fmt};
 use hyper::server::{Service, NewService};
 use hyper::{Request, Response, StatusCode};
 use futures::{future, Future};
 use context::Context;
-
 pub trait HasPath {
     fn path(&self) -> &str;
 }
@@ -50,7 +49,6 @@ impl<T, U, V, W> BoxedNewService<U, V, W> for T
 where
     T: NewService<Request = U, Response = V, Error = W>,
     T::Instance: Service<Future = Box<Future<Item = V, Error = W>>>
-        + Sized
         + 'static,
 {
     fn boxed_new_service(
@@ -91,24 +89,6 @@ impl<U: HasPath, V: HasNotFound, W> CompositeNewService<U, V, W> {
     }
 }
 
-pub struct CompositeService<U, V, W>(
-    Vec<
-        (&'static str,
-         Box<
-            Service<
-                Request = U,
-                Response = V,
-                Error = W,
-                Future = Box<Future<Item = V, Error = W>>,
-            >,
-        >),
-    >
-)
-where
-    U: HasPath,
-    V: HasNotFound + 'static,
-    W: 'static;
-
 impl<U, V, W> NewService for CompositeNewService<U, V, W>
 where
     U: HasPath,
@@ -130,6 +110,40 @@ where
         Ok(CompositeService(vec))
     }
 }
+
+impl<U, V, W> fmt::Debug for CompositeNewService<U, V, W>
+where
+    U: HasPath,
+    V: HasNotFound + 'static,
+    W: 'static,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let str_vec: Vec<&'static str> = self.0.iter().map(|&(base_path, _)| base_path).collect();
+        write!(
+            f,
+            "CompositeNewService accepting paths: {:?}",
+            str_vec,
+        )
+    }
+}
+
+pub struct CompositeService<U, V, W>(
+    Vec<
+        (&'static str,
+         Box<
+            Service<
+                Request = U,
+                Response = V,
+                Error = W,
+                Future = Box<Future<Item = V, Error = W>>,
+            >,
+        >),
+    >
+)
+where
+    U: HasPath,
+    V: HasNotFound + 'static,
+    W: 'static;
 
 impl<U, V, W> Service for CompositeService<U, V, W>
 where
@@ -158,5 +172,21 @@ where
         } else {
             Box::new(future::ok(V::not_found()))
         }
+    }
+}
+
+impl<U, V, W> fmt::Debug for CompositeService<U, V, W>
+where
+    U: HasPath,
+    V: HasNotFound + 'static,
+    W: 'static,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let str_vec: Vec<&'static str> = self.0.iter().map(|&(base_path, _)| base_path).collect();
+        write!(
+            f,
+            "CompositeService accepting paths: {:?}",
+            str_vec,
+        )
     }
 }

@@ -40,7 +40,7 @@ pub mod connector;
 pub use connector::{http_connector, https_connector, https_mutual_connector};
 
 pub mod composites;
-pub use composites::{HasPath, CompositeNewService, CompositeService};
+pub use composites::{HasPath, HasNotFound, CompositeNewService, CompositeService};
 
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
