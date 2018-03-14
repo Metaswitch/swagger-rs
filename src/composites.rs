@@ -4,7 +4,6 @@ use hyper::{Request, Response, StatusCode};
 use futures::{future, Future};
 use context::Context;
 
-
 pub trait HasPath {
     fn path(&self) -> &str;
 }
@@ -72,7 +71,11 @@ where
     }
 }
 
-pub struct CompositeNewService<U: HasPath, V: HasNotFound + 'static, W: 'static>(Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>);
+pub struct CompositeNewService<U, V, W>(Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>)
+where
+    U: HasPath,
+    V: HasNotFound + 'static,
+    W: 'static;
 
 impl<U: HasPath, V: HasNotFound, W> CompositeNewService<U, V, W> {
     pub fn new() -> Self {
@@ -88,7 +91,7 @@ impl<U: HasPath, V: HasNotFound, W> CompositeNewService<U, V, W> {
     }
 }
 
-pub struct CompositeService<U: HasPath, V: HasNotFound + 'static, W: 'static>(
+pub struct CompositeService<U, V, W>(
     Vec<
         (&'static str,
          Box<
@@ -100,9 +103,18 @@ pub struct CompositeService<U: HasPath, V: HasNotFound + 'static, W: 'static>(
             >,
         >),
     >
-);
+)
+where
+    U: HasPath,
+    V: HasNotFound + 'static,
+    W: 'static;
 
-impl<U: HasPath, V: HasNotFound + 'static, W: 'static> NewService for CompositeNewService<U, V, W> {
+impl<U, V, W> NewService for CompositeNewService<U, V, W>
+where
+    U: HasPath,
+    V: HasNotFound + 'static,
+    W: 'static,
+{
     type Request = U;
     type Response = V;
     type Error = W;
@@ -115,18 +127,16 @@ impl<U: HasPath, V: HasNotFound + 'static, W: 'static> NewService for CompositeN
             vec.push((base_path, new_service.boxed_new_service()?))
         }
 
-        // let vec = self.0
-        //     .iter()
-        //     .map(|&(base_path, ref new_service)| {
-        //         (base_path, new_service.boxed_new_service()?)
-        //     })
-        //     .collect();
-
         Ok(CompositeService(vec))
     }
 }
 
-impl<U: HasPath, V: HasNotFound + 'static, W: 'static> Service for CompositeService<U, V, W> {
+impl<U, V, W> Service for CompositeService<U, V, W>
+where
+    U: HasPath,
+    V: HasNotFound + 'static,
+    W: 'static,
+{
     type Request = U;
     type Response = V;
     type Error = W;
