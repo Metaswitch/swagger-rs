@@ -36,7 +36,9 @@ impl HasNotFound for Response {
     }
 }
 
-/// Trait for wrapping hyper NewServices to uniformize the return type of new_service()
+/// Trait for wrapping hyper NewServices to uniformize the return type of new_service().
+/// This is necessary in order for the NewServices with different Instance types to
+/// be stored in a single collection.
 pub trait BoxedNewService<U, V, W> {
     /// Create a new Service trait object
     fn boxed_new_service(
@@ -145,7 +147,7 @@ where
     }
 }
 
-/// A struct combining multiple multiple hyper Services
+/// A struct combining multiple hyper Services
 pub struct CompositeService<U, V, W>(
     Vec<
         (&'static str,
