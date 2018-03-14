@@ -7,30 +7,30 @@ use futures::{future, Future};
 use context::Context;
 
 /// Trait for getting the path of a request
-pub trait HasPath {
+pub trait GetPath {
     /// Retrieve the path
     fn path(&self) -> &str;
 }
 
-impl HasPath for Request {
+impl GetPath for Request {
     fn path(&self) -> &str {
         self.path()
     }
 }
 
-impl HasPath for (Request, Context) {
+impl GetPath for (Request, Context) {
     fn path(&self) -> &str {
         self.0.path()
     }
 }
 
 /// Trait for generating a default "not found" response
-pub trait HasNotFound {
+pub trait NotFound {
     /// Return a "not found" response
     fn not_found() -> Self;
 }
 
-impl HasNotFound for Response {
+impl NotFound for Response {
     fn not_found() -> Self {
         Response::new().with_status(StatusCode::NotFound)
     }
@@ -88,11 +88,11 @@ where
 /// "not found" response if there is no match.
 pub struct CompositeNewService<U, V, W>(Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>)
 where
-    U: HasPath,
-    V: HasNotFound + 'static,
+    U: GetPath,
+    V: NotFound + 'static,
     W: 'static;
 
-impl<U: HasPath, V: HasNotFound, W> CompositeNewService<U, V, W> {
+impl<U: GetPath, V: NotFound, W> CompositeNewService<U, V, W> {
     /// Create an empty CompositeNewService
     pub fn new() -> Self {
         CompositeNewService(Vec::new())
@@ -110,8 +110,8 @@ impl<U: HasPath, V: HasNotFound, W> CompositeNewService<U, V, W> {
 
 impl<U, V, W> NewService for CompositeNewService<U, V, W>
 where
-    U: HasPath,
-    V: HasNotFound + 'static,
+    U: GetPath,
+    V: NotFound + 'static,
     W: 'static,
 {
     type Request = U;
@@ -132,8 +132,8 @@ where
 
 impl<U, V, W> fmt::Debug for CompositeNewService<U, V, W>
 where
-    U: HasPath,
-    V: HasNotFound + 'static,
+    U: GetPath,
+    V: NotFound + 'static,
     W: 'static,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -162,14 +162,14 @@ pub struct CompositeService<U, V, W>(
     >
 )
 where
-    U: HasPath,
-    V: HasNotFound + 'static,
+    U: GetPath,
+    V: NotFound + 'static,
     W: 'static;
 
 impl<U, V, W> Service for CompositeService<U, V, W>
 where
-    U: HasPath,
-    V: HasNotFound + 'static,
+    U: GetPath,
+    V: NotFound + 'static,
     W: 'static,
 {
     type Request = U;
@@ -198,8 +198,8 @@ where
 
 impl<U, V, W> fmt::Debug for CompositeService<U, V, W>
 where
-    U: HasPath,
-    V: HasNotFound + 'static,
+    U: GetPath,
+    V: NotFound + 'static,
     W: 'static,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
