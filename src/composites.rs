@@ -1,6 +1,7 @@
 //! Module for combining hyper services
 
 use std::{io, fmt};
+use std::ops::Deref;
 use hyper::server::{Service, NewService};
 use hyper::{Request, Response, StatusCode};
 use futures::{future, Future};
@@ -148,6 +149,18 @@ where
     }
 }
 
+impl<U, V, W> Deref for CompositeNewService<U, V, W>
+where
+    U: GetPath,
+    V: NotFound + 'static,
+    W: 'static,
+{
+    type Target = Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 /// A struct combining multiple hyper `Service`s
 #[derive(Default)]
 pub struct CompositeService<U, V, W>(
@@ -190,11 +203,7 @@ where
             }
         }
 
-        if let Some(result) = result {
-            result
-        } else {
-            Box::new(future::ok(V::not_found()))
-        }
+        result.unwrap_or(Box::new(future::ok(V::not_found())))
     }
 }
 
@@ -212,5 +221,27 @@ where
             "CompositeService accepting base paths: {:?}",
             str_vec,
         )
+    }
+}
+
+impl<U, V, W> Deref for CompositeService<U, V, W>
+where
+    U: GetPath,
+    V: NotFound + 'static,
+    W: 'static,
+{
+    type Target = Vec<
+        (&'static str,
+         Box<
+            Service<
+                Request = U,
+                Response = V,
+                Error = W,
+                Future = Box<Future<Item = V, Error = W>>,
+            >,
+        >),
+    >;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
