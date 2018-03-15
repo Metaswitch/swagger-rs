@@ -1,7 +1,7 @@
 //! Module for combining hyper services
 
 use std::{io, fmt};
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use hyper::server::{Service, NewService};
 use hyper::{Request, Response, StatusCode};
 use futures::{future, Future};
@@ -87,19 +87,11 @@ where
     W: 'static;
 
 // Clippy bug? This lint triggers despite having a #[derive(Default)]
-#[allow(new_without_default_derive)]
+#[cfg_attr(feature = "cargo-clippy", allow(new_without_default_derive))]
 impl<U: GetPath, V: NotFound, W> CompositeNewService<U, V, W> {
     /// create an empty `CompositeNewService`
     pub fn new() -> Self {
         CompositeNewService(Vec::new())
-    }
-    /// Add a new `NewService` with a base path to the composite
-    pub fn append_new_service(
-        &mut self,
-        base_path: &'static str,
-        new_service: Box<BoxedNewService<U, V, W>>,
-    ) {
-        self.0.push((base_path, new_service));
     }
 }
 
@@ -151,6 +143,17 @@ where
     type Target = CompositeNewServiceVec<U, V, W>;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl<U, V, W> DerefMut for CompositeNewService<U, V, W>
+where
+    U: GetPath,
+    V: NotFound + 'static,
+    W: 'static,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -213,5 +216,16 @@ where
     type Target = Vec<(&'static str, BoxedService<U, V, W>)>;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl<U, V, W> DerefMut for CompositeService<U, V, W>
+where
+    U: GetPath,
+    V: NotFound + 'static,
+    W: 'static,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
