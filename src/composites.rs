@@ -37,44 +37,36 @@ impl NotFound for Response {
     }
 }
 
+type BoxedFuture<V, W> = Box<Future<Item = V, Error = W>>;
+type CompositeNewServiceVec<U, V, W> = Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>;
+type BoxedService<U, V, W> = Box<
+    Service<
+        Request = U,
+        Response = V,
+        Error = W,
+        Future = BoxedFuture<V, W>,
+    >,
+>;
+
 /// Trait for wrapping hyper `NewService`s to make the return type of `new_service` uniform.
 /// This is necessary in order for the `NewService`s with different `Instance` types to
 /// be stored in a single collection.
 pub trait BoxedNewService<U, V, W> {
     /// Create a new `Service` trait object
-    fn boxed_new_service(
-        &self,
-    ) -> Result<
-        Box<
-            Service<
-                Request = U,
-                Response = V,
-                Error = W,
-                Future = Box<Future<Item = V, Error = W>>,
-            >,
-        >,
-        io::Error,
-    >;
+    fn boxed_new_service(&self) -> Result<BoxedService<U, V, W>, io::Error>;
 }
 
 impl<T, U, V, W> BoxedNewService<U, V, W> for T
 where
     T: NewService<Request = U, Response = V, Error = W>,
-    T::Instance: Service<Future = Box<Future<Item = V, Error = W>>>
+    T::Instance: Service<Future = BoxedFuture<V, W>>
         + 'static,
 {
     /// Call the `new_service` method of the wrapped `NewService` and `Box` the result
     fn boxed_new_service(
         &self,
     ) -> Result<
-        Box<
-            Service<
-                Request = U,
-                Response = V,
-                Error = W,
-                Future = Box<Future<Item = V, Error = W>>,
-            >,
-        >,
+        BoxedService<U, V, W>,
         io::Error,
     > {
         let service = self.new_service()?;
@@ -88,18 +80,13 @@ where
 /// in the list whose base path is a prefix of the request's path or return a
 /// "not found" response if there is no match.
 #[derive(Default)]
-pub struct CompositeNewService<U, V, W>(Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>)
+pub struct CompositeNewService<U, V, W>(CompositeNewServiceVec<U, V, W>)
 where
     U: GetPath,
     V: NotFound + 'static,
     W: 'static;
 
 impl<U: GetPath, V: NotFound, W> CompositeNewService<U, V, W> {
-    /// Create an empty `CompositeNewService`
-    pub fn new() -> Self {
-        CompositeNewService(Vec::new())
-    }
-
     /// Add a new `NewService` with a base path to the composite
     pub fn append_new_service(
         &mut self,
@@ -155,27 +142,14 @@ where
     V: NotFound + 'static,
     W: 'static,
 {
-    type Target = Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>;
+    type Target = CompositeNewServiceVec<U, V, W>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 /// A struct combining multiple hyper `Service`s
-#[derive(Default)]
-pub struct CompositeService<U, V, W>(
-    Vec<
-        (&'static str,
-         Box<
-            Service<
-                Request = U,
-                Response = V,
-                Error = W,
-                Future = Box<Future<Item = V, Error = W>>,
-            >,
-        >),
-    >
-)
+pub struct CompositeService<U, V, W>(Vec<(&'static str, BoxedService<U, V, W>)>)
 where
     U: GetPath,
     V: NotFound + 'static,
@@ -203,7 +177,7 @@ where
             }
         }
 
-        result.unwrap_or(Box::new(future::ok(V::not_found())))
+        result.unwrap_or_else(|| Box::new(future::ok(V::not_found())))
     }
 }
 
@@ -230,17 +204,7 @@ where
     V: NotFound + 'static,
     W: 'static,
 {
-    type Target = Vec<
-        (&'static str,
-         Box<
-            Service<
-                Request = U,
-                Response = V,
-                Error = W,
-                Future = Box<Future<Item = V, Error = W>>,
-            >,
-        >),
-    >;
+    type Target = Vec<(&'static str, BoxedService<U, V, W>)>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
