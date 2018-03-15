@@ -86,6 +86,8 @@ where
     V: NotFound + 'static,
     W: 'static;
 
+// Clippy bug? This lint triggers despite having a #[derive(Default)]
+#[allow(new_without_default_derive)]
 impl<U: GetPath, V: NotFound, W> CompositeNewService<U, V, W> {
     /// create an empty `CompositeNewService`
     pub fn new() -> Self {
