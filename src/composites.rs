@@ -87,6 +87,10 @@ where
     W: 'static;
 
 impl<U: GetPath, V: NotFound, W> CompositeNewService<U, V, W> {
+    /// create an empty `CompositeNewService`
+    pub fn new() -> Self {
+        CompositeNewService(Vec::new())
+    }
     /// Add a new `NewService` with a base path to the composite
     pub fn append_new_service(
         &mut self,
