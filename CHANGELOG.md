@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-## [0.9.0] - 2018-03-16
+## [0.10.0] - 2018-03-16
 ### Added
 -- Stucts for combining multiple hyper services
 
