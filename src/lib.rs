@@ -16,6 +16,8 @@ extern crate base64;
 #[macro_use]
 extern crate hyper;
 
+extern crate futures;
+
 use std::fmt;
 use std::error;
 
@@ -36,6 +38,9 @@ pub use context::{Context, ContextWrapper};
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
 pub use connector::{http_connector, https_connector, https_mutual_connector};
+
+pub mod composites;
+pub use composites::{GetPath, NotFound, CompositeNewService, CompositeService};
 
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
