@@ -2,6 +2,7 @@
 
 use hyper;
 use auth::{Authorization, AuthData};
+use std::marker::Sized;
 extern crate slog;
 
 /// Request context, both as received in a server handler or as sent in a
@@ -17,6 +18,41 @@ pub struct Context {
     /// Raw authentication data, for use in making HTTP requests as a client.
     pub auth_data: Option<AuthData>,
     logger: Option<slog::Logger>,
+}
+
+pub trait Has<T> {
+    fn set(&mut self, T);
+    fn get(&self) -> &T;
+    fn get_mut(&mut self) -> &mut T;
+}
+
+pub trait ExtendsWith<C, T>: Has<T> {
+    fn new(inner: C, item: T) -> Self;
+}
+
+pub struct ContextExtension<C, T> {
+    inner: C,
+    item: T,
+}
+
+impl<C, T> Has<T> for ContextExtension<C, T> {
+    fn set(&mut self, item: T) {
+        self.item = item;
+    }
+
+    fn get(&self) -> &T {
+        &self.item
+    }
+
+    fn get_mut(&mut self) -> &mut T {
+        &mut self.item
+    }
+}
+
+impl<C, T> ExtendsWith<C, T> for ContextExtension<C, T> {
+    fn new(inner: C, item: T) -> Self {
+        ContextExtension { inner, item }
+    }
 }
 
 /// Trait for retrieving a logger from a struct.
