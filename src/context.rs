@@ -21,7 +21,7 @@ pub struct Context {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct XSpanIdString(String);
+pub struct XSpanIdString(pub String);
 
 pub trait Has<T> {
     fn set(&mut self, T);
