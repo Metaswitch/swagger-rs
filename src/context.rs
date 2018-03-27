@@ -111,14 +111,14 @@ impl Context {
 
 /// Context wrapper, to bind an API with a context.
 #[derive(Debug)]
-pub struct ContextWrapper<'a, T: 'a> {
+pub struct ContextWrapper<'a, T: 'a, C> {
     api: &'a T,
-    context: Context,
+    context: C,
 }
 
-impl<'a, T> ContextWrapper<'a, T> {
+impl<'a, T, C> ContextWrapper<'a, T, C> {
     /// Create a new ContextWrapper, binding the API and context.
-    pub fn new(api: &'a T, context: Context) -> ContextWrapper<'a, T> {
+    pub fn new(api: &'a T, context: C) -> ContextWrapper<'a, T, C> {
         ContextWrapper { api, context }
     }
 
@@ -128,18 +128,18 @@ impl<'a, T> ContextWrapper<'a, T> {
     }
 
     /// Borrows the context.
-    pub fn context(&self) -> &Context {
+    pub fn context(&self) -> &C {
         &self.context
     }
 }
 
 /// Trait to extend an API to make it easy to bind it to a context.
-pub trait ContextWrapperExt<'a>
+pub trait ContextWrapperExt<'a, C>
 where
     Self: Sized,
 {
     /// Binds this API to a context.
-    fn with_context(self: &'a Self, context: Context) -> ContextWrapper<'a, Self> {
-        ContextWrapper::<Self>::new(self, context)
+    fn with_context(self: &'a Self, context: C) -> ContextWrapper<'a, Self, C> {
+        ContextWrapper::<Self, C>::new(self, context)
     }
 }
