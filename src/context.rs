@@ -11,7 +11,7 @@ extern crate slog;
 #[derive(Clone, Debug, Default)]
 pub struct Context {
     /// Tracking ID when passing a request to another microservice.
-    pub x_span_id: Option<String>,
+    pub x_span_id: XSpanIdString,
 
     /// Authorization data, filled in from middlewares.
     pub authorization: Option<Authorization>,
@@ -19,6 +19,9 @@ pub struct Context {
     pub auth_data: Option<AuthData>,
     logger: Option<slog::Logger>,
 }
+
+#[derive(Debug, Clone, Default)]
+pub struct XSpanIdString(String);
 
 pub trait Has<T> {
     fn set(&mut self, T);
@@ -74,6 +77,20 @@ impl HasLogger for Context {
     }
 }
 
+impl Has<XSpanIdString> for Context {
+    fn set(&mut self, item: XSpanIdString) {
+        self.x_span_id = item;
+    }
+
+    fn get(&self) -> &XSpanIdString{
+        &self.x_span_id
+    }
+
+    fn get_mut(&mut self) -> &mut XSpanIdString {
+        &mut self.x_span_id
+    }
+}
+
 impl Context {
     /// Create a new, empty, `Context`.
     pub fn new() -> Context {
@@ -83,7 +100,7 @@ impl Context {
     /// Create a `Context` with a given span ID.
     pub fn new_with_span_id<S: Into<String>>(x_span_id: S) -> Context {
         Context {
-            x_span_id: Some(x_span_id.into()),
+            x_span_id: XSpanIdString(x_span_id.into()),
             ..Context::default()
         }
     }
