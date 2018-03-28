@@ -33,114 +33,83 @@ pub trait ExtendsWith<C, T>: Has<T> {
     fn new(inner: C, item: T) -> Self;
 }
 
-pub struct ContextExtension<C, T> {
-    inner: C,
-    item: T,
-}
+macro_rules! extend_has_impls_helper {
+    ($context_name:ident , $type:ty, $($types:ty),+ ) => {
+        $(
+            impl<C: Has<$type>> Has<$type> for $context_name<C, $types> {
+                fn set(&mut self, item: $type) {
+                    self.inner.set(item);
+                }
 
-impl<C, T> Has<T> for ContextExtension<C, T> {
-    fn set(&mut self, item: T) {
-        self.item = item;
-    }
+                fn get(&self) -> &$type {
+                    self.inner.get()
+                }
 
-    fn get(&self) -> &T {
-        &self.item
-    }
+                fn get_mut(&mut self) -> &mut $type {
+                    self.inner.get_mut()
+                }
+            }
 
-    fn get_mut(&mut self) -> &mut T {
-        &mut self.item
-    }
-}
+            impl<C: Has<$types>> Has<$types> for $context_name<C, $type> {
+                fn set(&mut self, item: $types) {
+                    self.inner.set(item);
+                }
 
-impl<C, T> ExtendsWith<C, T> for ContextExtension<C, T> {
-    fn new(inner: C, item: T) -> Self {
-        ContextExtension { inner, item }
-    }
-}
+                fn get(&self) -> &$types {
+                    self.inner.get()
+                }
 
-impl<C: Has<XSpanIdString>> Has<XSpanIdString> for ContextExtension<C, Option<Authorization>> {
-    fn set(&mut self, item: XSpanIdString) {
-        self.inner.set(item);
-    }
-
-    fn get(&self) -> &XSpanIdString {
-        self.inner.get()
-    }
-
-    fn get_mut(&mut self) -> &mut XSpanIdString {
-        self.inner.get_mut()
+                fn get_mut(&mut self) -> &mut $types {
+                    self.inner.get_mut()
+                }
+            }
+        )+
     }
 }
 
-impl<C: Has<Option<Authorization>>> Has<Option<Authorization>> for ContextExtension<C, XSpanIdString> {
-    fn set(&mut self, item: Option<Authorization>) {
-        self.inner.set(item);
-    }
-
-    fn get(&self) -> &Option<Authorization> {
-        self.inner.get()
-    }
-
-    fn get_mut(&mut self) -> &mut Option<Authorization> {
-        self.inner.get_mut()
-    }
+macro_rules! extend_has_impls {
+    ($context_name:ident, $head:ty, $($tail:ty),+ ) => {
+        extend_has_impls_helper!($context_name, $head, $($tail),+);
+        extend_has_impls!($context_name, $($tail),+);
+    };
+    ($context_name:ident, $head:ty) => {};
 }
 
-impl<C: Has<XSpanIdString>> Has<XSpanIdString> for ContextExtension<C, Option<AuthData>> {
-    fn set(&mut self, item: XSpanIdString) {
-        self.inner.set(item);
-    }
+macro_rules! new_context_type {
+    ($context_name:ident, $($types:ty),+ ) => {
+        pub struct $context_name<C, T> {
+            inner: C,
+            item: T,
+        }
 
-    fn get(&self) -> &XSpanIdString {
-        self.inner.get()
-    }
+        impl<C, T> Has<T> for $context_name<C, T> {
+            fn set(&mut self, item: T) {
+                self.item = item;
+            }
 
-    fn get_mut(&mut self) -> &mut XSpanIdString {
-        self.inner.get_mut()
-    }
+            fn get(&self) -> &T {
+                &self.item
+            }
+
+            fn get_mut(&mut self) -> &mut T {
+                &mut self.item
+            }
+        }
+
+        impl<C, T> ExtendsWith<C, T> for $context_name<C, T> {
+            fn new(inner: C, item: T) -> Self {
+                $context_name { inner, item }
+            }
+        }
+
+        extend_has_impls!($context_name, $($types),+);
+    };
+
 }
 
-impl<C: Has<Option<AuthData>>> Has<Option<AuthData>> for ContextExtension<C, XSpanIdString> {
-    fn set(&mut self, item: Option<AuthData>) {
-        self.inner.set(item);
-    }
+new_context_type!(ContextExtension, String, u32, bool);
 
-    fn get(&self) -> &Option<AuthData> {
-        self.inner.get()
-    }
 
-    fn get_mut(&mut self) -> &mut Option<AuthData> {
-        self.inner.get_mut()
-    }
-}
-
-impl<C: Has<Option<AuthData>>> Has<Option<AuthData>> for ContextExtension<C, Option<Authorization>> {
-    fn set(&mut self, item: Option<AuthData>) {
-        self.inner.set(item);
-    }
-
-    fn get(&self) -> &Option<AuthData> {
-        self.inner.get()
-    }
-
-    fn get_mut(&mut self) -> &mut Option<AuthData> {
-        self.inner.get_mut()
-    }
-}
-
-impl<C: Has<Option<Authorization>>> Has<Option<Authorization>> for ContextExtension<C, Option<AuthData>> {
-    fn set(&mut self, item: Option<Authorization>) {
-        self.inner.set(item);
-    }
-
-    fn get(&self) -> &Option<Authorization> {
-        self.inner.get()
-    }
-
-    fn get_mut(&mut self) -> &mut Option<Authorization> {
-        self.inner.get_mut()
-    }
-}
 
 /// Trait for retrieving a logger from a struct.
 pub trait HasLogger {
