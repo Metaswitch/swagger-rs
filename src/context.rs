@@ -58,6 +58,90 @@ impl<C, T> ExtendsWith<C, T> for ContextExtension<C, T> {
     }
 }
 
+impl<C: Has<XSpanIdString>> Has<XSpanIdString> for ContextExtension<C, Option<Authorization>> {
+    fn set(&mut self, item: XSpanIdString) {
+        self.inner.set(item);
+    }
+
+    fn get(&self) -> &XSpanIdString {
+        self.inner.get()
+    }
+
+    fn get_mut(&mut self) -> &mut XSpanIdString {
+        self.inner.get_mut()
+    }
+}
+
+impl<C: Has<Option<Authorization>>> Has<Option<Authorization>> for ContextExtension<C, XSpanIdString> {
+    fn set(&mut self, item: Option<Authorization>) {
+        self.inner.set(item);
+    }
+
+    fn get(&self) -> &Option<Authorization> {
+        self.inner.get()
+    }
+
+    fn get_mut(&mut self) -> &mut Option<Authorization> {
+        self.inner.get_mut()
+    }
+}
+
+impl<C: Has<XSpanIdString>> Has<XSpanIdString> for ContextExtension<C, AuthData> {
+    fn set(&mut self, item: XSpanIdString) {
+        self.inner.set(item);
+    }
+
+    fn get(&self) -> &XSpanIdString {
+        self.inner.get()
+    }
+
+    fn get_mut(&mut self) -> &mut XSpanIdString {
+        self.inner.get_mut()
+    }
+}
+
+impl<C: Has<AuthData>> Has<AuthData> for ContextExtension<C, XSpanIdString> {
+    fn set(&mut self, item: AuthData) {
+        self.inner.set(item);
+    }
+
+    fn get(&self) -> &AuthData {
+        self.inner.get()
+    }
+
+    fn get_mut(&mut self) -> &mut AuthData {
+        self.inner.get_mut()
+    }
+}
+
+impl<C: Has<AuthData>> Has<AuthData> for ContextExtension<C, Option<Authorization>> {
+    fn set(&mut self, item: AuthData) {
+        self.inner.set(item);
+    }
+
+    fn get(&self) -> &AuthData {
+        self.inner.get()
+    }
+
+    fn get_mut(&mut self) -> &mut AuthData {
+        self.inner.get_mut()
+    }
+}
+
+impl<C: Has<Option<Authorization>>> Has<Option<Authorization>> for ContextExtension<C, AuthData> {
+    fn set(&mut self, item: Option<Authorization>) {
+        self.inner.set(item);
+    }
+
+    fn get(&self) -> &Option<Authorization> {
+        self.inner.get()
+    }
+
+    fn get_mut(&mut self) -> &mut Option<Authorization> {
+        self.inner.get_mut()
+    }
+}
+
 /// Trait for retrieving a logger from a struct.
 pub trait HasLogger {
     /// Retrieve the context logger
