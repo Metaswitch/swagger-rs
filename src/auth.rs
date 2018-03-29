@@ -2,6 +2,7 @@
 
 use std::collections::BTreeSet;
 use std::io;
+use std::marker::PhantomData;
 use hyper;
 use hyper::{Request, Response, Error};
 use super::Context;
@@ -55,35 +56,32 @@ pub enum AuthData {
 /// No Authenticator, that does not insert any authorization data, denying all
 /// access to endpoints that require authentication.
 #[derive(Debug)]
-pub struct NoAuthentication<T>(pub T);
+pub struct NoAuthentication<T, C>
+    where C: Default,
+{
+    inner: T,
+    marker: PhantomData<C>,
+}
 
-impl<T> hyper::server::NewService for NoAuthentication<T>
-where
-    T: hyper::server::NewService<
-        Request = (Request,
-                   Context),
-        Response = Response,
-        Error = Error,
-    >,
+impl<T, C> hyper::server::NewService for NoAuthentication<T, C>
+    where
+        T: hyper::server::NewService<Request=(Request, C), Response=Response, Error=Error>,
+        C: Default,
 {
     type Request = Request;
     type Response = Response;
     type Error = Error;
-    type Instance = NoAuthentication<T::Instance>;
+    type Instance = NoAuthentication<T::Instance, C>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.0.new_service().map(NoAuthentication)
+        self.inner.new_service().map(|s| NoAuthentication{inner: s, marker: PhantomData})
     }
 }
 
-impl<T> hyper::server::Service for NoAuthentication<T>
-where
-    T: hyper::server::Service<
-        Request = (Request,
-                   Context),
-        Response = Response,
-        Error = Error,
-    >,
+impl<T, C> hyper::server::Service for NoAuthentication<T, C>
+    where
+        T: hyper::server::Service<Request=(Request, C), Response=Response, Error=Error>,
+        C: Default,
 {
     type Request = Request;
     type Response = Response;
@@ -91,7 +89,7 @@ where
     type Future = T::Future;
 
     fn call(&self, req: Self::Request) -> Self::Future {
-        self.0.call((req, Context::default()))
+        self.inner.call((req, C::default()))
     }
 }
 
