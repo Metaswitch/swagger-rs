@@ -5,7 +5,7 @@ use std::io;
 use std::marker::PhantomData;
 use hyper;
 use hyper::{Request, Response, Error};
-use super::Context;
+use super::{Has, ExtendsWith};
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -57,7 +57,8 @@ pub enum AuthData {
 /// access to endpoints that require authentication.
 #[derive(Debug)]
 pub struct NoAuthentication<T, C>
-    where C: Default,
+where
+    C: Default,
 {
     inner: T,
     marker: PhantomData<C>,
@@ -96,47 +97,61 @@ impl<T, C> hyper::server::Service for NoAuthentication<T, C>
 /// Dummy Authenticator, that blindly inserts authorization data, allowing all
 /// access to an endpoint with the specified subject.
 #[derive(Debug)]
-pub struct AllowAllAuthenticator<T> {
+pub struct AllowAllAuthenticator<T, C, D> {
     inner: T,
     subject: String,
+    marker1: PhantomData<C>,
+    marker2: PhantomData<D>,
 }
 
-impl<T> AllowAllAuthenticator<T> {
+impl<T, C, D> AllowAllAuthenticator<T, C, D> {
     /// Create a middleware that authorizes with the configured subject.
-    pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T> {
+    pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T, C, D> {
         AllowAllAuthenticator {
             inner,
             subject: subject.into(),
+            marker1: PhantomData,
+            marker2: PhantomData,
         }
     }
 }
 
-impl<T> hyper::server::NewService for AllowAllAuthenticator<T>
-    where T: hyper::server::NewService<Request=(Request,Context), Response=Response, Error=Error> {
-    type Request = (Request, Option<AuthData>);
+impl<T, C, D> hyper::server::NewService for AllowAllAuthenticator<T, C, D>
+    where
+        T: hyper::server::NewService<Request=(Request, D), Response=Response, Error=Error>,
+        C: Has<Option<AuthData>>,
+        D: ExtendsWith<C, Option<Authorization>>,
+{
+    type Request = (Request, C);
     type Response = Response;
     type Error = Error;
-    type Instance = AllowAllAuthenticator<T::Instance>;
+    type Instance = AllowAllAuthenticator<T::Instance, C, D>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
         self.inner.new_service().map(|s| AllowAllAuthenticator::new(s, self.subject.clone()))
     }
 }
 
-impl<T> hyper::server::Service for AllowAllAuthenticator<T>
-    where T: hyper::server::Service<Request=(Request,Context), Response=Response, Error=Error> {
-    type Request = (Request, Option<AuthData>);
+impl<T, C, D> hyper::server::Service for AllowAllAuthenticator<T, C, D>
+    where
+        T: hyper::server::Service<Request=(Request,D), Response=Response, Error=Error>,
+        C: Has<Option<AuthData>>,
+        D: ExtendsWith<C, Option<Authorization>>,
+{
+    type Request = (Request, C);
     type Response = Response;
     type Error = Error;
     type Future = T::Future;
 
-    fn call(&self, (req, _): Self::Request) -> Self::Future {
-        let mut context = Context::default();
-        context.authorization = Some(Authorization{
-            subject: self.subject.clone(),
-            scopes: Scopes::All,
-            issuer: None,
-        });
+    fn call(&self, (req, context): Self::Request) -> Self::Future {
+        let context = D::new(
+            context,
+            Some(Authorization{
+                subject: self.subject.clone(),
+                scopes: Scopes::All,
+                issuer: None,
+            })
+        );
         self.inner.call((req, context))
     }
 }
