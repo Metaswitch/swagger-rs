@@ -29,9 +29,58 @@ pub trait Has<T> {
     fn get_mut(&mut self) -> &mut T;
 }
 
-pub trait ExtendsWith<C, T>: Has<T> {
-    fn new(inner: C, item: T) -> Self;
+pub trait ExtendsWith {
+    type Extends;
+    type Extension;
+    fn new(inner: Self::Extends, item: Self::Extension) -> Self;
+    fn set(&mut self, Self::Extension);
+    fn get(&self) -> &Self::Extension;
+    fn get_mut(&mut self) -> &mut Self::Extension;
 }
+
+impl<S, T> Has<S> for (S, T) {
+    fn set(&mut self, item: S) {
+        self.0 = item;
+    }
+    fn get(&self) -> &S {
+        &self.0
+    }
+    fn get_mut(&mut self) -> &mut S {
+        &mut self.0
+    }
+}
+
+impl<C, D, T> Has<T> for D
+where
+    D: ExtendsWith<Extends = C, Extension = T>,
+{
+    fn set(&mut self, item: T) {
+        ExtendsWith::set(self, item);
+    }
+    fn get(&self) -> &T {
+        ExtendsWith::get(self)
+    }
+    fn get_mut(&mut self) -> &mut T {
+        ExtendsWith::get_mut(self)
+    }
+}
+
+// impl<C, D, S, T> Has<S> for D
+// where
+//     D: ExtendsWith<Extends = C, Extension = T>,
+//     T: Has<S>,
+// {
+//     fn set(&mut self, item: S) {
+//         Has::<T>::get_mut(&mut self).set(item);
+//     }
+//     fn get(&self) -> &S {
+//         Has::<T>::get(&self).get()
+//     }
+
+//     fn get_mut(&mut self) -> &mut S {
+//         Has::<T>::get_mut(&mut self).get_mut()
+//     }
+// }
 
 macro_rules! extend_has_impls_helper {
     ($context_name:ident , $type:ty, $($types:ty),+ ) => {
@@ -82,23 +131,38 @@ macro_rules! new_context_type {
             item: T,
         }
 
-        impl<C, T> Has<T> for $context_name<C, T> {
-            fn set(&mut self, item: T) {
+        // impl<C, T> Has<T> for $context_name<C, T> {
+        //     fn set(&mut self, item: T) {
+        //         self.item = item;
+        //     }
+
+        //     fn get(&self) -> &T {
+        //         &self.item
+        //     }
+
+        //     fn get_mut(&mut self) -> &mut T {
+        //         &mut self.item
+        //     }
+        // }
+
+        impl<C, T> ExtendsWith for $context_name<C, T> {
+            type Extends = C;
+            type Extension = T;
+
+            fn new(inner: C, item: T) -> Self {
+                $context_name { inner, item }
+            }
+
+            fn set(&mut self, item: Self::Extension) {
                 self.item = item;
             }
 
-            fn get(&self) -> &T {
+            fn get(&self) -> &Self::Extension {
                 &self.item
             }
 
-            fn get_mut(&mut self) -> &mut T {
+            fn get_mut(&mut self) -> &mut Self::Extension {
                 &mut self.item
-            }
-        }
-
-        impl<C, T> ExtendsWith<C, T> for $context_name<C, T> {
-            fn new(inner: C, item: T) -> Self {
-                $context_name { inner, item }
             }
         }
 
@@ -135,7 +199,7 @@ impl Has<XSpanIdString> for Context {
         self.x_span_id = item;
     }
 
-    fn get(&self) -> &XSpanIdString{
+    fn get(&self) -> &XSpanIdString {
         &self.x_span_id
     }
 
