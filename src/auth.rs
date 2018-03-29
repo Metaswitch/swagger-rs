@@ -97,14 +97,22 @@ impl<T, C> hyper::server::Service for NoAuthentication<T, C>
 /// Dummy Authenticator, that blindly inserts authorization data, allowing all
 /// access to an endpoint with the specified subject.
 #[derive(Debug)]
-pub struct AllowAllAuthenticator<T, C, D> {
+pub struct AllowAllAuthenticator<T, C, D>
+    where
+        C: Has<Option<AuthData>>,
+        D: ExtendsWith<Inner=C, Ext=Option<Authorization>>,
+{
     inner: T,
     subject: String,
     marker1: PhantomData<C>,
     marker2: PhantomData<D>,
 }
 
-impl<T, C, D> AllowAllAuthenticator<T, C, D> {
+impl<T, C, D> AllowAllAuthenticator<T, C, D>
+    where
+        C: Has<Option<AuthData>>,
+        D: ExtendsWith<Inner=C, Ext=Option<Authorization>>,
+{
     /// Create a middleware that authorizes with the configured subject.
     pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T, C, D> {
         AllowAllAuthenticator {
