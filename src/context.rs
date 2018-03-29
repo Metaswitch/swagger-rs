@@ -170,7 +170,7 @@ macro_rules! new_context_type {
 
 }
 
-new_context_type!(ContextExtension, String, u32, bool);
+new_context_type!(ContextExtension, XSpanIdString, Option<AuthData>, Option<Authorization>);
 
 
 
