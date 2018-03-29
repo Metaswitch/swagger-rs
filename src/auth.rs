@@ -120,7 +120,7 @@ impl<T, C, D> hyper::server::NewService for AllowAllAuthenticator<T, C, D>
     where
         T: hyper::server::NewService<Request=(Request, D), Response=Response, Error=Error>,
         C: Has<Option<AuthData>>,
-        D: ExtendsWith<Extends=C, Extension=Option<Authorization>>,
+        D: ExtendsWith<Inner=C, Ext=Option<Authorization>>,
 {
     type Request = (Request, C);
     type Response = Response;
@@ -136,7 +136,7 @@ impl<T, C, D> hyper::server::Service for AllowAllAuthenticator<T, C, D>
     where
         T: hyper::server::Service<Request=(Request,D), Response=Response, Error=Error>,
         C: Has<Option<AuthData>>,
-        D: ExtendsWith<Extends=C, Extension=Option<Authorization>>,
+        D: ExtendsWith<Inner=C, Ext=Option<Authorization>>,
 {
     type Request = (Request, C);
     type Response = Response;

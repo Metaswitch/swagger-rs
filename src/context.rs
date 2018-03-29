@@ -30,12 +30,12 @@ pub trait Has<T> {
 }
 
 pub trait ExtendsWith {
-    type Extends;
-    type Extension;
-    fn new(inner: Self::Extends, item: Self::Extension) -> Self;
-    fn set(&mut self, Self::Extension);
-    fn get(&self) -> &Self::Extension;
-    fn get_mut(&mut self) -> &mut Self::Extension;
+    type Inner;
+    type Ext;
+    fn new(inner: Self::Inner, item: Self::Ext) -> Self;
+    fn set(&mut self, Self::Ext);
+    fn get(&self) -> &Self::Ext;
+    fn get_mut(&mut self) -> &mut Self::Ext;
 }
 
 impl<S, T> Has<S> for (S, T) {
@@ -52,7 +52,7 @@ impl<S, T> Has<S> for (S, T) {
 
 impl<C, D, T> Has<T> for D
 where
-    D: ExtendsWith<Extends = C, Extension = T>,
+    D: ExtendsWith<Inner = C, Ext = T>,
 {
     fn set(&mut self, item: T) {
         ExtendsWith::set(self, item);
@@ -67,7 +67,7 @@ where
 
 // impl<C, D, S, T> Has<S> for D
 // where
-//     D: ExtendsWith<Extends = C, Extension = T>,
+//     D: ExtendsWith<Inner = C, Ext = T>,
 //     T: Has<S>,
 // {
 //     fn set(&mut self, item: S) {
@@ -131,37 +131,23 @@ macro_rules! new_context_type {
             item: T,
         }
 
-        // impl<C, T> Has<T> for $context_name<C, T> {
-        //     fn set(&mut self, item: T) {
-        //         self.item = item;
-        //     }
-
-        //     fn get(&self) -> &T {
-        //         &self.item
-        //     }
-
-        //     fn get_mut(&mut self) -> &mut T {
-        //         &mut self.item
-        //     }
-        // }
-
         impl<C, T> ExtendsWith for $context_name<C, T> {
-            type Extends = C;
-            type Extension = T;
+            type Inner = C;
+            type Ext = T;
 
             fn new(inner: C, item: T) -> Self {
                 $context_name { inner, item }
             }
 
-            fn set(&mut self, item: Self::Extension) {
+            fn set(&mut self, item: Self::Ext) {
                 self.item = item;
             }
 
-            fn get(&self) -> &Self::Extension {
+            fn get(&self) -> &Self::Ext {
                 &self.item
             }
 
-            fn get_mut(&mut self) -> &mut Self::Extension {
+            fn get_mut(&mut self) -> &mut Self::Ext {
                 &mut self.item
             }
         }
