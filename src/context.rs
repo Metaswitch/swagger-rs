@@ -3,6 +3,8 @@
 use hyper;
 use auth::{Authorization, AuthData};
 use std::marker::Sized;
+use uuid::Uuid;
+use super::XSpanId;
 extern crate slog;
 
 /// Request context, both as received in a server handler or as sent in a
@@ -22,6 +24,17 @@ pub struct Context {
 
 #[derive(Debug, Clone, Default)]
 pub struct XSpanIdString(pub String);
+
+impl XSpanIdString {
+    pub fn get_or_generate(req: &hyper::Request) -> Self {
+        XSpanIdString(
+            req.headers()
+            .get::<XSpanId>()
+            .map(XSpanId::to_string)
+            .unwrap_or_else(|| Uuid::new_v4().to_string())
+        )
+    }
+}
 
 pub trait Has<T> {
     fn set(&mut self, T);

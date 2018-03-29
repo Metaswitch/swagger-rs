@@ -29,4 +29,5 @@ openssl = "0.9.14"
 slog = { version = "2", features = [ "max_level_trace", "release_max_level_debug"] }
 tokio-core = "0.1.6"
 futures = "0.1"
+uuid = {version = "0.5", features = ["serde", "v4"]}
 

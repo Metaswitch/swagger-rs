@@ -17,6 +17,7 @@ extern crate base64;
 extern crate hyper;
 
 extern crate futures;
+extern crate uuid;
 
 use std::fmt;
 use std::error;
