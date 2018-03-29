@@ -34,7 +34,7 @@ pub mod auth;
 pub use auth::{Authorization, AuthData};
 
 pub mod context;
-pub use context::{Context, ContextWrapper, Has, ExtendsWith, ContextExtension, XSpanIdString};
+pub use context::{Context, ContextWrapper, Has, ExtendsWith, XSpanIdString};
 
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
