@@ -78,23 +78,6 @@ where
     }
 }
 
-// impl<C, D, S, T> Has<S> for D
-// where
-//     D: ExtendsWith<Inner = C, Ext = T>,
-//     T: Has<S>,
-// {
-//     fn set(&mut self, item: S) {
-//         Has::<T>::get_mut(&mut self).set(item);
-//     }
-//     fn get(&self) -> &S {
-//         Has::<T>::get(&self).get()
-//     }
-
-//     fn get_mut(&mut self) -> &mut S {
-//         Has::<T>::get_mut(&mut self).get_mut()
-//     }
-// }
-
 macro_rules! extend_has_impls_helper {
     ($context_name:ident , $type:ty, $($types:ty),+ ) => {
         $(
@@ -139,6 +122,7 @@ macro_rules! extend_has_impls {
 
 macro_rules! new_context_type {
     ($context_name:ident, $($types:ty),+ ) => {
+        #[derive(Debug, Clone, Default)]
         pub struct $context_name<C, T> {
             inner: C,
             item: T,
