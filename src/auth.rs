@@ -66,6 +66,20 @@ where
     marker2: PhantomData<D>,
 }
 
+impl<T, C, D> NoAuthentication<T, C, D>
+where
+    C: Default,
+    D: ExtendsWith<Inner=C, Ext=XSpanIdString>,
+{
+    pub fn new(inner: T) -> Self {
+        NoAuthentication {
+            inner,
+            marker1: PhantomData,
+            marker2: PhantomData,
+        }
+    }
+}
+
 impl<T, C, D> hyper::server::NewService for NoAuthentication<T, C, D>
     where
         T: hyper::server::NewService<Request=(Request, D), Response=Response, Error=Error>,
@@ -78,7 +92,7 @@ impl<T, C, D> hyper::server::NewService for NoAuthentication<T, C, D>
     type Instance = NoAuthentication<T::Instance, C, D>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.inner.new_service().map(|s| NoAuthentication{inner: s, marker1: PhantomData, marker2: PhantomData})
+        self.inner.new_service().map(|s| NoAuthentication::new(s))
     }
 }
 
