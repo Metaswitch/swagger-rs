@@ -5,7 +5,7 @@ use std::io;
 use std::marker::PhantomData;
 use hyper;
 use hyper::{Request, Response, Error};
-use super::{Has, ExtendsWith};
+use super::{Has, ExtendsWith, XSpanIdString};
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -56,33 +56,37 @@ pub enum AuthData {
 /// No Authenticator, that does not insert any authorization data, denying all
 /// access to endpoints that require authentication.
 #[derive(Debug)]
-pub struct NoAuthentication<T, C>
+pub struct NoAuthentication<T, C, D>
 where
     C: Default,
+    D: ExtendsWith<Inner=C, Ext=XSpanIdString>,
 {
     inner: T,
-    marker: PhantomData<C>,
+    marker1: PhantomData<C>,
+    marker2: PhantomData<D>,
 }
 
-impl<T, C> hyper::server::NewService for NoAuthentication<T, C>
+impl<T, C, D> hyper::server::NewService for NoAuthentication<T, C, D>
     where
-        T: hyper::server::NewService<Request=(Request, C), Response=Response, Error=Error>,
+        T: hyper::server::NewService<Request=(Request, D), Response=Response, Error=Error>,
         C: Default,
+        D: ExtendsWith<Inner=C, Ext=XSpanIdString>,
 {
     type Request = Request;
     type Response = Response;
     type Error = Error;
-    type Instance = NoAuthentication<T::Instance, C>;
+    type Instance = NoAuthentication<T::Instance, C, D>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.inner.new_service().map(|s| NoAuthentication{inner: s, marker: PhantomData})
+        self.inner.new_service().map(|s| NoAuthentication{inner: s, marker1: PhantomData, marker2: PhantomData})
     }
 }
 
-impl<T, C> hyper::server::Service for NoAuthentication<T, C>
+impl<T, C, D> hyper::server::Service for NoAuthentication<T, C, D>
     where
-        T: hyper::server::Service<Request=(Request, C), Response=Response, Error=Error>,
+        T: hyper::server::Service<Request=(Request, D), Response=Response, Error=Error>,
         C: Default,
+        D: ExtendsWith<Inner=C, Ext=XSpanIdString>,
 {
     type Request = Request;
     type Response = Response;
@@ -90,7 +94,9 @@ impl<T, C> hyper::server::Service for NoAuthentication<T, C>
     type Future = T::Future;
 
     fn call(&self, req: Self::Request) -> Self::Future {
-        self.inner.call((req, C::default()))
+        let x_span_id = XSpanIdString::get_or_generate(&req);
+        let context = D::new(C::default(), x_span_id);
+        self.inner.call((req, context))
     }
 }
 
