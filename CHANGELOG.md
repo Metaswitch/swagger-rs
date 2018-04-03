@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Start of changelog.
 
 [Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.11.0...HEAD
-[0.10.0]: https://github.com/Metaswitch/swagger-rs/compare/0.10.0...0.11.0
+[0.11.0]: https://github.com/Metaswitch/swagger-rs/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/Metaswitch/swagger-rs/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/Metaswitch/swagger-rs/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/Metaswitch/swagger-rs/compare/0.8.0...0.8.1
