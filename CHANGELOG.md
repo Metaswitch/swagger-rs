@@ -9,9 +9,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.11.0] -2018-04-04
+### Added
+-- `Has<T>` trait for specifying requirements on context types in hyper services
+-- `ExtendsWith` trait for specifying the items added to a context by a hyper middleware service
+-- `new_context_type!` macro for defining structs that can be used to build concrete context types that implement `Has` and `ExtendsWith`
+
+### Removed
+-- Old `Context` struct
+
 ## [0.10.0] - 2018-03-16
 ### Added
--- Stucts for combining multiple hyper services
+-- Structs for combining multiple hyper services
 
 ### Changed
 
@@ -45,7 +54,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.10.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.11.0...HEAD
+[0.10.0]: https://github.com/Metaswitch/swagger-rs/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/Metaswitch/swagger-rs/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/Metaswitch/swagger-rs/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/Metaswitch/swagger-rs/compare/0.8.0...0.8.1
