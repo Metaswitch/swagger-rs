@@ -117,48 +117,6 @@ where
     }
 }
 
-// macro_rules! extend_has_impls_helper {
-//     ($context_name:ident , $type:ty, $($types:ty),+ ) => {
-//         $(
-//             impl<C: Has<$type>> Has<$type> for $context_name<C, $types> {
-//                 fn set(&mut self, item: $type) {
-//                     self.inner.set(item);
-//                 }
-
-//                 fn get(&self) -> &$type {
-//                     self.inner.get()
-//                 }
-
-//                 fn get_mut(&mut self) -> &mut $type {
-//                     self.inner.get_mut()
-//                 }
-//             }
-
-//             impl<C: Has<$types>> Has<$types> for $context_name<C, $type> {
-//                 fn set(&mut self, item: $types) {
-//                     self.inner.set(item);
-//                 }
-
-//                 fn get(&self) -> &$types {
-//                     self.inner.get()
-//                 }
-
-//                 fn get_mut(&mut self) -> &mut $types {
-//                     self.inner.get_mut()
-//                 }
-//             }
-//         )+
-//     }
-// }
-
-// macro_rules! extend_has_impls {
-//     ($context_name:ident, $head:ty, $($tail:ty),+ ) => {
-//         extend_has_impls_helper!($context_name, $head, $($tail),+);
-//         extend_has_impls!($context_name, $($tail),+);
-//     };
-//     ($context_name:ident, $head:ty) => {};
-// }
-
 #[macro_export]
 macro_rules! new_context_type {
     ($context_name:ident, $($types:ty),+ ) => {
