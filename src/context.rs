@@ -168,3 +168,233 @@ where
         ContextWrapper::<Self, C>::new(self, context)
     }
 }
+
+
+#[cfg(test)]
+mod context_tests {
+    use hyper::server::{NewService, Service};
+    use hyper::{Response, Request, Error, Method, Uri};
+    use std::marker::PhantomData;
+    use std::io;
+    use std::str::FromStr;
+    use futures::future::{Future, ok};
+    use super::*;
+
+    struct ContextItem1;
+    struct ContextItem2;
+
+    fn do_something_with_item_1(_: &ContextItem1) {}
+    fn do_something_with_item_2(_: &ContextItem2) {}
+
+    struct InnerService<C>
+        where C: Has<ContextItem1> + Has<ContextItem2>,
+    {
+        marker: PhantomData<C>,
+    }
+
+    impl<C> Service for InnerService<C>
+        where C: Has<ContextItem1> + Has<ContextItem2>,
+    {
+        type Request = (Request, C);
+        type Response = Response;
+        type Error = Error;
+        type Future = Box<Future<Item=Response, Error=Error>>;
+        fn call(&self, (_, context): Self::Request) -> Self::Future {
+            do_something_with_item_1(Has::<ContextItem1>::get(&context));
+            do_something_with_item_2(Has::<ContextItem2>::get(&context));
+            Box::new(ok(Response::new()))
+        }
+    }
+
+    struct InnerNewService<C>
+        where C: Has<ContextItem1> + Has<ContextItem2>,
+    {
+        marker: PhantomData<C>,
+    }
+
+    impl<C> InnerNewService<C>
+        where C: Has<ContextItem1> + Has<ContextItem2>,
+    {
+        fn new() -> Self {
+            InnerNewService {
+                marker: PhantomData,
+            }
+        }
+    }
+
+    impl<C> NewService for InnerNewService<C>
+        where C: Has<ContextItem1> + Has<ContextItem2>,
+    {
+        type Request = (Request, C);
+        type Response = Response;
+        type Error = Error;
+        type Instance = InnerService<C>;
+        fn new_service(&self) -> Result<Self::Instance, io::Error> {
+            Ok(InnerService{marker: PhantomData})
+        }
+    }
+
+    struct MiddleService<T, C, D>
+        where
+            T: Service<Request = (Request, D)>,
+            C: Has<ContextItem1>,
+            D: ExtendsWith<Inner=C, Ext=ContextItem2>,
+
+    {
+        inner: T,
+        marker1: PhantomData<C>,
+        marker2: PhantomData<D>,
+    }
+
+    impl<T, C, D> Service for MiddleService<T, C, D>
+        where
+            T: Service<Request = (Request, D)>,
+            C: Has<ContextItem1>,
+            D: ExtendsWith<Inner=C, Ext=ContextItem2>,
+    {
+        type Request = (Request, C);
+        type Response = T::Response;
+        type Error = T::Error;
+        type Future = T::Future;
+        fn call(&self, (req, context): Self::Request) -> Self::Future {
+            do_something_with_item_1(Has::<ContextItem1>::get(&context));
+            let context = D::new(context, ContextItem2{});
+            self.inner.call((req, context))
+        }
+    }
+
+    struct MiddleNewService<T, C, D>
+        where
+            T: NewService<Request = (Request, D)>,
+            C: Has<ContextItem1>,
+            D: ExtendsWith<Inner=C, Ext=ContextItem2>,
+    {
+        inner: T,
+        marker1: PhantomData<C>,
+        marker2: PhantomData<D>,
+    }
+
+    impl<T, C, D> NewService for MiddleNewService<T, C, D>
+        where
+            T: NewService<Request = (Request, D)>,
+            C: Has<ContextItem1>,
+            D: ExtendsWith<Inner=C, Ext=ContextItem2>,
+    {
+        type Request = (Request, C);
+        type Response = T::Response;
+        type Error = T::Error;
+        type Instance = MiddleService<T::Instance, C, D>;
+        fn new_service(&self) -> Result<Self::Instance, io::Error> {
+            self.inner.new_service().map(|s| MiddleService{inner:s, marker1: PhantomData, marker2: PhantomData})
+        }
+    }
+
+    impl<T, C, D> MiddleNewService<T, C, D>
+        where
+            T: NewService<Request = (Request, D)>,
+            C: Has<ContextItem1>,
+            D: ExtendsWith<Inner=C, Ext=ContextItem2>,
+    {
+        fn new(inner: T) -> Self {
+            MiddleNewService {
+                inner,
+                marker1: PhantomData,
+                marker2:PhantomData,
+            }
+        }
+    }
+
+    struct OuterService<T, C, D>
+        where
+            T: Service<Request = (Request, D)>,
+            C: Default,
+            D: ExtendsWith<Inner=C, Ext=ContextItem1>,
+
+    {
+        inner: T,
+        marker1: PhantomData<C>,
+        marker2: PhantomData<D>,
+    }
+
+    impl<T, C, D> Service for OuterService<T, C, D>
+        where
+            T: Service<Request = (Request, D)>,
+            C: Default,
+            D: ExtendsWith<Inner=C, Ext=ContextItem1>,
+    {
+        type Request = Request;
+        type Response = T::Response;
+        type Error = T::Error;
+        type Future = T::Future;
+        fn call(&self, req : Self::Request) -> Self::Future {
+            let context = D::new(C::default(), ContextItem1 {} );
+            self.inner.call((req, context))
+        }
+    }
+
+    struct OuterNewService<T, C, D>
+        where
+            T: NewService<Request = (Request, D)>,
+            C: Default,
+            D: ExtendsWith<Inner=C, Ext=ContextItem1>,
+    {
+        inner: T,
+        marker1: PhantomData<C>,
+        marker2: PhantomData<D>,
+    }
+
+    impl<T, C, D> NewService for OuterNewService<T, C, D>
+        where
+            T: NewService<Request = (Request, D)>,
+            C: Default,
+            D: ExtendsWith<Inner=C, Ext=ContextItem1>,
+    {
+        type Request = Request;
+        type Response = T::Response;
+        type Error = T::Error;
+        type Instance = OuterService<T::Instance, C, D>;
+        fn new_service(&self) -> Result<Self::Instance, io::Error> {
+            self.inner.new_service().map(|s| OuterService{inner:s, marker1: PhantomData, marker2: PhantomData})
+        }
+    }
+
+    impl<T, C, D> OuterNewService<T, C, D>
+        where
+            T: NewService<Request = (Request, D)>,
+            C: Default,
+            D: ExtendsWith<Inner=C, Ext=ContextItem1>,
+    {
+        fn new(inner: T) -> Self {
+            OuterNewService {
+                inner,
+                marker1: PhantomData,
+                marker2:PhantomData,
+            }
+        }
+    }
+
+    new_context_type!(MyContext, ContextItem1, ContextItem2);
+
+    type Context1 = MyContext<(), ContextItem1>;
+    type Context2 = MyContext<Context1, ContextItem2>;
+
+    type NewService1 = InnerNewService<Context2>;
+    type NewService2 = MiddleNewService<NewService1, Context1, Context2>;
+    type NewService3 = OuterNewService<NewService2, (), Context1>;
+
+    #[test]
+    fn send_request() {
+
+        let new_service : NewService3 =
+            OuterNewService::new(
+                MiddleNewService::new(
+                    InnerNewService::new()
+                )
+            );
+
+        let req = Request::new(Method::Post, Uri::from_str("127.0.0.1:80").unwrap());
+        new_service
+            .new_service().expect("Failed to start new service")
+            .call(req).wait().expect("Service::call returned an error");
+    }
+}
