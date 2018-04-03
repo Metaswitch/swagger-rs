@@ -1,22 +1,37 @@
 //! Module for API context management.
 
-use hyper;
 use auth::{Authorization, AuthData};
 use std::marker::Sized;
-use super::{XSpanId, XSpanIdString};
+use super::XSpanIdString;
 
+/// Defines getters and setters for a value of a generic type.
 pub trait Has<T> {
+    /// Set the value.
     fn set(&mut self, T);
+    /// Get an immutable reference to the value.
     fn get(&self) -> &T;
+    /// Get a mutable reference to the value.
     fn get_mut(&mut self) -> &mut T;
 }
 
+/// Allows one type to act as an extension of another with an extra field added.
 pub trait ExtendsWith {
+    /// The type being extended.
     type Inner;
+
+    /// The type of the field being added.
     type Ext;
+
+    /// Create a new extended value.
     fn new(inner: Self::Inner, item: Self::Ext) -> Self;
+
+    /// Set the added field.
     fn set(&mut self, Self::Ext);
+
+    /// Get an immutable reference to the added field.
     fn get(&self) -> &Self::Ext;
+
+    /// Get a mutable reference to the added field.
     fn get_mut(&mut self) -> &mut Self::Ext;
 }
 
@@ -80,6 +95,9 @@ macro_rules! extend_has_impls {
 #[macro_export]
 macro_rules! new_context_type {
     ($context_name:ident, $($types:ty),+ ) => {
+
+        /// Wrapper type for building up contexts recursively, adding one item
+        /// to the context at a time.
         #[derive(Debug, Clone, Default)]
         pub struct $context_name<C, T> {
             inner: C,
@@ -112,6 +130,7 @@ macro_rules! new_context_type {
 
 }
 
+/// Create a default context type to export.
 new_context_type!(Context, XSpanIdString, Option<AuthData>, Option<Authorization>);
 
 

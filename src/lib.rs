@@ -48,10 +48,13 @@ header! {
     (XSpanId, "X-Span-ID") => [String]
 }
 
+/// Wrapper for a string being used as an X-Span-ID.
 #[derive(Debug, Clone, Default)]
 pub struct XSpanIdString(pub String);
 
 impl XSpanIdString {
+    /// Extract an X-Span-ID from a request header if present, and if not
+    /// generate a new one.
     pub fn get_or_generate(req: &hyper::Request) -> Self {
         XSpanIdString(
             req.headers()

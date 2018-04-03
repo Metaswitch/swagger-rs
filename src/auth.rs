@@ -71,6 +71,7 @@ where
     C: Default,
     D: ExtendsWith<Inner=C, Ext=XSpanIdString>,
 {
+    /// Create a new NoAuthentication struct wrapping a value
     pub fn new(inner: T) -> Self {
         NoAuthentication {
             inner,
