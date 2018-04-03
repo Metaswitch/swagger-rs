@@ -3,22 +3,7 @@
 use hyper;
 use auth::{Authorization, AuthData};
 use std::marker::Sized;
-use uuid::Uuid;
-use super::XSpanId;
-
-#[derive(Debug, Clone, Default)]
-pub struct XSpanIdString(pub String);
-
-impl XSpanIdString {
-    pub fn get_or_generate(req: &hyper::Request) -> Self {
-        XSpanIdString(
-            req.headers()
-            .get::<XSpanId>()
-            .map(XSpanId::to_string)
-            .unwrap_or_else(|| Uuid::new_v4().to_string())
-        )
-    }
-}
+use super::{XSpanId, XSpanIdString};
 
 pub trait Has<T> {
     fn set(&mut self, T);
@@ -33,18 +18,6 @@ pub trait ExtendsWith {
     fn set(&mut self, Self::Ext);
     fn get(&self) -> &Self::Ext;
     fn get_mut(&mut self) -> &mut Self::Ext;
-}
-
-impl<S, T> Has<S> for (S, T) {
-    fn set(&mut self, item: S) {
-        self.0 = item;
-    }
-    fn get(&self) -> &S {
-        &self.0
-    }
-    fn get_mut(&mut self) -> &mut S {
-        &mut self.0
-    }
 }
 
 impl<C, D, T> Has<T> for D

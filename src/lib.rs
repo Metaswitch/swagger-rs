@@ -34,7 +34,7 @@ pub mod auth;
 pub use auth::{Authorization, AuthData};
 
 pub mod context;
-pub use context::{Context, ContextWrapper, Has, ExtendsWith, XSpanIdString};
+pub use context::{Context, ContextWrapper, Has, ExtendsWith};
 
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
@@ -46,6 +46,26 @@ pub use composites::{GetPath, NotFound, CompositeNewService, CompositeService};
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
     (XSpanId, "X-Span-ID") => [String]
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct XSpanIdString(pub String);
+
+impl XSpanIdString {
+    pub fn get_or_generate(req: &hyper::Request) -> Self {
+        XSpanIdString(
+            req.headers()
+            .get::<XSpanId>()
+            .map(XSpanId::to_string)
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+        )
+    }
+}
+
+impl fmt::Display for XSpanIdString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
 /// Very simple error type - just holds a description of the error. This is useful for human
