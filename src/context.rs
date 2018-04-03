@@ -77,6 +77,7 @@ macro_rules! extend_has_impls {
     ($context_name:ident, $head:ty) => {};
 }
 
+#[macro_export]
 macro_rules! new_context_type {
     ($context_name:ident, $($types:ty),+ ) => {
         #[derive(Debug, Clone, Default)]
