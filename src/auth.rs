@@ -93,7 +93,7 @@ impl<T, C, D> hyper::server::NewService for NoAuthentication<T, C, D>
     type Instance = NoAuthentication<T::Instance, C, D>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.inner.new_service().map(|s| NoAuthentication::new(s))
+        self.inner.new_service().map(NoAuthentication::new)
     }
 }
 

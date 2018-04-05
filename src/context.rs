@@ -3,75 +3,42 @@
 //! This module defines traits and structs that can be used  to manage
 //! contextual data related to a request, as it is passed through a series of
 //! hyper services.
-//!
-//! `Has<T>`:
-//!
-//! Used to specify the requirements that a hyper service makes on a generic
-//! context type that it receives with a request, e.g.
-//! ```
-//! impl<C> hyper::server::Service for MyService<C>
-//!     where C: Has<MyItem>,
-//! {
-//!     type Request = (hyper::Request, C);
-//!     type Response = hyper::Response;
-//!     type Error = hyper::Error;
-//!     type Future = Box<Future<Item=Response, Error=Error>>;
-//!     fn call(&self, (req, context) : Self::Request) -> Self::Future {
-//!         do_something_with_my_item(Has::<MyItem>::get(&context));
-//!         ...
-//!     }
-//! }
-//! ```
-//!
-//! `ExtendsWith`:
-//!
-//! Used to specify what items a middleware service adds to a request context
-//! before passing it on to the wrapped service, e.g.
-//!
-//! impl<T, C, D> hyper::server::Service for MyMiddlewareService<T, C, D>
-//!     where
-//!     T: hyper::server::Service<Request=(hyper::Request, D),
-//!     D: ExtendsWith<Inner=C, Ext=MyItem>,
-//! {
-//!     type Request = (hyper::Request, C);
-//!     type Response = hyper::Response;
-//!     type Error = hyper::Error;
-//!     type Future = T::Future;
-//!     fn call(&self, (req, context) : Self::Request) -> Self::Future {
-//!         let context = D::new(context, MyItem::new());
-//!         self.inner.call((req, context));    // where self.inner: T
-//!     }
-//! }
-//!
-//! `new_context_type!`
-//! Defines a struct that can be used to build up contexts recursively by
-//! adding one item to the context at a time. The first argument is the name
-//! of the newly defined context struct, and subsequent arguments are the types
-//! that can be stored in contexts built using this struct. That is,
-//!
-//! ```
-//! # #[macro_use] extern crate swagger;
-//! struct MyType1;
-//! struct MyType2;
-//! struct MyType3;
-//! new_context_type!(MyContext, MyType1, MyType2, MyType3);
-//! # fn main() {
-//! # }
-//! ```
-//!
-//! will define a new struct `MyContext<C, T>`, which implements:
-//! - `Has<T>`,
-//! - `ExtendsWith<Inner=C, Ext=T>`,
-//! - `Has<S>` whenever `S` is one of `MyType1`, `MyType2` or `MyType3`, AND
-//!   `C` implements `Has<S>`.
-//!
-//! See the `context_tests` module for more usage examples.
 
 use auth::{Authorization, AuthData};
 use std::marker::Sized;
 use super::XSpanIdString;
 
 /// Defines getters and setters for a value of a generic type.
+///
+/// Used to specify the requirements that a hyper service makes on a generic
+/// context type that it receives with a request, e.g.
+///
+/// ```rust
+/// extern crate hyper;
+///
+/// use std::marker::PhantomData;
+/// use context::*;
+///
+/// struct MyItem;
+/// fn do_something_with_my_item(item: &MyItem) {};
+///
+/// struct MyService<C> {
+///     marker: PhantomData<C>,
+/// }
+///
+/// impl<C> hyper::server::Service for MyService<C>
+///     where C: Has<MyItem>,
+/// {
+///     type Request = (hyper::Request, C);
+///     type Response = hyper::Response;
+///     type Error = hyper::Error;
+///     type Future = Box<Future<Item=Response, Error=Error>>;
+///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
+///         do_something_with_my_item(Has::<MyItem>::get(&context));
+///         //...
+///     }
+/// }
+/// ```
 pub trait Has<T> {
     /// Set the value.
     fn set(&mut self, T);
@@ -81,7 +48,37 @@ pub trait Has<T> {
     fn get_mut(&mut self) -> &mut T;
 }
 
+
+
 /// Allows one type to act as an extension of another with an extra field added.
+///
+/// Used to specify what items a middleware service adds to a request context
+/// before passing it on to the wrapped service, e.g.
+///
+/// ```rust
+/// struct MyItem;
+///
+/// struct MyMiddlewareService<T, C, D> {
+///     inner: T,
+///     marker1: PhantomData<C>,
+///     marker2: PhantomData<D>,
+/// }
+///
+/// impl<T, C, D> hyper::server::Service for MyMiddlewareService<T, C, D>
+///     where
+///     T: hyper::server::Service<Request=(hyper::Request, D),
+///     D: ExtendsWith<Inner=C, Ext=MyItem>,
+/// {
+///     type Request = (hyper::Request, C);
+///     type Response = hyper::Response;
+///     type Error = hyper::Error;
+///     type Future = T::Future;
+///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
+///         let context = D::new(context, MyItem {});
+///         self.inner.call((req, context));
+///     }
+/// }
+///```
 pub trait ExtendsWith {
     /// The type being extended.
     type Inner;
@@ -117,6 +114,28 @@ where
     }
 }
 
+/// Defines a struct that can be used to build up contexts recursively by
+/// adding one item to the context at a time. The first argument is the name
+/// of the newly defined context struct, and subsequent arguments are the types
+/// that can be stored in contexts built using this struct. That is,
+///
+/// ```rust
+/// # #[macro_use] extern crate swagger;
+/// struct MyType1;
+/// struct MyType2;
+/// struct MyType3;
+/// new_context_type!(MyContext, MyType1, MyType2, MyType3);
+/// # fn main() {
+/// # }
+/// ```
+///
+/// will define a new struct `MyContext<C, T>`, which implements:
+/// - `Has<T>`,
+/// - `ExtendsWith<Inner=C, Ext=T>`,
+/// - `Has<S>` whenever `S` is one of `MyType1`, `MyType2` or `MyType3`, AND
+///   `C` implements `Has<S>`.
+///
+/// See the `context_tests` module for more usage examples.
 #[macro_export]
 macro_rules! new_context_type {
     ($context_name:ident, $($types:ty),+ ) => {
@@ -190,10 +209,8 @@ macro_rules! new_context_type {
     };
 }
 
-
 /// Create a default context type to export.
 new_context_type!(Context, XSpanIdString, Option<AuthData>, Option<Authorization>);
-
 
 /// Context wrapper, to bind an API with a context.
 #[derive(Debug)]
@@ -229,7 +246,6 @@ where
         ContextWrapper::<Self, C>::new(self, context)
     }
 }
-
 
 #[cfg(test)]
 mod context_tests {
