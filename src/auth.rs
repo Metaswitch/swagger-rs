@@ -5,7 +5,7 @@ use std::io;
 use std::marker::PhantomData;
 use hyper;
 use hyper::{Request, Response, Error};
-use super::{Has, ExtendsWith, XSpanIdString};
+use super::{Has, XSpanIdString};
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -59,7 +59,7 @@ pub enum AuthData {
 pub struct NoAuthentication<T, C, D>
 where
     C: Default,
-    D: ExtendsWith<Inner=C, Ext=XSpanIdString>,
+    D: Has<XSpanIdString, Remainder=C>,
 {
     inner: T,
     marker1: PhantomData<C>,
@@ -69,7 +69,7 @@ where
 impl<T, C, D> NoAuthentication<T, C, D>
 where
     C: Default,
-    D: ExtendsWith<Inner=C, Ext=XSpanIdString>,
+    D: Has<XSpanIdString, Remainder=C>,
 {
     /// Create a new NoAuthentication struct wrapping a value
     pub fn new(inner: T) -> Self {
@@ -85,7 +85,7 @@ impl<T, C, D> hyper::server::NewService for NoAuthentication<T, C, D>
     where
         T: hyper::server::NewService<Request=(Request, D), Response=Response, Error=Error>,
         C: Default,
-        D: ExtendsWith<Inner=C, Ext=XSpanIdString>,
+        D: Has<XSpanIdString, Remainder=C>,
 {
     type Request = Request;
     type Response = Response;
@@ -101,7 +101,7 @@ impl<T, C, D> hyper::server::Service for NoAuthentication<T, C, D>
     where
         T: hyper::server::Service<Request=(Request, D), Response=Response, Error=Error>,
         C: Default,
-        D: ExtendsWith<Inner=C, Ext=XSpanIdString>,
+        D: Has<XSpanIdString, Remainder=C>,
 {
     type Request = Request;
     type Response = Response;
@@ -110,7 +110,7 @@ impl<T, C, D> hyper::server::Service for NoAuthentication<T, C, D>
 
     fn call(&self, req: Self::Request) -> Self::Future {
         let x_span_id = XSpanIdString::get_or_generate(&req);
-        let context = D::new(C::default(), x_span_id);
+        let context = D::construct(x_span_id, C::default());
         self.inner.call((req, context))
     }
 }
@@ -121,7 +121,7 @@ impl<T, C, D> hyper::server::Service for NoAuthentication<T, C, D>
 pub struct AllowAllAuthenticator<T, C, D>
     where
         C: Has<Option<AuthData>>,
-        D: ExtendsWith<Inner=C, Ext=Option<Authorization>>,
+        D: Has<Option<Authorization>, Remainder=C>,
 {
     inner: T,
     subject: String,
@@ -132,7 +132,7 @@ pub struct AllowAllAuthenticator<T, C, D>
 impl<T, C, D> AllowAllAuthenticator<T, C, D>
     where
         C: Has<Option<AuthData>>,
-        D: ExtendsWith<Inner=C, Ext=Option<Authorization>>,
+        D: Has<Option<Authorization>, Remainder=C>,
 {
     /// Create a middleware that authorizes with the configured subject.
     pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T, C, D> {
@@ -149,7 +149,7 @@ impl<T, C, D> hyper::server::NewService for AllowAllAuthenticator<T, C, D>
     where
         T: hyper::server::NewService<Request=(Request, D), Response=Response, Error=Error>,
         C: Has<Option<AuthData>>,
-        D: ExtendsWith<Inner=C, Ext=Option<Authorization>>,
+        D: Has<Option<Authorization>, Remainder=C>,
 {
     type Request = (Request, C);
     type Response = Response;
@@ -165,7 +165,7 @@ impl<T, C, D> hyper::server::Service for AllowAllAuthenticator<T, C, D>
     where
         T: hyper::server::Service<Request=(Request,D), Response=Response, Error=Error>,
         C: Has<Option<AuthData>>,
-        D: ExtendsWith<Inner=C, Ext=Option<Authorization>>,
+        D: Has<Option<Authorization>, Remainder=C>,
 {
     type Request = (Request, C);
     type Response = Response;
@@ -173,13 +173,13 @@ impl<T, C, D> hyper::server::Service for AllowAllAuthenticator<T, C, D>
     type Future = T::Future;
 
     fn call(&self, (req, context): Self::Request) -> Self::Future {
-        let context = D::new(
-            context,
+        let context = D::construct(
             Some(Authorization{
                 subject: self.subject.clone(),
                 scopes: Scopes::All,
                 issuer: None,
-            })
+            }),
+            context
         );
         self.inner.call((req, context))
     }

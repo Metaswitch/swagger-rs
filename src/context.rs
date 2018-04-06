@@ -40,78 +40,18 @@ use super::XSpanIdString;
 /// }
 /// ```
 pub trait Has<T> {
+    /// The type that is left after removing the T value.
+    type Remainder;
     /// Set the value.
     fn set(&mut self, T);
     /// Get an immutable reference to the value.
     fn get(&self) -> &T;
     /// Get a mutable reference to the value.
     fn get_mut(&mut self) -> &mut T;
-}
-
-
-
-/// Allows one type to act as an extension of another with an extra field added.
-///
-/// Used to specify what items a middleware service adds to a request context
-/// before passing it on to the wrapped service, e.g.
-///
-/// ```rust
-/// struct MyItem;
-///
-/// struct MyMiddlewareService<T, C, D> {
-///     inner: T,
-///     marker1: PhantomData<C>,
-///     marker2: PhantomData<D>,
-/// }
-///
-/// impl<T, C, D> hyper::server::Service for MyMiddlewareService<T, C, D>
-///     where
-///     T: hyper::server::Service<Request=(hyper::Request, D),
-///     D: ExtendsWith<Inner=C, Ext=MyItem>,
-/// {
-///     type Request = (hyper::Request, C);
-///     type Response = hyper::Response;
-///     type Error = hyper::Error;
-///     type Future = T::Future;
-///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
-///         let context = D::new(context, MyItem {});
-///         self.inner.call((req, context));
-///     }
-/// }
-///```
-pub trait ExtendsWith {
-    /// The type being extended.
-    type Inner;
-
-    /// The type of the field being added.
-    type Ext;
-
-    /// Create a new extended value.
-    fn new(inner: Self::Inner, item: Self::Ext) -> Self;
-
-    /// Set the added field.
-    fn set(&mut self, Self::Ext);
-
-    /// Get an immutable reference to the added field.
-    fn get(&self) -> &Self::Ext;
-
-    /// Get a mutable reference to the added field.
-    fn get_mut(&mut self) -> &mut Self::Ext;
-}
-
-impl<C, D, T> Has<T> for D
-where
-    D: ExtendsWith<Inner = C, Ext = T>,
-{
-    fn set(&mut self, item: T) {
-        ExtendsWith::set(self, item);
-    }
-    fn get(&self) -> &T {
-        ExtendsWith::get(self)
-    }
-    fn get_mut(&mut self) -> &mut T {
-        ExtendsWith::get_mut(self)
-    }
+    /// Split into a the value and the remainder.
+    fn deconstruct(self) -> (T, Self::Remainder);
+    /// Constructor out of a value and remainder.
+    fn construct(T, Self::Remainder) -> Self;
 }
 
 /// Defines a struct that can be used to build up contexts recursively by
@@ -143,29 +83,32 @@ macro_rules! new_context_type {
         /// Wrapper type for building up contexts recursively, adding one item
         /// to the context at a time.
         #[derive(Debug, Clone, Default)]
-        pub struct $context_name<C, T> {
-            inner: C,
-            item: T,
+        pub struct $context_name<T, C> {
+            head: T,
+            tail: C,
         }
 
-        impl<C, T> $crate::ExtendsWith for $context_name<C, T> {
-            type Inner = C;
-            type Ext = T;
+        impl<T, C> Has<T> for $context_name<T, C> {
+            type Remainder = C;
 
-            fn new(inner: C, item: T) -> Self {
-                $context_name { inner, item }
+            fn set(&mut self, item: T) {
+                self.head = item;
             }
 
-            fn set(&mut self, item: Self::Ext) {
-                self.item = item;
+            fn get(&self) -> &T {
+                &self.head
             }
 
-            fn get(&self) -> &Self::Ext {
-                &self.item
+            fn get_mut(&mut self) -> &mut T {
+                &mut self.head
             }
 
-            fn get_mut(&mut self) -> &mut Self::Ext {
-                &mut self.item
+            fn deconstruct(self) -> (T, Self::Remainder){
+                (self.head, self.tail)
+            }
+
+            fn construct(item: T, remainder: Self::Remainder) -> Self {
+                $context_name{ head: item, tail: remainder}
             }
         }
 
@@ -178,31 +121,53 @@ macro_rules! new_context_type {
     (impl extend_has $context_name:ident, $head:ty) => {};
     (impl extend_has_helper $context_name:ident , $type:ty, $($types:ty),+ ) => {
         $(
-            impl<C: $crate::Has<$type>> $crate::Has<$type> for $context_name<C, $types> {
+            impl<C: $crate::Has<$type>> $crate::Has<$type> for $context_name<$types, C> {
+                type Remainder = $context_name<$types, C::Remainder>;
+
                 fn set(&mut self, item: $type) {
-                    self.inner.set(item);
+                    self.tail.set(item);
                 }
 
                 fn get(&self) -> &$type {
-                    self.inner.get()
+                    self.tail.get()
                 }
 
                 fn get_mut(&mut self) -> &mut $type {
-                    self.inner.get_mut()
+                    self.tail.get_mut()
+                }
+
+                fn deconstruct(self) -> ($type, Self::Remainder) {
+                    let (item, remainder) = self.tail.deconstruct();
+                    (item, $context_name { head: self.head, tail: remainder})
+                }
+
+                fn construct(item: $type, remainder: Self::Remainder) -> Self {
+                    $context_name { head: remainder.head, tail: C::construct(item, remainder.tail)}
                 }
             }
 
-            impl<C: $crate::Has<$types>> $crate::Has<$types> for $context_name<C, $type> {
+            impl<C: $crate::Has<$types>> $crate::Has<$types> for $context_name<$type, C> {
+                type Remainder = $context_name<$type, C::Remainder>;
+
                 fn set(&mut self, item: $types) {
-                    self.inner.set(item);
+                    self.tail.set(item);
                 }
 
                 fn get(&self) -> &$types {
-                    self.inner.get()
+                    self.tail.get()
                 }
 
                 fn get_mut(&mut self) -> &mut $types {
-                    self.inner.get_mut()
+                    self.tail.get_mut()
+                }
+
+                fn deconstruct(self) -> ($types, Self::Remainder) {
+                    let (item, remainder) = self.tail.deconstruct();
+                    (item, $context_name { head: self.head, tail: remainder})
+                }
+
+                fn construct(item: $types, remainder: Self::Remainder) -> Self {
+                    $context_name { head: remainder.head, tail: C::construct(item, remainder.tail)}
                 }
             }
         )+
@@ -315,7 +280,7 @@ mod context_tests {
         where
             T: Service<Request = (Request, D)>,
             C: Has<ContextItem1>,
-            D: ExtendsWith<Inner=C, Ext=ContextItem2>,
+            D: Has<ContextItem2, Remainder=C>,
 
     {
         inner: T,
@@ -327,7 +292,7 @@ mod context_tests {
         where
             T: Service<Request = (Request, D)>,
             C: Has<ContextItem1>,
-            D: ExtendsWith<Inner=C, Ext=ContextItem2>,
+            D: Has<ContextItem2, Remainder=C>,
     {
         type Request = (Request, C);
         type Response = T::Response;
@@ -335,7 +300,7 @@ mod context_tests {
         type Future = T::Future;
         fn call(&self, (req, context): Self::Request) -> Self::Future {
             do_something_with_item_1(Has::<ContextItem1>::get(&context));
-            let context = D::new(context, ContextItem2{});
+            let context = D::construct(ContextItem2{}, context);
             self.inner.call((req, context))
         }
     }
@@ -344,7 +309,7 @@ mod context_tests {
         where
             T: NewService<Request = (Request, D)>,
             C: Has<ContextItem1>,
-            D: ExtendsWith<Inner=C, Ext=ContextItem2>,
+            D: Has<ContextItem2, Remainder=C>,
     {
         inner: T,
         marker1: PhantomData<C>,
@@ -355,7 +320,7 @@ mod context_tests {
         where
             T: NewService<Request = (Request, D)>,
             C: Has<ContextItem1>,
-            D: ExtendsWith<Inner=C, Ext=ContextItem2>,
+            D: Has<ContextItem2, Remainder=C>,
     {
         type Request = (Request, C);
         type Response = T::Response;
@@ -370,7 +335,7 @@ mod context_tests {
         where
             T: NewService<Request = (Request, D)>,
             C: Has<ContextItem1>,
-            D: ExtendsWith<Inner=C, Ext=ContextItem2>,
+            D: Has<ContextItem2, Remainder=C>,
     {
         fn new(inner: T) -> Self {
             MiddleNewService {
@@ -385,7 +350,7 @@ mod context_tests {
         where
             T: Service<Request = (Request, D)>,
             C: Default,
-            D: ExtendsWith<Inner=C, Ext=ContextItem1>,
+            D: Has<ContextItem1, Remainder=C>,
 
     {
         inner: T,
@@ -397,14 +362,14 @@ mod context_tests {
         where
             T: Service<Request = (Request, D)>,
             C: Default,
-            D: ExtendsWith<Inner=C, Ext=ContextItem1>,
+            D: Has<ContextItem1, Remainder=C>,
     {
         type Request = Request;
         type Response = T::Response;
         type Error = T::Error;
         type Future = T::Future;
         fn call(&self, req : Self::Request) -> Self::Future {
-            let context = D::new(C::default(), ContextItem1 {} );
+            let context = D::construct(ContextItem1 {}, C::default() );
             self.inner.call((req, context))
         }
     }
@@ -413,7 +378,7 @@ mod context_tests {
         where
             T: NewService<Request = (Request, D)>,
             C: Default,
-            D: ExtendsWith<Inner=C, Ext=ContextItem1>,
+            D: Has<ContextItem1, Remainder=C>,
     {
         inner: T,
         marker1: PhantomData<C>,
@@ -424,7 +389,7 @@ mod context_tests {
         where
             T: NewService<Request = (Request, D)>,
             C: Default,
-            D: ExtendsWith<Inner=C, Ext=ContextItem1>,
+            D: Has<ContextItem1, Remainder=C>,
     {
         type Request = Request;
         type Response = T::Response;
@@ -439,7 +404,7 @@ mod context_tests {
         where
             T: NewService<Request = (Request, D)>,
             C: Default,
-            D: ExtendsWith<Inner=C, Ext=ContextItem1>,
+            D: Has<ContextItem1, Remainder=C>,
     {
         fn new(inner: T) -> Self {
             OuterNewService {
