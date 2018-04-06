@@ -121,7 +121,7 @@ impl<T, C, D> hyper::server::Service for NoAuthentication<T, C, D>
 pub struct AllowAllAuthenticator<T, C, D>
 where
     C: Has<Option<AuthData>>,
-    D: Has<Option<Authorization>, Remainder = C>,
+    D: Has<Option<Authorization>, Remainder = C::Remainder>,
 {
     inner: T,
     subject: String,
@@ -132,7 +132,7 @@ where
 impl<T, C, D> AllowAllAuthenticator<T, C, D>
 where
     C: Has<Option<AuthData>>,
-    D: Has<Option<Authorization>, Remainder = C>,
+    D: Has<Option<Authorization>, Remainder = C::Remainder>,
 {
     /// Create a middleware that authorizes with the configured subject.
     pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T, C, D> {
@@ -149,7 +149,7 @@ impl<T, C, D> hyper::server::NewService for AllowAllAuthenticator<T, C, D>
     where
         T: hyper::server::NewService<Request=(Request, D), Response=Response, Error=Error>,
         C: Has<Option<AuthData>>,
-        D: Has<Option<Authorization>, Remainder=C>,
+        D: Has<Option<Authorization>, Remainder = C::Remainder>,
 {
     type Request = (Request, C);
     type Response = Response;
@@ -165,7 +165,7 @@ impl<T, C, D> hyper::server::Service for AllowAllAuthenticator<T, C, D>
     where
         T: hyper::server::Service<Request=(Request,D), Response=Response, Error=Error>,
         C: Has<Option<AuthData>>,
-        D: Has<Option<Authorization>, Remainder=C>,
+        D: Has<Option<Authorization>, Remainder = C::Remainder>,
 {
     type Request = (Request, C);
     type Response = Response;
@@ -173,6 +173,8 @@ impl<T, C, D> hyper::server::Service for AllowAllAuthenticator<T, C, D>
     type Future = T::Future;
 
     fn call(&self, (req, context): Self::Request) -> Self::Future {
+        let (_auth_data, context) = context.deconstruct();
+
         let context = D::construct(
             Some(Authorization{
                 subject: self.subject.clone(),
