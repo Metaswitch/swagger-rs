@@ -58,9 +58,9 @@ impl XSpanIdString {
     pub fn get_or_generate(req: &hyper::Request) -> Self {
         XSpanIdString(
             req.headers()
-            .get::<XSpanId>()
-            .map(XSpanId::to_string)
-            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+                .get::<XSpanId>()
+                .map(XSpanId::to_string)
+                .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
         )
     }
 }

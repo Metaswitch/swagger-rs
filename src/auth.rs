@@ -59,7 +59,7 @@ pub enum AuthData {
 pub struct NoAuthentication<T, C, D>
 where
     C: Default,
-    D: Has<XSpanIdString, Remainder=C>,
+    D: Has<XSpanIdString, Remainder = C>,
 {
     inner: T,
     marker1: PhantomData<C>,
@@ -69,7 +69,7 @@ where
 impl<T, C, D> NoAuthentication<T, C, D>
 where
     C: Default,
-    D: Has<XSpanIdString, Remainder=C>,
+    D: Has<XSpanIdString, Remainder = C>,
 {
     /// Create a new NoAuthentication struct wrapping a value
     pub fn new(inner: T) -> Self {
@@ -119,9 +119,9 @@ impl<T, C, D> hyper::server::Service for NoAuthentication<T, C, D>
 /// access to an endpoint with the specified subject.
 #[derive(Debug)]
 pub struct AllowAllAuthenticator<T, C, D>
-    where
-        C: Has<Option<AuthData>>,
-        D: Has<Option<Authorization>, Remainder=C>,
+where
+    C: Has<Option<AuthData>>,
+    D: Has<Option<Authorization>, Remainder = C>,
 {
     inner: T,
     subject: String,
@@ -130,9 +130,9 @@ pub struct AllowAllAuthenticator<T, C, D>
 }
 
 impl<T, C, D> AllowAllAuthenticator<T, C, D>
-    where
-        C: Has<Option<AuthData>>,
-        D: Has<Option<Authorization>, Remainder=C>,
+where
+    C: Has<Option<AuthData>>,
+    D: Has<Option<Authorization>, Remainder = C>,
 {
     /// Create a middleware that authorizes with the configured subject.
     pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T, C, D> {
