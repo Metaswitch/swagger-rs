@@ -478,7 +478,6 @@ mod context_tests {
                 }
             })
         }
-
     }
 
     impl<T, D> OuterNewService<T, D>
