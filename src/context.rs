@@ -221,6 +221,9 @@ macro_rules! new_context_type {
 /// Create a default context type to export.
 new_context_type!(Context, XSpanIdString, Option<AuthData>, Option<Authorization>);
 
+/// Macro for easily defining context types. The first argument should be a
+/// context type created with `new_context_type!` and subsequent arguments are the
+/// types to be stored in the context, with the outermost first.
 #[macro_export]
 macro_rules! make_context_ty {
     ($context_name:ident, $type:ty $(, $types:ty)* $(,)* ) => {
@@ -231,6 +234,9 @@ macro_rules! make_context_ty {
     };
 }
 
+/// Macro for easily defining context values. The first argument should be a
+/// context type created with `new_context_type!` and subsequent arguments are the
+/// values to be stored in the context, with the outermost first.
 #[macro_export]
 macro_rules! make_context {
     ($context_name:ident, $value:expr $(, $values:expr)* $(,)*) => {
@@ -491,8 +497,8 @@ mod context_tests {
 
     new_context_type!(MyContext, ContextItem1, ContextItem2);
 
-    type Context1 = MyContext<ContextItem1, ()>;
-    type Context2 = MyContext<ContextItem2, ()>;
+    type Context1 = make_context_ty!(MyContext, ContextItem1);
+    type Context2 = make_context_ty!(MyContext, ContextItem2);
 
     type NewService1 = InnerNewService<Context2>;
     type NewService2 = MiddleNewService<NewService1, Context1, Context2>;
