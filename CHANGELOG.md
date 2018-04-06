@@ -11,9 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.11.0] -2018-04-04
 ### Added
--- `Has<T>` trait for specifying requirements on context types in hyper services
--- `ExtendsWith` trait for specifying the items added to a context by a hyper middleware service
--- `new_context_type!` macro for defining structs that can be used to build concrete context types that implement `Has` and `ExtendsWith`
+-- `Has<T>` trait for specifying requirements on context types in hyper services, and providing methods for manipulating them
+-- `new_context_type!` macro for defining structs that can be used to build concrete context types that implement `Has`
+-- `make_context!` and `make_context_ty!` for conveniently creating contexts at value and type level
 
 ### Removed
 -- Old `Context` struct
