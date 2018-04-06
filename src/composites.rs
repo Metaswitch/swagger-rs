@@ -87,15 +87,15 @@ where
 /// base path is a prefix of the request path.
 ///
 /// Usage:
-/// ```
-/// let my_new_service1 = ...
-/// let my_new_service2 = ...
+/// ```ignore
+/// let my_new_service1 = NewService1::new();
+/// let my_new_service2 = NewService2::new();
 ///
 /// let mut composite_new_service = CompositeNewService::new();
 /// composite_new_service.push(("/base/path/1", my_new_service1));
 /// composite_new_service.push(("/base/path/2", my_new_service2));
 ///
-/// <use as you would any `NewService` instance>
+/// // use as you would any `NewService` instance
 /// ```
 #[derive(Default)]
 pub struct CompositeNewService<U, V, W>(CompositeNewServiceVec<U, V, W>)
