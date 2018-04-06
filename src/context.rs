@@ -221,6 +221,26 @@ macro_rules! new_context_type {
 /// Create a default context type to export.
 new_context_type!(Context, XSpanIdString, Option<AuthData>, Option<Authorization>);
 
+#[macro_export]
+macro_rules! make_context_ty {
+    ($context_name:ident, $type:ty $(, $types:ty)* $(,)* ) => {
+        $context_name<$type, make_context_ty!($context_name, $($types),*)>
+    };
+    ($context_name:ident $(,)* ) => {
+        ()
+    };
+}
+
+#[macro_export]
+macro_rules! make_context {
+    ($context_name:ident, $value:expr $(, $values:expr)* $(,)*) => {
+        $context_name::construct($value, make_context!($context_name, $($values),*))
+    };
+    ($context_name:ident $(,)* ) => {
+        ()
+    };
+}
+
 /// Context wrapper, to bind an API with a context.
 #[derive(Debug)]
 pub struct ContextWrapper<'a, T: 'a, C> {
@@ -452,6 +472,7 @@ mod context_tests {
                 }
             })
         }
+
     }
 
     impl<T, D> OuterNewService<T, D>
