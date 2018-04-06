@@ -417,8 +417,8 @@ mod context_tests {
 
     new_context_type!(MyContext, ContextItem1, ContextItem2);
 
-    type Context1 = MyContext<(), ContextItem1>;
-    type Context2 = MyContext<Context1, ContextItem2>;
+    type Context1 = MyContext<ContextItem1, ()>;
+    type Context2 = MyContext<ContextItem2, Context1>;
 
     type NewService1 = InnerNewService<Context2>;
     type NewService2 = MiddleNewService<NewService1, Context1, Context2>;
