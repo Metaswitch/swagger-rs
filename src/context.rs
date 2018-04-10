@@ -251,7 +251,7 @@ macro_rules! make_context_ty {
 #[macro_export]
 macro_rules! make_context {
     ($context_name:ident, $empty_context_name:ident, $value:expr $(, $values:expr)* $(,)*) => {
-        $context_name{ head: $value, tail: make_context!($context_name, $empty_context_name, $($values),*)}
+        make_context!($context_name, $empty_context_name, $($values),*).push($value)
     };
     ($context_name:ident, $empty_context_name:ident $(,)* ) => {
         $empty_context_name::default()
