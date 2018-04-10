@@ -253,7 +253,7 @@ macro_rules! make_context {
     ($context_name:ident, $empty_context_name:ident, $value:expr $(, $values:expr)* $(,)*) => {
         $context_name::construct($value, make_context!($context_name, $($values),*))
     };
-    ($context_name:ident $empty_context_name:ident, $(,)* ) => {
+    ($context_name:ident, $empty_context_name:ident $(,)* ) => {
         $empty_context_name::default()
     };
 }
