@@ -5,7 +5,7 @@ use std::io;
 use std::marker::PhantomData;
 use hyper;
 use hyper::{Request, Response, Error};
-use super::{Has, XSpanIdString};
+use super::{Has, Pop, Push, XSpanIdString};
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -56,52 +56,47 @@ pub enum AuthData {
 /// No Authenticator, that does not insert any authorization data, denying all
 /// access to endpoints that require authentication.
 #[derive(Debug)]
-pub struct NoAuthentication<T, C, D>
+pub struct NoAuthentication<T, C>
 where
-    C: Default,
-    D: Has<XSpanIdString, Remainder = C>,
+    C: Default + Push<XSpanIdString>,
 {
     inner: T,
     marker1: PhantomData<C>,
-    marker2: PhantomData<D>,
 }
 
-impl<T, C, D> NoAuthentication<T, C, D>
+impl<T, C> NoAuthentication<T, C>
 where
-    C: Default,
-    D: Has<XSpanIdString, Remainder = C>,
+    C: Default + Push<XSpanIdString>,
 {
     /// Create a new NoAuthentication struct wrapping a value
     pub fn new(inner: T) -> Self {
         NoAuthentication {
             inner,
             marker1: PhantomData,
-            marker2: PhantomData,
         }
     }
 }
 
-impl<T, C, D> hyper::server::NewService for NoAuthentication<T, C, D>
+impl<T, C> hyper::server::NewService for NoAuthentication<T, C>
     where
-        T: hyper::server::NewService<Request=(Request, D), Response=Response, Error=Error>,
-        C: Default,
-        D: Has<XSpanIdString, Remainder=C>,
+        C: Default + Push<XSpanIdString>,
+        T: hyper::server::NewService<Request=(Request, C::Result), Response=Response, Error=Error>,
+
 {
     type Request = Request;
     type Response = Response;
     type Error = Error;
-    type Instance = NoAuthentication<T::Instance, C, D>;
+    type Instance = NoAuthentication<T::Instance, C>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
         self.inner.new_service().map(NoAuthentication::new)
     }
 }
 
-impl<T, C, D> hyper::server::Service for NoAuthentication<T, C, D>
+impl<T, C> hyper::server::Service for NoAuthentication<T, C>
     where
-        T: hyper::server::Service<Request=(Request, D), Response=Response, Error=Error>,
-        C: Default,
-        D: Has<XSpanIdString, Remainder=C>,
+        C: Default + Push<XSpanIdString>,
+        T: hyper::server::Service<Request=(Request, C::Result), Response=Response, Error=Error>,
 {
     type Request = Request;
     type Response = Response;
@@ -110,7 +105,7 @@ impl<T, C, D> hyper::server::Service for NoAuthentication<T, C, D>
 
     fn call(&self, req: Self::Request) -> Self::Future {
         let x_span_id = XSpanIdString::get_or_generate(&req);
-        let context = D::construct(x_span_id, C::default());
+        let context = C::default().push(x_span_id);
         self.inner.call((req, context))
     }
 }
@@ -118,54 +113,53 @@ impl<T, C, D> hyper::server::Service for NoAuthentication<T, C, D>
 /// Dummy Authenticator, that blindly inserts authorization data, allowing all
 /// access to an endpoint with the specified subject.
 #[derive(Debug)]
-pub struct AllowAllAuthenticator<T, C, D>
+pub struct AllowAllAuthenticator<T, C>
 where
-    C: Has<Option<AuthData>>,
-    D: Has<Option<Authorization>, Remainder = C::Remainder>,
+    C: Pop<Option<AuthData>>,
+    C::Result : Push<Option<Authorization>>,
 {
     inner: T,
     subject: String,
     marker1: PhantomData<C>,
-    marker2: PhantomData<D>,
 }
 
-impl<T, C, D> AllowAllAuthenticator<T, C, D>
+impl<T, C> AllowAllAuthenticator<T, C>
 where
-    C: Has<Option<AuthData>>,
-    D: Has<Option<Authorization>, Remainder = C::Remainder>,
+    C: Pop<Option<AuthData>>,
+    C::Result : Push<Option<Authorization>>,
 {
     /// Create a middleware that authorizes with the configured subject.
-    pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T, C, D> {
+    pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T, C> {
         AllowAllAuthenticator {
             inner,
             subject: subject.into(),
             marker1: PhantomData,
-            marker2: PhantomData,
         }
     }
 }
 
-impl<T, C, D> hyper::server::NewService for AllowAllAuthenticator<T, C, D>
+impl<T, C> hyper::server::NewService for AllowAllAuthenticator<T, C>
     where
-        T: hyper::server::NewService<Request=(Request, D), Response=Response, Error=Error>,
-        C: Has<Option<AuthData>>,
-        D: Has<Option<Authorization>, Remainder = C::Remainder>,
+        C: Pop<Option<AuthData>>,
+        C::Result : Push<Option<Authorization>>,
+        T: hyper::server::NewService<Request=(Request, <C::Result as Push<Option<Authorization>>>::Result), Response=Response, Error=Error>,
+
 {
     type Request = (Request, C);
     type Response = Response;
     type Error = Error;
-    type Instance = AllowAllAuthenticator<T::Instance, C, D>;
+    type Instance = AllowAllAuthenticator<T::Instance, C>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
         self.inner.new_service().map(|s| AllowAllAuthenticator::new(s, self.subject.clone()))
     }
 }
 
-impl<T, C, D> hyper::server::Service for AllowAllAuthenticator<T, C, D>
+impl<T, C> hyper::server::Service for AllowAllAuthenticator<T, C>
     where
-        T: hyper::server::Service<Request=(Request,D), Response=Response, Error=Error>,
-        C: Has<Option<AuthData>>,
-        D: Has<Option<Authorization>, Remainder = C::Remainder>,
+        C: Pop<Option<AuthData>>,
+        C::Result : Push<Option<Authorization>>,
+        T: hyper::server::Service<Request=(Request, <C::Result as Push<Option<Authorization>>>::Result), Response=Response, Error=Error>,
 {
     type Request = (Request, C);
     type Response = Response;
@@ -173,16 +167,14 @@ impl<T, C, D> hyper::server::Service for AllowAllAuthenticator<T, C, D>
     type Future = T::Future;
 
     fn call(&self, (req, context): Self::Request) -> Self::Future {
-        let (_auth_data, context) = context.deconstruct();
+        let (_auth_data, context) = context.pop();
 
-        let context = D::construct(
+        let context = context.push(
             Some(Authorization{
                 subject: self.subject.clone(),
                 scopes: Scopes::All,
                 issuer: None,
-            }),
-            context
-        );
+            }));
         self.inner.call((req, context))
     }
 }

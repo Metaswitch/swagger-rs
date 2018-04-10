@@ -8,10 +8,9 @@ use auth::{Authorization, AuthData};
 use std::marker::Sized;
 use super::XSpanIdString;
 
-/// Defines getters and setters for a value of a generic type.
-///
-/// Used to specify the requirements that a hyper service makes on a generic
-/// context type that it receives with a request, e.g.
+/// Defines methods for accessing, modifying, adding and removing the data stored
+/// in a context. Used to specify the requirements that a hyper service makes on
+/// a generic context type that it receives with a request, e.g.
 ///
 /// ```rust
 /// # extern crate hyper;
@@ -45,18 +44,22 @@ use super::XSpanIdString;
 /// # fn main() {}
 /// ```
 pub trait Has<T> {
-    /// The type that is left after removing the T value.
-    type Remainder;
-    /// Set the value.
-    fn set(&mut self, T);
     /// Get an immutable reference to the value.
     fn get(&self) -> &T;
-    /// Get a mutable reference to the value.
-    fn get_mut(&mut self) -> &mut T;
     /// Split into a the value and the remainder.
-    fn deconstruct(self) -> (T, Self::Remainder);
-    /// Constructor out of a value and remainder.
-    fn construct(T, Self::Remainder) -> Self;
+    fn get_mut(&mut self) -> &mut T;
+    /// Set the value.
+    fn set(&mut self, value: T);
+}
+
+pub trait Pop<T> {
+    type Result;
+    fn pop(self) -> (T, Self::Result);
+}
+
+pub trait Push<T> {
+    type Result;
+    fn push(self, T) -> Self::Result;
 }
 
 /// Defines a struct that can be used to build up contexts recursively by
@@ -122,7 +125,7 @@ pub trait Has<T> {
 /// See the `context_tests` module for more usage examples.
 #[macro_export]
 macro_rules! new_context_type {
-    ($context_name:ident, $($types:ty),+ ) => {
+    ($context_name:ident, $empty_context_name:ident, $($types:ty),+ ) => {
 
         /// Wrapper type for building up contexts recursively, adding one item
         /// to the context at a time.
@@ -132,9 +135,17 @@ macro_rules! new_context_type {
             tail: C,
         }
 
-        impl<T, C> $crate::Has<T> for $context_name<T, C> {
-            type Remainder = C;
+        #[derive(Debug, Clone, Default)]
+        pub struct $empty_context_name;
 
+        impl<U> $crate::Push<U> for $empty_context_name {
+            type Result = $context_name<U, Self>;
+            fn push(self, item: U) -> Self::Result {
+                $context_name{head: item, tail: Self::default()}
+            }
+        }
+
+        impl<T, C> $crate::Has<T> for $context_name<T, C> {
             fn set(&mut self, item: T) {
                 self.head = item;
             }
@@ -146,28 +157,32 @@ macro_rules! new_context_type {
             fn get_mut(&mut self) -> &mut T {
                 &mut self.head
             }
+        }
 
-            fn deconstruct(self) -> (T, Self::Remainder){
+        impl<T, C> $crate::Pop<T> for $context_name<T, C> {
+            type Result = C;
+            fn pop(self) -> (T, Self::Result) {
                 (self.head, self.tail)
-            }
-
-            fn construct(item: T, remainder: Self::Remainder) -> Self {
-                $context_name{ head: item, tail: remainder}
             }
         }
 
-        new_context_type!(impl extend_has $context_name, $($types),+);
+        impl<C, T, U> $crate::Push<U> for $context_name<T, C> {
+            type Result = $context_name<U, Self>;
+            fn push(self, item: U) -> Self::Result {
+                $context_name{head: item, tail: self}
+            }
+        }
+
+        new_context_type!(impl extend_has $context_name, $empty_context_name, $($types),+);
     };
-    (impl extend_has $context_name:ident, $head:ty, $($tail:ty),+ ) => {
-        new_context_type!(impl extend_has_helper $context_name, $head, $($tail),+);
-        new_context_type!(impl extend_has $context_name, $($tail),+);
+    (impl extend_has $context_name:ident, $empty_context_name:ident, $head:ty, $($tail:ty),+ ) => {
+        new_context_type!(impl extend_has_helper $context_name, $empty_context_name, $head, $($tail),+);
+        new_context_type!(impl extend_has $context_name, $empty_context_name, $($tail),+);
     };
-    (impl extend_has $context_name:ident, $head:ty) => {};
-    (impl extend_has_helper $context_name:ident , $type:ty, $($types:ty),+ ) => {
+    (impl extend_has $context_name:ident, $empty_context_name:ident, $head:ty) => {};
+    (impl extend_has_helper $context_name:ident , $empty_context_name:ident, $type:ty, $($types:ty),+ ) => {
         $(
             impl<C: $crate::Has<$type>> $crate::Has<$type> for $context_name<$types, C> {
-                type Remainder = $context_name<$types, C::Remainder>;
-
                 fn set(&mut self, item: $type) {
                     self.tail.set(item);
                 }
@@ -179,20 +194,9 @@ macro_rules! new_context_type {
                 fn get_mut(&mut self) -> &mut $type {
                     self.tail.get_mut()
                 }
-
-                fn deconstruct(self) -> ($type, Self::Remainder) {
-                    let (item, remainder) = self.tail.deconstruct();
-                    (item, $context_name { head: self.head, tail: remainder})
-                }
-
-                fn construct(item: $type, remainder: Self::Remainder) -> Self {
-                    $context_name { head: remainder.head, tail: C::construct(item, remainder.tail)}
-                }
             }
 
             impl<C: $crate::Has<$types>> $crate::Has<$types> for $context_name<$type, C> {
-                type Remainder = $context_name<$type, C::Remainder>;
-
                 fn set(&mut self, item: $types) {
                     self.tail.set(item);
                 }
@@ -204,14 +208,21 @@ macro_rules! new_context_type {
                 fn get_mut(&mut self) -> &mut $types {
                     self.tail.get_mut()
                 }
+            }
 
-                fn deconstruct(self) -> ($types, Self::Remainder) {
-                    let (item, remainder) = self.tail.deconstruct();
-                    (item, $context_name { head: self.head, tail: remainder})
+            impl<C> $crate::Pop<$type> for $context_name<$types, C> where C: Pop<$type> {
+                type Result = $context_name<$types, C::Result>;
+                fn pop(self) -> ($type, Self::Result) {
+                    let (value, tail) = self.tail.pop();
+                    (value, $context_name{ head: self.head, tail: tail})
                 }
+            }
 
-                fn construct(item: $types, remainder: Self::Remainder) -> Self {
-                    $context_name { head: remainder.head, tail: C::construct(item, remainder.tail)}
+            impl<C> $crate::Pop<$types> for $context_name<$type, C> where C: Pop<$types> {
+                type Result = $context_name<$type, C::Result>;
+                fn pop(self) -> ($types, Self::Result) {
+                    let (value, tail) = self.tail.pop();
+                    (value, $context_name{ head: self.head, tail: tail})
                 }
             }
         )+
@@ -219,18 +230,18 @@ macro_rules! new_context_type {
 }
 
 /// Create a default context type to export.
-new_context_type!(Context, XSpanIdString, Option<AuthData>, Option<Authorization>);
+new_context_type!(Context, EmpContext, XSpanIdString, Option<AuthData>, Option<Authorization>);
 
 /// Macro for easily defining context types. The first argument should be a
 /// context type created with `new_context_type!` and subsequent arguments are the
 /// types to be stored in the context, with the outermost first.
 #[macro_export]
 macro_rules! make_context_ty {
-    ($context_name:ident, $type:ty $(, $types:ty)* $(,)* ) => {
-        $context_name<$type, make_context_ty!($context_name, $($types),*)>
+    ($context_name:ident, $empty_context_name:ident, $type:ty $(, $types:ty)* $(,)* ) => {
+        $context_name<$type, make_context_ty!($context_name, $empty_context_name, $($types),*)>
     };
-    ($context_name:ident $(,)* ) => {
-        ()
+    ($context_name:ident, $empty_context_name:ident $(,)* ) => {
+        $empty_context_name
     };
 }
 
@@ -243,7 +254,7 @@ macro_rules! make_context {
         $context_name::construct($value, make_context!($context_name, $($values),*))
     };
     ($context_name:ident $(,)* ) => {
-        ()
+        $empty_context_name::default()
     };
 }
 
@@ -348,128 +359,120 @@ mod context_tests {
         }
     }
 
-    struct MiddleService<T, C, D>
+    struct MiddleService<T, C>
     where
-        T: Service<Request = (Request, D)>,
-        D: Has<ContextItem2>,
-        C: Has<ContextItem1, Remainder = D::Remainder>,
+        C: Pop<ContextItem1>,
+        C::Result : Push<ContextItem2>,
+        T: Service<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
     {
         inner: T,
         marker1: PhantomData<C>,
-        marker2: PhantomData<D>,
     }
 
-    impl<T, C, D> Service for MiddleService<T, C, D>
+    impl<T, C> Service for MiddleService<T, C>
     where
-        T: Service<Request = (Request, D)>,
-        D: Has<ContextItem2>,
-        C: Has<ContextItem1, Remainder = D::Remainder>,
+        C: Pop<ContextItem1>,
+        C::Result : Push<ContextItem2>,
+        T: Service<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
     {
         type Request = (Request, C);
         type Response = T::Response;
         type Error = T::Error;
         type Future = T::Future;
         fn call(&self, (req, context): Self::Request) -> Self::Future {
-            let (item, remainder) = context.deconstruct();
+            let (item, context) = context.pop();
             do_something_with_item_1(&item);
-            let context = D::construct(ContextItem2 {}, remainder);
+            let context = context.push(ContextItem2 {});
             self.inner.call((req, context))
         }
     }
 
-    struct MiddleNewService<T, C, D>
+    struct MiddleNewService<T, C>
     where
-        T: NewService<Request = (Request, D)>,
-        D: Has<ContextItem2>,
-        C: Has<ContextItem1, Remainder = D::Remainder>,
+        C: Pop<ContextItem1>,
+        C::Result : Push<ContextItem2>,
+        T: NewService<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
     {
         inner: T,
         marker1: PhantomData<C>,
-        marker2: PhantomData<D>,
     }
 
-    impl<T, C, D> NewService for MiddleNewService<T, C, D>
+    impl<T, C> NewService for MiddleNewService<T, C>
     where
-        T: NewService<Request = (Request, D)>,
-        D: Has<ContextItem2>,
-        C: Has<ContextItem1, Remainder = D::Remainder>,
+        C: Pop<ContextItem1>,
+        C::Result : Push<ContextItem2>,
+        T: NewService<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
     {
         type Request = (Request, C);
         type Response = T::Response;
         type Error = T::Error;
-        type Instance = MiddleService<T::Instance, C, D>;
+        type Instance = MiddleService<T::Instance, C>;
         fn new_service(&self) -> Result<Self::Instance, io::Error> {
             self.inner.new_service().map(|s| {
                 MiddleService {
                     inner: s,
                     marker1: PhantomData,
-                    marker2: PhantomData,
                 }
             })
         }
     }
 
-    impl<T, C, D> MiddleNewService<T, C, D>
+    impl<T, C> MiddleNewService<T, C>
     where
-        T: NewService<Request = (Request, D)>,
-        D: Has<ContextItem2>,
-        C: Has<ContextItem1, Remainder = D::Remainder>,
+        C: Pop<ContextItem1>,
+        C::Result : Push<ContextItem2>,
+        T: NewService<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
     {
         fn new(inner: T) -> Self {
             MiddleNewService {
                 inner,
                 marker1: PhantomData,
-                marker2: PhantomData,
             }
         }
     }
 
-    struct OuterService<T, D>
+    struct OuterService<T, C>
     where
-        T: Service<Request = (Request, D)>,
-        D: Has<ContextItem1>,
-        <D as Has<ContextItem1>>::Remainder: Default,
+        C: Default + Push<ContextItem1>,
+        T: Service<Request = (Request, C::Result)>,
     {
         inner: T,
-        marker: PhantomData<D>,
+        marker: PhantomData<C>,
     }
 
-    impl<T, D> Service for OuterService<T, D>
+    impl<T, C> Service for OuterService<T, C>
     where
-        T: Service<Request = (Request, D)>,
-        D: Has<ContextItem1>,
-        <D as Has<ContextItem1>>::Remainder: Default,
+        C: Default + Push<ContextItem1>,
+        T: Service<Request = (Request, C::Result)>,
     {
         type Request = Request;
         type Response = T::Response;
         type Error = T::Error;
         type Future = T::Future;
         fn call(&self, req: Self::Request) -> Self::Future {
-            let context = D::construct(ContextItem1 {}, D::Remainder::default());
+            let context = C::default().push(ContextItem1 {});
             self.inner.call((req, context))
         }
     }
 
-    struct OuterNewService<T, D>
+    struct OuterNewService<T, C>
     where
-        T: NewService<Request = (Request, D)>,
-        D: Has<ContextItem1>,
-        <D as Has<ContextItem1>>::Remainder: Default,
+        C: Default + Push<ContextItem1>,
+        T: NewService<Request = (Request, C::Result)>,
     {
         inner: T,
-        marker: PhantomData<D>,
+        marker: PhantomData<C>,
     }
 
-    impl<T, D> NewService for OuterNewService<T, D>
+    impl<T, C> NewService for OuterNewService<T, C>
     where
-        T: NewService<Request = (Request, D)>,
-        D: Has<ContextItem1>,
-        <D as Has<ContextItem1>>::Remainder: Default,
+        C: Default + Push<ContextItem1>,
+        T: NewService<Request = (Request, C::Result)>,
     {
         type Request = Request;
         type Response = T::Response;
         type Error = T::Error;
-        type Instance = OuterService<T::Instance, D>;
+        type Instance = OuterService<T::Instance, C>;
         fn new_service(&self) -> Result<Self::Instance, io::Error> {
             self.inner.new_service().map(|s| {
                 OuterService {
@@ -480,11 +483,10 @@ mod context_tests {
         }
     }
 
-    impl<T, D> OuterNewService<T, D>
+    impl<T, C> OuterNewService<T, C>
     where
-        T: NewService<Request = (Request, D)>,
-        D: Has<ContextItem1>,
-        <D as Has<ContextItem1>>::Remainder: Default,
+        C: Default + Push<ContextItem1>,
+        T: NewService<Request = (Request, C::Result)>,
     {
         fn new(inner: T) -> Self {
             OuterNewService {
@@ -494,20 +496,14 @@ mod context_tests {
         }
     }
 
-    new_context_type!(MyContext, ContextItem1, ContextItem2);
+    new_context_type!(MyContext, MyEmptyContext, ContextItem1, ContextItem2);
 
-    type Context1 = make_context_ty!(MyContext, ContextItem1);
-    type Context2 = make_context_ty!(MyContext, ContextItem2);
-
-    type NewService1 = InnerNewService<Context2>;
-    type NewService2 = MiddleNewService<NewService1, Context1, Context2>;
-    type NewService3 = OuterNewService<NewService2, Context1>;
 
     #[test]
     fn send_request() {
 
-        let new_service: NewService3 =
-            OuterNewService::new(MiddleNewService::new(InnerNewService::new()));
+        let new_service =
+            OuterNewService::<_, MyEmptyContext>::new(MiddleNewService::new(InnerNewService::new()));
 
         let req = Request::new(Method::Post, Uri::from_str("127.0.0.1:80").unwrap());
         new_service
