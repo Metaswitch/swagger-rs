@@ -34,7 +34,7 @@ pub mod auth;
 pub use auth::{Authorization, AuthData};
 
 pub mod context;
-pub use context::{Context, EmptyContext, ContextWrapper, Has, Pop, Push};
+pub use context::{Context, EmpContext, ContextWrapper, Has, Pop, Push};
 
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
