@@ -52,7 +52,9 @@ pub trait Has<T> {
     fn set(&mut self, value: T);
 }
 
+///
 pub trait Pop<T> {
+
     type Result;
     fn pop(self) -> (T, Self::Result);
 }
@@ -63,9 +65,11 @@ pub trait Push<T> {
 }
 
 /// Defines a struct that can be used to build up contexts recursively by
-/// adding one item to the context at a time. The first argument is the name
-/// of the newly defined context struct, and subsequent arguments are the types
-/// that can be stored in contexts built using this struct.
+/// adding one item to the context at a time, and a unit struct representing an
+/// empty context. The first argument is the name of the newly defined context struct
+/// that is used to add an item to the context, the second argument is the name of
+/// the empty context struct, and subsequent arguments are the types
+/// that can be stored in contexts built using these struct.
 ///
 /// A cons list built using the generated context type will implement Has<T>
 /// for each type T that appears in the list, provided that the list only
@@ -76,40 +80,31 @@ pub trait Push<T> {
 ///
 /// ```rust
 /// # #[macro_use] extern crate swagger;
-/// # use swagger::Has;
+/// # use swagger::{Has, Pop, Push};
 ///
 /// struct MyType1;
 /// struct MyType2;
 /// struct MyType3;
 /// struct MyType4;
 ///
-/// new_context_type!(MyContext, MyType1, MyType2, MyType3);
+/// new_context_type!(MyContext, MyEmpContext, MyType1, MyType2, MyType3);
 ///
 /// fn use_has_my_type_1<T: Has<MyType1>> (_: &T) {}
 /// fn use_has_my_type_2<T: Has<MyType2>> (_: &T) {}
 /// fn use_has_my_type_3<T: Has<MyType3>> (_: &T) {}
 /// fn use_has_my_type_4<T: Has<MyType4>> (_: &T) {}
 ///
-/// type ExampleContext = MyContext<MyType1, MyContext<MyType2, MyContext<MyType3, ()>>>;
-/// type BadContext = MyContext<MyType1, MyContext<MyType4, ()>>;
+/// type ExampleContext = MyContext<MyType1, MyContext<MyType2, MyContext<MyType3, MyEmpContext>>>;
+/// type BadContext = MyContext<MyType1, MyContext<MyType4, MyEmpContext>>;
 ///
 /// fn main() {
-///     let context: ExampleContext = MyContext::construct(
-///         MyType1{},
-///         MyContext::construct(
-///             MyType2{},
-///             MyContext::construct(MyType3{}, ())
-///         )
-///     );
+///     let context : ExampleContext = MyEmpContext::default().push(MyType3{}).push(MyType2{}).push(MyType1{});
+///
 ///     use_has_my_type_1(&context);
 ///     use_has_my_type_2(&context);
 ///     use_has_my_type_3(&context);
 ///
-///     let bad_context: BadContext = MyContext::construct(
-///         MyType1{},
-///         MyContext::construct(MyType4{}, ())
-///     );
-///
+///     let bad_context: BadContext = MyEmpContext::default().push(MyType4{}).push(MyType1{});
 ///     // will not work
 ///     // use_has_my_type_4(&bad_context);
 ///
