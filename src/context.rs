@@ -52,15 +52,91 @@ pub trait Has<T> {
     fn set(&mut self, value: T);
 }
 
+/// Defines a method for permanently extracting a value, changing the resulting
+/// type. Used to specify that a hyper service consumes some data from the context,
+/// making it unavailable to later layers, e.g.
 ///
+/// ```rust
+/// # extern crate hyper;
+/// # extern crate swagger;
+/// # extern crate futures;
+/// #
+/// # use swagger::context::*;
+/// # use futures::future::{Future, ok};
+/// # use std::marker::PhantomData;
+/// #
+/// # struct MyItem;
+/// # fn do_something_with_my_item(item: &MyItem) {}
+/// #
+/// struct MiddlewareService<T, C> {
+///     inner: T,
+///     marker: PhantomData<C>,
+/// }
+///
+/// impl<T, C> hyper::server::Service for MiddlewareService<T, C>
+///     where
+///         C: Pop<MyItem>,
+///         T: hyper::server::Service<Request = (hyper::Request, C::Result)>
+/// {
+///     type Request = (hyper::Request, C);
+///     type Response = T::Response;
+///     type Error = T::Error;
+///     type Future = T::Future;
+///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
+///         let (item, context) = context.pop();
+///         do_something_with_my_item(&item);
+///         self.inner.call((req, context))
+///     }
+/// }
+///
+/// # fn main() {}
 pub trait Pop<T> {
-
+    /// The type that remains after the value has been popped.
     type Result;
+    /// Extracts a value.
     fn pop(self) -> (T, Self::Result);
 }
 
+/// Defines a method for inserting a value, changing the resulting
+/// type. Used to specify that a hyper service adds some data from the context,
+/// making it available to later layers, e.g.
+///
+/// ```rust
+/// # extern crate hyper;
+/// # extern crate swagger;
+/// # extern crate futures;
+/// #
+/// # use swagger::context::*;
+/// # use futures::future::{Future, ok};
+/// # use std::marker::PhantomData;
+/// #
+/// # struct MyItem;
+/// #
+/// struct MiddlewareService<T, C> {
+///     inner: T,
+///     marker: PhantomData<C>,
+/// }
+///
+/// impl<T, C> hyper::server::Service for MiddlewareService<T, C>
+///     where
+///         C: Push<MyItem>,
+///         T: hyper::server::Service<Request = (hyper::Request, C::Result)>
+/// {
+///     type Request = (hyper::Request, C);
+///     type Response = T::Response;
+///     type Error = T::Error;
+///     type Future = T::Future;
+///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
+///         let context = context.push(MyItem{});
+///         self.inner.call((req, context))
+///     }
+/// }
+///
+/// # fn main() {}
 pub trait Push<T> {
+    /// The type that results from adding an item.
     type Result;
+    /// Inserts a value.
     fn push(self, T) -> Self::Result;
 }
 
