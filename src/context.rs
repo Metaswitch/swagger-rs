@@ -174,7 +174,11 @@ pub trait Push<T> {
 /// type BadContext = MyContext<MyType1, MyContext<MyType4, MyEmpContext>>;
 ///
 /// fn main() {
-///     let context : ExampleContext = MyEmpContext::default().push(MyType3{}).push(MyType2{}).push(MyType1{});
+///     let context : ExampleContext =
+///         MyEmpContext::default()
+///         .push(MyType3{})
+///         .push(MyType2{})
+///         .push(MyType1{});
 ///
 ///     use_has_my_type_1(&context);
 ///     use_has_my_type_2(&context);
@@ -206,6 +210,7 @@ macro_rules! new_context_type {
             tail: C,
         }
 
+        /// Unit struct representing a context with no data in it.
         #[derive(Debug, Clone, Default)]
         pub struct $empty_context_name;
 
@@ -247,11 +252,22 @@ macro_rules! new_context_type {
         new_context_type!(impl extend_has $context_name, $empty_context_name, $($types),+);
     };
     (impl extend_has $context_name:ident, $empty_context_name:ident, $head:ty, $($tail:ty),+ ) => {
-        new_context_type!(impl extend_has_helper $context_name, $empty_context_name, $head, $($tail),+);
+        new_context_type!(
+            impl extend_has_helper
+            $context_name,
+            $empty_context_name,
+            $head,
+            $($tail),+
+        );
         new_context_type!(impl extend_has $context_name, $empty_context_name, $($tail),+);
     };
     (impl extend_has $context_name:ident, $empty_context_name:ident, $head:ty) => {};
-    (impl extend_has_helper $context_name:ident , $empty_context_name:ident, $type:ty, $($types:ty),+ ) => {
+    (impl extend_has_helper
+        $context_name:ident,
+        $empty_context_name:ident,
+        $type:ty,
+        $($types:ty),+
+        ) => {
         $(
             impl<C: $crate::Has<$type>> $crate::Has<$type> for $context_name<$types, C> {
                 fn set(&mut self, item: $type) {
@@ -285,7 +301,7 @@ macro_rules! new_context_type {
                 type Result = $context_name<$types, C::Result>;
                 fn pop(self) -> ($type, Self::Result) {
                     let (value, tail) = self.tail.pop();
-                    (value, $context_name{ head: self.head, tail: tail})
+                    (value, $context_name{ head: self.head, tail})
                 }
             }
 
@@ -293,7 +309,7 @@ macro_rules! new_context_type {
                 type Result = $context_name<$type, C::Result>;
                 fn pop(self) -> ($types, Self::Result) {
                     let (value, tail) = self.tail.pop();
-                    (value, $context_name{ head: self.head, tail: tail})
+                    (value, $context_name{ head: self.head, tail})
                 }
             }
         )+
@@ -433,7 +449,7 @@ mod context_tests {
     struct MiddleService<T, C>
     where
         C: Pop<ContextItem1>,
-        C::Result : Push<ContextItem2>,
+        C::Result: Push<ContextItem2>,
         T: Service<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
     {
         inner: T,
@@ -461,7 +477,7 @@ mod context_tests {
     struct MiddleNewService<T, C>
     where
         C: Pop<ContextItem1>,
-        C::Result : Push<ContextItem2>,
+        C::Result: Push<ContextItem2>,
         T: NewService<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
     {
         inner: T,
@@ -573,8 +589,9 @@ mod context_tests {
     #[test]
     fn send_request() {
 
-        let new_service =
-            OuterNewService::<_, MyEmptyContext>::new(MiddleNewService::new(InnerNewService::new()));
+        let new_service = OuterNewService::<_, MyEmptyContext>::new(
+            MiddleNewService::new(InnerNewService::new()),
+        );
 
         let req = Request::new(Method::Post, Uri::from_str("127.0.0.1:80").unwrap());
         new_service

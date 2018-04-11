@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-## [0.11.0] -2018-04-04
+## [0.11.0] -2018-04-11
 ### Added
--- `Has<T>` trait for specifying requirements on context types in hyper services, and providing methods for manipulating them
--- `new_context_type!` macro for defining structs that can be used to build concrete context types that implement `Has`
+-- `Has<T>`, `Pop<T>` and `Push<T>` traits for specifying requirements on context types in hyper services, and providing methods for manipulating them
+-- `new_context_type!` macro for defining structs that can be used to build concrete context types that implement `Has`, `Pop` and `Push`
 -- `make_context!` and `make_context_ty!` for conveniently creating contexts at value and type level
 
 ### Removed

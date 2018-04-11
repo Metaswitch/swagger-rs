@@ -5,7 +5,7 @@ use std::io;
 use std::marker::PhantomData;
 use hyper;
 use hyper::{Request, Response, Error};
-use super::{Has, Pop, Push, XSpanIdString};
+use super::{Pop, Push, XSpanIdString};
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -116,7 +116,7 @@ impl<T, C> hyper::server::Service for NoAuthentication<T, C>
 pub struct AllowAllAuthenticator<T, C>
 where
     C: Pop<Option<AuthData>>,
-    C::Result : Push<Option<Authorization>>,
+    C::Result: Push<Option<Authorization>>,
 {
     inner: T,
     subject: String,
@@ -126,7 +126,7 @@ where
 impl<T, C> AllowAllAuthenticator<T, C>
 where
     C: Pop<Option<AuthData>>,
-    C::Result : Push<Option<Authorization>>,
+    C::Result: Push<Option<Authorization>>,
 {
     /// Create a middleware that authorizes with the configured subject.
     pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T, C> {
@@ -138,11 +138,11 @@ where
     }
 }
 
-impl<T, C> hyper::server::NewService for AllowAllAuthenticator<T, C>
+impl<T, C, D> hyper::server::NewService for AllowAllAuthenticator<T, C>
     where
         C: Pop<Option<AuthData>>,
-        C::Result : Push<Option<Authorization>>,
-        T: hyper::server::NewService<Request=(Request, <C::Result as Push<Option<Authorization>>>::Result), Response=Response, Error=Error>,
+        C::Result : Push<Option<Authorization>, Result=D>,
+        T: hyper::server::NewService<Request=(Request, D), Response=Response, Error=Error>,
 
 {
     type Request = (Request, C);
@@ -155,11 +155,11 @@ impl<T, C> hyper::server::NewService for AllowAllAuthenticator<T, C>
     }
 }
 
-impl<T, C> hyper::server::Service for AllowAllAuthenticator<T, C>
+impl<T, C, D> hyper::server::Service for AllowAllAuthenticator<T, C>
     where
         C: Pop<Option<AuthData>>,
-        C::Result : Push<Option<Authorization>>,
-        T: hyper::server::Service<Request=(Request, <C::Result as Push<Option<Authorization>>>::Result), Response=Response, Error=Error>,
+        C::Result : Push<Option<Authorization>, Result=D>,
+        T: hyper::server::Service<Request=(Request, D), Response=Response, Error=Error>,
 {
     type Request = (Request, C);
     type Response = Response;
