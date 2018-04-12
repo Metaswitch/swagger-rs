@@ -5,7 +5,7 @@ use std::io;
 use std::marker::PhantomData;
 use hyper;
 use hyper::{Request, Response, Error};
-use super::{Pop, Push, XSpanIdString};
+use super::{Pop, Push};
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -51,63 +51,6 @@ pub enum AuthData {
     Bearer(hyper::header::Bearer),
     /// Header-based or query parameter-based API key auth.
     ApiKey(String),
-}
-
-/// No Authenticator, that does not insert any authorization data, denying all
-/// access to endpoints that require authentication.
-#[derive(Debug)]
-pub struct NoAuthentication<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-{
-    inner: T,
-    marker: PhantomData<C>,
-}
-
-impl<T, C> NoAuthentication<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-{
-    /// Create a new NoAuthentication struct wrapping a value
-    pub fn new(inner: T) -> Self {
-        NoAuthentication {
-            inner,
-            marker: PhantomData,
-        }
-    }
-}
-
-impl<T, C> hyper::server::NewService for NoAuthentication<T, C>
-    where
-        C: Default + Push<XSpanIdString>,
-        T: hyper::server::NewService<Request=(Request, C::Result), Response=Response, Error=Error>,
-
-{
-    type Request = Request;
-    type Response = Response;
-    type Error = Error;
-    type Instance = NoAuthentication<T::Instance, C>;
-
-    fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.inner.new_service().map(NoAuthentication::new)
-    }
-}
-
-impl<T, C> hyper::server::Service for NoAuthentication<T, C>
-    where
-        C: Default + Push<XSpanIdString>,
-        T: hyper::server::Service<Request=(Request, C::Result), Response=Response, Error=Error>,
-{
-    type Request = Request;
-    type Response = Response;
-    type Error = Error;
-    type Future = T::Future;
-
-    fn call(&self, req: Self::Request) -> Self::Future {
-        let x_span_id = XSpanIdString::get_or_generate(&req);
-        let context = C::default().push(x_span_id);
-        self.inner.call((req, context))
-    }
 }
 
 /// Dummy Authenticator, that blindly inserts authorization data, allowing all

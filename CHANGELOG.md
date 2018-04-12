@@ -11,16 +11,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.11.0] -2018-04-11
 ### Added
--- `Has<T>`, `Pop<T>` and `Push<T>` traits for specifying requirements on context types in hyper services, and providing methods for manipulating them
--- `new_context_type!` macro for defining structs that can be used to build concrete context types that implement `Has`, `Pop` and `Push`
--- `make_context!` and `make_context_ty!` for conveniently creating contexts at value and type level
+- `Has<T>`, `Pop<T>` and `Push<T>` traits for specifying requirements on context types in hyper services, and providing methods for manipulating them
+- `new_context_type!` macro for defining structs that can be used to build concrete context types that implement `Has`, `Pop` and `Push`
+- `make_context!` and `make_context_ty!` for conveniently creating contexts at value and type level
 
 ### Removed
--- Old `Context` struct
+- Old `Context` struct
+
+### Changed
+- Renamed `NoAuthentication` to `MiddlewareWrapper` and moved it to its own module.
 
 ## [0.10.0] - 2018-03-16
 ### Added
--- Structs for combining multiple hyper services
+- Structs for combining multiple hyper services
 
 ### Changed
 

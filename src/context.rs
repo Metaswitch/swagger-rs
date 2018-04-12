@@ -4,7 +4,7 @@
 //! contextual data related to a request, as it is passed through a series of
 //! hyper services.
 //!
-//! See the contexts_tests module below for examples of how to use.
+//! See the `context_tests` module below for examples of how to use.
 
 use auth::{Authorization, AuthData};
 use std::marker::Sized;
@@ -432,9 +432,6 @@ mod context_tests {
 
     impl<C> Service for InnerService<C>
     where
-        // include a trait bounds like this for each type you want to use from
-        // the context. Use `Pop` when you need to take ownership of the value,
-        // or `Has` if a reference is enough.
         C: Has<ContextItem2> + Pop<ContextItem3>,
     {
         type Request = (Request, C);
@@ -445,7 +442,7 @@ mod context_tests {
 
             use_item_2(Has::<ContextItem2>::get(&context));
 
-            let (item3, _) : (ContextItem3, _) = context.pop();
+            let (item3, _): (ContextItem3, _) = context.pop();
             use_item_3_owned(item3);
 
             Box::new(ok(Response::new()))
@@ -489,7 +486,10 @@ mod context_tests {
         C: Pop<ContextItem1>,
         C::Result: Push<ContextItem2>,
         <C::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
-        T: Service<Request=(Request, <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result)>,
+        T: Service<Request=(
+            Request,
+            <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result
+        )>,
     {
         inner: T,
         marker1: PhantomData<C>,
@@ -497,13 +497,8 @@ mod context_tests {
 
     impl<T, C, D, E> Service for MiddleService<T, C>
     where
-        // Use trait bounds like this to indicate how the context will be modified
-        // in sequence. Use `Pop` to remove an item from the context (making it
-        // unavailable to subsequent layers) and push to add items. Use `Has` to
-        // use a reference to an item in the context or modify it without removing
-        // that type from the context.
-        C: Pop<ContextItem1, Result=D>,
-        D: Push<ContextItem2, Result=E>,
+        C: Pop<ContextItem1, Result = D>,
+        D: Push<ContextItem2, Result = E>,
         E: Push<ContextItem3>,
         T: Service<Request = (Request, E::Result)>,
     {
@@ -514,10 +509,7 @@ mod context_tests {
         fn call(&self, (req, context): Self::Request) -> Self::Future {
             let (item, context) = context.pop();
             use_item_1_owned(item);
-            let context =
-                context
-                .push(ContextItem2 {})
-                .push(ContextItem3 {});
+            let context = context.push(ContextItem2 {}).push(ContextItem3 {});
             self.inner.call((req, context))
         }
     }
@@ -527,7 +519,10 @@ mod context_tests {
         C: Pop<ContextItem1>,
         C::Result: Push<ContextItem2>,
         <C::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
-        T: NewService<Request=(Request, <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result)>,
+        T: NewService<Request=(
+            Request,
+            <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result
+        )>,
     {
         inner: T,
         marker1: PhantomData<C>,
@@ -535,8 +530,8 @@ mod context_tests {
 
     impl<T, C, D, E> NewService for MiddleNewService<T, C>
     where
-        C: Pop<ContextItem1, Result=D>,
-        D: Push<ContextItem2, Result=E>,
+        C: Pop<ContextItem1, Result = D>,
+        D: Push<ContextItem2, Result = E>,
         E: Push<ContextItem3>,
         T: NewService<Request = (Request, E::Result)>,
     {
@@ -556,8 +551,8 @@ mod context_tests {
 
     impl<T, C, D, E> MiddleNewService<T, C>
     where
-        C: Pop<ContextItem1, Result=D>,
-        D: Push<ContextItem2, Result=E>,
+        C: Pop<ContextItem1, Result = D>,
+        D: Push<ContextItem2, Result = E>,
         E: Push<ContextItem3>,
         T: NewService<Request = (Request, E::Result)>,
     {
@@ -573,8 +568,6 @@ mod context_tests {
     // lower layers.
     struct OuterService<T, C>
     where
-        // Use a Default trait bound so that the context can be created by your
-        // service. User `Push` bounds for each type you will add to the context.
         C: Default + Push<ContextItem1>,
         T: Service<Request = (Request, C::Result)>,
     {
@@ -652,9 +645,7 @@ mod context_tests {
         // uses is the empty context type created by the above macro invocation.
         // the compiler should infer all the other context types.
         let new_service = OuterNewService::<_, MyEmptyContext>::new(
-            MiddleNewService::new(
-                InnerNewService::new()
-            ),
+            MiddleNewService::new(InnerNewService::new()),
         );
 
         let req = Request::new(Method::Post, Uri::from_str("127.0.0.1:80").unwrap());

@@ -43,6 +43,9 @@ pub use connector::{http_connector, https_connector, https_mutual_connector};
 pub mod composites;
 pub use composites::{GetPath, NotFound, CompositeNewService, CompositeService};
 
+pub mod middleware_wrapper;
+pub use middleware_wrapper::MiddlewareWrapper;
+
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
     (XSpanId, "X-Span-ID") => [String]
