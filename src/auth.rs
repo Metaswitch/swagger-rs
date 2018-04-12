@@ -61,7 +61,7 @@ where
     C: Default + Push<XSpanIdString>,
 {
     inner: T,
-    marker1: PhantomData<C>,
+    marker: PhantomData<C>,
 }
 
 impl<T, C> NoAuthentication<T, C>
@@ -72,7 +72,7 @@ where
     pub fn new(inner: T) -> Self {
         NoAuthentication {
             inner,
-            marker1: PhantomData,
+            marker: PhantomData,
         }
     }
 }
@@ -120,7 +120,7 @@ where
 {
     inner: T,
     subject: String,
-    marker1: PhantomData<C>,
+    marker: PhantomData<C>,
 }
 
 impl<T, C> AllowAllAuthenticator<T, C>
@@ -133,7 +133,7 @@ where
         AllowAllAuthenticator {
             inner,
             subject: subject.into(),
-            marker1: PhantomData,
+            marker: PhantomData,
         }
     }
 }

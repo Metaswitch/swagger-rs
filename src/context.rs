@@ -3,6 +3,8 @@
 //! This module defines traits and structs that can be used  to manage
 //! contextual data related to a request, as it is passed through a series of
 //! hyper services.
+//!
+//! See the contexts_tests module below for examples of how to use.
 
 use auth::{Authorization, AuthData};
 use std::marker::Sized;
@@ -46,7 +48,7 @@ use super::XSpanIdString;
 pub trait Has<T> {
     /// Get an immutable reference to the value.
     fn get(&self) -> &T;
-    /// Split into a the value and the remainder.
+    /// get an mutable reference to the value.
     fn get_mut(&mut self) -> &mut T;
     /// Set the value.
     fn set(&mut self, value: T);
@@ -65,26 +67,33 @@ pub trait Has<T> {
 /// # use futures::future::{Future, ok};
 /// # use std::marker::PhantomData;
 /// #
-/// # struct MyItem;
-/// # fn do_something_with_my_item(item: &MyItem) {}
-/// #
+/// struct MyItem1;
+/// struct MyItem2;
+/// struct MyItem3;
+///
 /// struct MiddlewareService<T, C> {
 ///     inner: T,
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<T, C> hyper::server::Service for MiddlewareService<T, C>
+/// impl<T, C, D, E> hyper::server::Service for MiddlewareService<T, C>
 ///     where
-///         C: Pop<MyItem>,
-///         T: hyper::server::Service<Request = (hyper::Request, C::Result)>
+///         C: Pop<MyItem1, Result=D>,
+///         D: Pop<MyItem2, Result=E>,
+///         E: Pop<MyItem3>,
+///         T: hyper::server::Service<Request = (hyper::Request, E::Result)>
 /// {
 ///     type Request = (hyper::Request, C);
 ///     type Response = T::Response;
 ///     type Error = T::Error;
 ///     type Future = T::Future;
 ///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
-///         let (item, context) = context.pop();
-///         do_something_with_my_item(&item);
+///
+///         // type annotations optional, included for illustrative purposes
+///         let (_, context): (MyItem1, D) = context.pop();
+///         let (_, context): (MyItem2, E) = context.pop();
+///         let (_, context): (MyItem3, E::Result) = context.pop();
+///
 ///         self.inner.call((req, context))
 ///     }
 /// }
@@ -110,24 +119,31 @@ pub trait Pop<T> {
 /// # use futures::future::{Future, ok};
 /// # use std::marker::PhantomData;
 /// #
-/// # struct MyItem;
-/// #
+/// struct MyItem1;
+/// struct MyItem2;
+/// struct MyItem3;
+///
 /// struct MiddlewareService<T, C> {
 ///     inner: T,
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<T, C> hyper::server::Service for MiddlewareService<T, C>
+/// impl<T, C, D, E> hyper::server::Service for MiddlewareService<T, C>
 ///     where
-///         C: Push<MyItem>,
-///         T: hyper::server::Service<Request = (hyper::Request, C::Result)>
+///         C: Push<MyItem1, Result=D>,
+///         D: Push<MyItem2, Result=E>,
+///         E: Push<MyItem3>,
+///         T: hyper::server::Service<Request = (hyper::Request, E::Result)>
 /// {
 ///     type Request = (hyper::Request, C);
 ///     type Response = T::Response;
 ///     type Error = T::Error;
 ///     type Future = T::Future;
 ///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
-///         let context = context.push(MyItem{});
+///         let context = context
+///             .push(MyItem1{})
+///             .push(MyItem2{})
+///             .push(MyItem3{});
 ///         self.inner.call((req, context))
 ///     }
 /// }
@@ -147,10 +163,15 @@ pub trait Push<T> {
 /// the empty context struct, and subsequent arguments are the types
 /// that can be stored in contexts built using these struct.
 ///
-/// A cons list built using the generated context type will implement Has<T>
+/// A cons list built using the generated context type will implement Has<T> and Pop<T>
 /// for each type T that appears in the list, provided that the list only
 /// contains the types that were passed to the macro invocation after the context
 /// type name.
+///
+/// All list types constructed using the generated types will implement `Push<T>`
+/// for all `T`, but it should ony be used when `T` is one of the types passed
+/// to the macro invocation, otherwise it might not be possible to retrieve the
+/// inserted value.
 ///
 /// E.g.
 ///
@@ -170,32 +191,34 @@ pub trait Push<T> {
 /// fn use_has_my_type_3<T: Has<MyType3>> (_: &T) {}
 /// fn use_has_my_type_4<T: Has<MyType4>> (_: &T) {}
 ///
-/// type ExampleContext = MyContext<MyType1, MyContext<MyType2, MyContext<MyType3, MyEmpContext>>>;
+/// // will implement `Has<MyType1>` and `Has<MyType2>` because these appear
+/// // in the type, and were passed to `new_context_type!`. Will not implement
+/// // `Has<MyType3>` even though it was passed to `new_context_type!`, because
+/// // it is not included in the type.
+/// type ExampleContext = MyContext<MyType1, MyContext<MyType2,  MyEmpContext>>;
+///
+/// // Will not implement `Has<MyType4>` even though it appears in the type,
+/// // because `MyType4` was not passed to `new_context_type!`.
 /// type BadContext = MyContext<MyType1, MyContext<MyType4, MyEmpContext>>;
 ///
 /// fn main() {
 ///     let context : ExampleContext =
 ///         MyEmpContext::default()
-///         .push(MyType3{})
 ///         .push(MyType2{})
 ///         .push(MyType1{});
 ///
 ///     use_has_my_type_1(&context);
 ///     use_has_my_type_2(&context);
-///     use_has_my_type_3(&context);
+///     // use_has_my_type3(&context);      // will fail
 ///
-///     let bad_context: BadContext = MyEmpContext::default().push(MyType4{}).push(MyType1{});
-///     // will not work
-///     // use_has_my_type_4(&bad_context);
+///     let bad_context: BadContext =
+///         MyEmpContext::default()
+///         .push(MyType4{})
+///         .push(MyType1{});
+///     // use_has_my_type_4(&bad_context);     // will fail
 ///
 /// }
 /// ```
-///
-/// will define a new struct `MyContext<C, T>`, which implements:
-/// - `Has<T>`,
-/// - `ExtendsWith<Inner=C, Ext=T>`,
-/// - `Has<S>` whenever `S` is one of `MyType1`, `MyType2` or `MyType3`, AND
-///   `C` implements `Has<S>`.
 ///
 /// See the `context_tests` module for more usage examples.
 #[macro_export]
@@ -317,7 +340,7 @@ macro_rules! new_context_type {
 }
 
 /// Create a default context type to export.
-new_context_type!(Context, EmpContext, XSpanIdString, Option<AuthData>, Option<Authorization>);
+new_context_type!(Context, EmptyContext, XSpanIdString, Option<AuthData>, Option<Authorization>);
 
 /// Macro for easily defining context types. The first argument should be a
 /// context type created with `new_context_type!` and subsequent arguments are the
@@ -392,41 +415,53 @@ mod context_tests {
 
     struct ContextItem1;
     struct ContextItem2;
+    struct ContextItem3;
 
-    fn do_something_with_item_1(_: &ContextItem1) {}
-    fn do_something_with_item_2(_: &ContextItem2) {}
+    fn use_item_1_owned(_: ContextItem1) {}
+    fn use_item_2(_: &ContextItem2) {}
+    fn use_item_3_owned(_: ContextItem3) {}
 
+    // Example of a "terminating" hyper service using contexts - i.e. doesn't
+    // pass a request and its context on a wrapped service.
     struct InnerService<C>
     where
-        C: Has<ContextItem2>,
+        C: Has<ContextItem2> + Pop<ContextItem3>,
     {
         marker: PhantomData<C>,
     }
 
     impl<C> Service for InnerService<C>
     where
-        C: Has<ContextItem2>,
+        // include a trait bounds like this for each type you want to use from
+        // the context. Use `Pop` when you need to take ownership of the value,
+        // or `Has` if a reference is enough.
+        C: Has<ContextItem2> + Pop<ContextItem3>,
     {
         type Request = (Request, C);
         type Response = Response;
         type Error = Error;
         type Future = Box<Future<Item = Response, Error = Error>>;
         fn call(&self, (_, context): Self::Request) -> Self::Future {
-            do_something_with_item_2(Has::<ContextItem2>::get(&context));
+
+            use_item_2(Has::<ContextItem2>::get(&context));
+
+            let (item3, _) : (ContextItem3, _) = context.pop();
+            use_item_3_owned(item3);
+
             Box::new(ok(Response::new()))
         }
     }
 
     struct InnerNewService<C>
     where
-        C: Has<ContextItem2>,
+        C: Has<ContextItem2> + Pop<ContextItem3>,
     {
         marker: PhantomData<C>,
     }
 
     impl<C> InnerNewService<C>
     where
-        C: Has<ContextItem2>,
+        C: Has<ContextItem2> + Pop<ContextItem3>,
     {
         fn new() -> Self {
             InnerNewService { marker: PhantomData }
@@ -435,7 +470,7 @@ mod context_tests {
 
     impl<C> NewService for InnerNewService<C>
     where
-        C: Has<ContextItem2>,
+        C: Has<ContextItem2> + Pop<ContextItem3>,
     {
         type Request = (Request, C);
         type Response = Response;
@@ -446,21 +481,31 @@ mod context_tests {
         }
     }
 
+    // Example of a middleware service using contexts, i.e. a hyper service that
+    // processes a request (and its context) and passes it on to another wrapped
+    // service.
     struct MiddleService<T, C>
     where
         C: Pop<ContextItem1>,
         C::Result: Push<ContextItem2>,
-        T: Service<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
+        <C::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
+        T: Service<Request=(Request, <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result)>,
     {
         inner: T,
         marker1: PhantomData<C>,
     }
 
-    impl<T, C> Service for MiddleService<T, C>
+    impl<T, C, D, E> Service for MiddleService<T, C>
     where
-        C: Pop<ContextItem1>,
-        C::Result : Push<ContextItem2>,
-        T: Service<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
+        // Use trait bounds like this to indicate how the context will be modified
+        // in sequence. Use `Pop` to remove an item from the context (making it
+        // unavailable to subsequent layers) and push to add items. Use `Has` to
+        // use a reference to an item in the context or modify it without removing
+        // that type from the context.
+        C: Pop<ContextItem1, Result=D>,
+        D: Push<ContextItem2, Result=E>,
+        E: Push<ContextItem3>,
+        T: Service<Request = (Request, E::Result)>,
     {
         type Request = (Request, C);
         type Response = T::Response;
@@ -468,8 +513,11 @@ mod context_tests {
         type Future = T::Future;
         fn call(&self, (req, context): Self::Request) -> Self::Future {
             let (item, context) = context.pop();
-            do_something_with_item_1(&item);
-            let context = context.push(ContextItem2 {});
+            use_item_1_owned(item);
+            let context =
+                context
+                .push(ContextItem2 {})
+                .push(ContextItem3 {});
             self.inner.call((req, context))
         }
     }
@@ -478,17 +526,19 @@ mod context_tests {
     where
         C: Pop<ContextItem1>,
         C::Result: Push<ContextItem2>,
-        T: NewService<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
+        <C::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
+        T: NewService<Request=(Request, <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result)>,
     {
         inner: T,
         marker1: PhantomData<C>,
     }
 
-    impl<T, C> NewService for MiddleNewService<T, C>
+    impl<T, C, D, E> NewService for MiddleNewService<T, C>
     where
-        C: Pop<ContextItem1>,
-        C::Result : Push<ContextItem2>,
-        T: NewService<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
+        C: Pop<ContextItem1, Result=D>,
+        D: Push<ContextItem2, Result=E>,
+        E: Push<ContextItem3>,
+        T: NewService<Request = (Request, E::Result)>,
     {
         type Request = (Request, C);
         type Response = T::Response;
@@ -504,11 +554,12 @@ mod context_tests {
         }
     }
 
-    impl<T, C> MiddleNewService<T, C>
+    impl<T, C, D, E> MiddleNewService<T, C>
     where
-        C: Pop<ContextItem1>,
-        C::Result : Push<ContextItem2>,
-        T: NewService<Request = (Request, <C::Result as Push<ContextItem2>>::Result)>,
+        C: Pop<ContextItem1, Result=D>,
+        D: Push<ContextItem2, Result=E>,
+        E: Push<ContextItem3>,
+        T: NewService<Request = (Request, E::Result)>,
     {
         fn new(inner: T) -> Self {
             MiddleNewService {
@@ -518,8 +569,12 @@ mod context_tests {
         }
     }
 
+    // Example of a top layer service that creates a context to be used by
+    // lower layers.
     struct OuterService<T, C>
     where
+        // Use a Default trait bound so that the context can be created by your
+        // service. User `Push` bounds for each type you will add to the context.
         C: Default + Push<ContextItem1>,
         T: Service<Request = (Request, C::Result)>,
     {
@@ -583,14 +638,23 @@ mod context_tests {
         }
     }
 
-    new_context_type!(MyContext, MyEmptyContext, ContextItem1, ContextItem2);
-
+    // Example of use by a service in its main.rs file. At this point you know
+    // all the hyper service layers you will be using, and what requirements
+    // their contexts types have. Use the `new_context_type!` macro to create
+    // a context type and empty context type that are capable of containing all the
+    // types that your hyper services require.
+    new_context_type!(MyContext, MyEmptyContext, ContextItem1, ContextItem2, ContextItem3);
 
     #[test]
     fn send_request() {
 
+        // annotate the outermost service to indicate that the context type it
+        // uses is the empty context type created by the above macro invocation.
+        // the compiler should infer all the other context types.
         let new_service = OuterNewService::<_, MyEmptyContext>::new(
-            MiddleNewService::new(InnerNewService::new()),
+            MiddleNewService::new(
+                InnerNewService::new()
+            ),
         );
 
         let req = Request::new(Method::Post, Uri::from_str("127.0.0.1:80").unwrap());
