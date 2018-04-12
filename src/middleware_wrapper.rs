@@ -1,10 +1,8 @@
 //! Hyper service that adds a context to an incoming request and passes it on
 //! to a wrapped service.
 
-
 use std::io;
 use std::marker::PhantomData;
-
 use hyper;
 use hyper::{Request, Response, Error};
 use super::{Push, XSpanIdString};

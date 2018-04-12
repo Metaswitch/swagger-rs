@@ -48,7 +48,7 @@ use super::XSpanIdString;
 pub trait Has<T> {
     /// Get an immutable reference to the value.
     fn get(&self) -> &T;
-    /// get an mutable reference to the value.
+    /// Get a mutable reference to the value.
     fn get_mut(&mut self) -> &mut T;
     /// Set the value.
     fn set(&mut self, value: T);
@@ -227,14 +227,14 @@ macro_rules! new_context_type {
 
         /// Wrapper type for building up contexts recursively, adding one item
         /// to the context at a time.
-        #[derive(Debug, Clone, Default)]
+        #[derive(Debug, Clone, Default, PartialEq, Eq)]
         pub struct $context_name<T, C> {
             head: T,
             tail: C,
         }
 
         /// Unit struct representing a context with no data in it.
-        #[derive(Debug, Clone, Default)]
+        #[derive(Debug, Clone, Default, PartialEq, Eq)]
         pub struct $empty_context_name;
 
         impl<U> $crate::Push<U> for $empty_context_name {
@@ -345,6 +345,28 @@ new_context_type!(Context, EmptyContext, XSpanIdString, Option<AuthData>, Option
 /// Macro for easily defining context types. The first argument should be a
 /// context type created with `new_context_type!` and subsequent arguments are the
 /// types to be stored in the context, with the outermost first.
+///
+/// ```rust
+/// # #[macro_use] extern crate swagger;
+/// # use swagger::{Has, Pop, Push};
+///
+/// # struct Type1;
+/// # struct Type2;
+/// # struct Type3;
+///
+/// # new_context_type!(MyContext, MyEmptyContext, Type1, Type2, Type3);
+///
+/// the following two types are identical
+/// type ExampleContext1 = make_context_ty!(MyContext, MyEmptyContext, Type1, Type2, Type3);
+/// type ExampleContext2 = MyContext<Type1, MyContext<Type2, MyContext<Type3, MyEmptyContext>>>;
+///
+/// /// e.g. this wouldn't compile if they were different types
+/// fn do_nothing(input: ExampleContext1) -> ExampleContext2 {
+///     input
+/// }
+///
+/// # fn main() {}
+/// ```
 #[macro_export]
 macro_rules! make_context_ty {
     ($context_name:ident, $empty_context_name:ident, $type:ty $(, $types:ty)* $(,)* ) => {
@@ -358,6 +380,31 @@ macro_rules! make_context_ty {
 /// Macro for easily defining context values. The first argument should be a
 /// context type created with `new_context_type!` and subsequent arguments are the
 /// values to be stored in the context, with the outermost first.
+///
+/// ```rust
+/// # #[macro_use] extern crate swagger;
+/// # use swagger::{Has, Pop, Push};
+///
+/// # #[derive(PartialEq, Eq, Debug)]
+/// # struct Type1;
+/// # #[derive(PartialEq, Eq, Debug)]
+/// # struct Type2;
+/// # #[derive(PartialEq, Eq, Debug)]
+/// # struct Type3;
+///
+/// # new_context_type!(MyContext, MyEmptyContext, Type1, Type2, Type3);
+///
+/// fn main() {
+///     // the following are equivalent
+///     let context1 = make_context!(MyContext, MyEmptyContext, Type1 {}, Type2 {}, Type3 {});
+///     let context2 = MyEmptyContext::default()
+///         .push(Type3{})
+///         .push(Type2{})
+///         .push(Type1{});
+///
+///     assert_eq!(context1, context2);
+/// }
+/// ```
 #[macro_export]
 macro_rules! make_context {
     ($context_name:ident, $empty_context_name:ident, $value:expr $(, $values:expr)* $(,)*) => {
@@ -422,7 +469,7 @@ mod context_tests {
     fn use_item_3_owned(_: ContextItem3) {}
 
     // Example of a "terminating" hyper service using contexts - i.e. doesn't
-    // pass a request and its context on a wrapped service.
+    // pass a request and its context on to a wrapped service.
     struct InnerService<C>
     where
         C: Has<ContextItem2> + Pop<ContextItem3>,
