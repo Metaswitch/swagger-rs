@@ -356,11 +356,11 @@ new_context_type!(Context, EmptyContext, XSpanIdString, Option<AuthData>, Option
 ///
 /// # new_context_type!(MyContext, MyEmptyContext, Type1, Type2, Type3);
 ///
-/// the following two types are identical
+/// // the following two types are identical
 /// type ExampleContext1 = make_context_ty!(MyContext, MyEmptyContext, Type1, Type2, Type3);
 /// type ExampleContext2 = MyContext<Type1, MyContext<Type2, MyContext<Type3, MyEmptyContext>>>;
 ///
-/// /// e.g. this wouldn't compile if they were different types
+/// // e.g. this wouldn't compile if they were different types
 /// fn do_nothing(input: ExampleContext1) -> ExampleContext2 {
 ///     input
 /// }
@@ -477,6 +477,9 @@ mod context_tests {
         marker: PhantomData<C>,
     }
 
+    // Use trait bounds to indicate what your service will use from the context.
+    // use `Pop` if you want to take ownership of a value stored in the context,
+    // or `Has` if a reference is enough.
     impl<C> Service for InnerService<C>
     where
         C: Has<ContextItem2> + Pop<ContextItem3>,
@@ -542,6 +545,8 @@ mod context_tests {
         marker1: PhantomData<C>,
     }
 
+    // Use trait bounds to indicate what modifications your service will make
+    // to the context, chaining them as below.
     impl<T, C, D, E> Service for MiddleService<T, C>
     where
         C: Pop<ContextItem1, Result = D>,
@@ -622,6 +627,9 @@ mod context_tests {
         marker: PhantomData<C>,
     }
 
+    // Use a `Default` trait bound so that the context can be created. Use
+    // `Push` trait bounds for each type that you will add to the newly
+    // created context.
     impl<T, C> Service for OuterService<T, C>
     where
         C: Default + Push<ContextItem1>,
