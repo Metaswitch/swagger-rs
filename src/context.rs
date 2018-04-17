@@ -340,7 +340,12 @@ macro_rules! new_context_type {
 }
 
 /// Create a default context type to export.
-new_context_type!(Context, EmptyContext, XSpanIdString, Option<AuthData>, Option<Authorization>);
+new_context_type!(ContextBuilder,
+                  EmptyContext,
+                  XSpanIdString,
+                  Option<AuthData>,
+                  Option<Authorization>
+);
 
 /// Macro for easily defining context types. The first argument should be a
 /// context type created with `new_context_type!` and subsequent arguments are the
