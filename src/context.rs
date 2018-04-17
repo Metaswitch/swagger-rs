@@ -233,10 +233,12 @@ macro_rules! new_context_type {
             tail: C,
         }
 
-        /// Unit struct representing a context with no data in it.
+        /// Unit struct representing an empty context with no data in it.
         #[derive(Debug, Clone, Default, PartialEq, Eq)]
         pub struct $empty_context_name;
 
+        // implement `Push<T>` on the empty context type for any `T`, so that
+        // items can be added to the context
         impl<U> $crate::Push<U> for $empty_context_name {
             type Result = $context_name<U, Self>;
             fn push(self, item: U) -> Self::Result {
@@ -244,6 +246,7 @@ macro_rules! new_context_type {
             }
         }
 
+        // implement `Has<T>` for a list where `T` is the type of the head
         impl<T, C> $crate::Has<T> for $context_name<T, C> {
             fn set(&mut self, item: T) {
                 self.head = item;
@@ -258,6 +261,7 @@ macro_rules! new_context_type {
             }
         }
 
+        // implement `Pop<T>` for a list where `T` is the type of the head
         impl<T, C> $crate::Pop<T> for $context_name<T, C> {
             type Result = C;
             fn pop(self) -> (T, Self::Result) {
@@ -265,6 +269,7 @@ macro_rules! new_context_type {
             }
         }
 
+        // implement `Push<U>` for non-empty lists, for all types `U`
         impl<C, T, U> $crate::Push<U> for $context_name<T, C> {
             type Result = $context_name<U, Self>;
             fn push(self, item: U) -> Self::Result {
@@ -272,9 +277,25 @@ macro_rules! new_context_type {
             }
         }
 
+        // Add implementations of `Has<T>` and `Pop<T>` when `T` is any type stored in
+        // the list, not just the head.
         new_context_type!(impl extend_has $context_name, $empty_context_name, $($types),+);
     };
+
+    // "HELPER" MACRO CASE - NOT FOR EXTERNAL USE
+    // takes a type `Type1` ($head) and a non-empty list of types `Types` ($tail). First calls
+    // another helper macro to define the following impls, for each `Type2` in `Types`:
+    // ```
+    // impl<C: Has<Type1> Has<Type1> for $context_name<Type2, C> {...}
+    // impl<C: Has<Type2> Has<Type2> for $context_name<Type1, C> {...}
+    // impl<C: Pop<Type1> Pop<Type1> for $context_name<Type2, C> {...}
+    // impl<C: Pop<Type2> Pop<Type2> for $context_name<Type1, C> {...}
+    // ```
+    // then calls itself again with the rest of the list. The end result is to define the above
+    // impls for all distinct pairs of types in the original list.
     (impl extend_has $context_name:ident, $empty_context_name:ident, $head:ty, $($tail:ty),+ ) => {
+
+        //
         new_context_type!(
             impl extend_has_helper
             $context_name,
@@ -284,7 +305,22 @@ macro_rules! new_context_type {
         );
         new_context_type!(impl extend_has $context_name, $empty_context_name, $($tail),+);
     };
+
+    // "HELPER" MACRO CASE - NOT FOR EXTERNAL USE
+    // base case of the preceding helper macro - was passed an empty list of types, so
+    // we don't need to do anything.
     (impl extend_has $context_name:ident, $empty_context_name:ident, $head:ty) => {};
+
+    // "HELPER" MACRO CASE - NOT FOR EXTERNAL USE
+    // takes a type `Type1` ($type) and a non-empty list of types `Types` ($types). For
+    // each `Type2` in `Types`, defines the following impls:
+    // ```
+    // impl<C: Has<Type1> Has<Type1> for $context_name<Type2, C> {...}
+    // impl<C: Has<Type2> Has<Type2> for $context_name<Type1, C> {...}
+    // impl<C: Pop<Type1> Pop<Type1> for $context_name<Type2, C> {...}
+    // impl<C: Pop<Type2> Pop<Type2> for $context_name<Type1, C> {...}
+    // ```
+    //
     (impl extend_has_helper
         $context_name:ident,
         $empty_context_name:ident,
