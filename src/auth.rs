@@ -55,7 +55,7 @@ pub enum AuthData {
 
 impl AuthData {
     /// Set Basic authentication
-    pub fn basic(&mut self, username: &str, password: &str) -> Self {
+    pub fn basic(username: &str, password: &str) -> Self {
         AuthData::Basic(hyper::header::Basic {
             username: username.to_owned(),
             password: Some(password.to_owned()),
@@ -63,12 +63,12 @@ impl AuthData {
     }
 
     /// Set Bearer token authentication
-    pub fn bearer(&mut self, token: &str) -> Self {
+    pub fn bearer(token: &str) -> Self {
         AuthData::Bearer(hyper::header::Bearer { token: token.to_owned() })
     }
 
     /// Set ApiKey authentication
-    pub fn apikey(&mut self, apikey: &str) -> Self {
+    pub fn apikey(apikey: &str) -> Self {
         AuthData::ApiKey(apikey.to_owned())
     }
 }
