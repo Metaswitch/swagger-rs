@@ -7,7 +7,6 @@ use std::ops::{Deref, DerefMut};
 use hyper::server::{Service, NewService};
 use hyper::{Request, Response, StatusCode};
 use futures::{future, Future};
-use context::Context;
 
 /// Trait for getting the path of a request. Must be implemented on the `Request`
 /// associated type for `NewService`s being combined in a `CompositeNewService`.
@@ -22,7 +21,7 @@ impl GetPath for Request {
     }
 }
 
-impl GetPath for (Request, Context) {
+impl<C> GetPath for (Request, C) {
     fn path(&self) -> &str {
         self.0.path()
     }
@@ -88,15 +87,15 @@ where
 /// base path is a prefix of the request path.
 ///
 /// Usage:
-/// ```
-/// let my_new_service1 = ...
-/// let my_new_service2 = ...
+/// ```ignore
+/// let my_new_service1 = NewService1::new();
+/// let my_new_service2 = NewService2::new();
 ///
 /// let mut composite_new_service = CompositeNewService::new();
 /// composite_new_service.push(("/base/path/1", my_new_service1));
 /// composite_new_service.push(("/base/path/2", my_new_service2));
 ///
-/// <use as you would any `NewService` instance>
+/// // use as you would any `NewService` instance
 /// ```
 #[derive(Default)]
 pub struct CompositeNewService<U, V, W>(CompositeNewServiceVec<U, V, W>)

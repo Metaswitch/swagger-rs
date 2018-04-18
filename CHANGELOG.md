@@ -9,9 +9,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+## [0.11.0] -2018-04-11
+### Added
+- `Has<T>`, `Pop<T>` and `Push<T>` traits for specifying requirements on context types in hyper services, and providing methods for manipulating them
+- `new_context_type!` macro for defining structs that can be used to build concrete context types that implement `Has`, `Pop` and `Push`
+- `make_context!` and `make_context_ty!` for conveniently creating contexts at value and type level
+
+### Removed
+- Old `Context` struct
+
+### Changed
+- Renamed `NoAuthentication` to `MiddlewareWrapper` and moved it to its own module.
+
 ## [0.10.0] - 2018-03-16
 ### Added
--- Stucts for combining multiple hyper services
+- Structs for combining multiple hyper services
 
 ### Changed
 
@@ -45,7 +57,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.10.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.11.0...HEAD
+[0.11.0]: https://github.com/Metaswitch/swagger-rs/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/Metaswitch/swagger-rs/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/Metaswitch/swagger-rs/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/Metaswitch/swagger-rs/compare/0.8.0...0.8.1

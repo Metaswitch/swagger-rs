@@ -17,6 +17,7 @@ extern crate base64;
 extern crate hyper;
 
 extern crate futures;
+extern crate uuid;
 
 use std::fmt;
 use std::error;
@@ -33,7 +34,7 @@ pub mod auth;
 pub use auth::{Authorization, AuthData};
 
 pub mod context;
-pub use context::{Context, ContextWrapper};
+pub use context::{ContextBuilder, EmptyContext, ContextWrapper, Has, Pop, Push};
 
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
@@ -42,9 +43,35 @@ pub use connector::{http_connector, https_connector, https_mutual_connector};
 pub mod composites;
 pub use composites::{GetPath, NotFound, CompositeNewService, CompositeService};
 
+pub mod add_context;
+pub use add_context::AddContext;
+
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
     (XSpanId, "X-Span-ID") => [String]
+}
+
+/// Wrapper for a string being used as an X-Span-ID.
+#[derive(Debug, Clone, Default)]
+pub struct XSpanIdString(pub String);
+
+impl XSpanIdString {
+    /// Extract an X-Span-ID from a request header if present, and if not
+    /// generate a new one.
+    pub fn get_or_generate(req: &hyper::Request) -> Self {
+        XSpanIdString(
+            req.headers()
+                .get::<XSpanId>()
+                .map(XSpanId::to_string)
+                .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+        )
+    }
+}
+
+impl fmt::Display for XSpanIdString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
 /// Very simple error type - just holds a description of the error. This is useful for human
