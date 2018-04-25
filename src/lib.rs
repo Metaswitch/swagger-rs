@@ -46,6 +46,9 @@ pub use composites::{GetPath, NotFound, CompositeNewService, CompositeService};
 pub mod add_context;
 pub use add_context::AddContext;
 
+pub mod drop_context;
+pub use drop_context::DropContext;
+
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
     (XSpanId, "X-Span-ID") => [String]
