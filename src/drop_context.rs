@@ -7,10 +7,30 @@ use hyper;
 use hyper::{Request, Response, Error};
 use super::{Push, XSpanIdString};
 
-/// Middleware wrapper service, that can be used to include services that take a plain
-/// `hyper::Request` in a `CompositeService` wrapped in an `AddContext` service.
-/// Drops the context from the incoming request and passes the plain `hyper::Request`
-/// to the wrapped service.
+/// Middleware wrapper service that trops the context from the incoming request
+/// and passes the plain `hyper::Request` to the wrapped service.
+///
+/// This service can be used to to include services that take a plain `hyper::Request`
+/// in a `CompositeService` wrapped in an `AddContext` service.
+///
+/// Example Usage
+/// =============
+///
+/// In the following example `SwaggerService` implements `hyper::server::NewService`
+/// with `Request = (hyper::Request, SomeContext)`, and `PlainService` implements it
+/// with `Request = hyper::Request`
+///
+/// ```ignore
+/// let swagger_service_one = SwaggerService::new();
+/// let swagger_service_two = SwaggerService::new();
+/// let plain_service = PlainService::new();
+///
+/// let mut composite_new_service = CompositeNewService::new();
+/// composite_new_service.push(("/base/path/1", swagger_service_one));
+/// composite_new_service.push(("/base/path/2", swagger_service_two));
+/// composite_new_service.push(("/base/path/3", DropContext::new(plain_service)));
+/// ```
+
 #[derive(Debug)]
 pub struct DropContext<T, C>
 where
