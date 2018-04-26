@@ -31,23 +31,26 @@ pub mod nullable_format;
 pub use nullable_format::Nullable;
 
 pub mod auth;
-pub use auth::{Authorization, AuthData};
+pub use auth::{AuthData, Authorization};
 
 pub mod context;
-pub use context::{ContextBuilder, EmptyContext, ContextWrapper, Has, Pop, Push};
+pub use context::{ContextBuilder, ContextWrapper, EmptyContext, Has, Pop, Push};
 
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
 pub use connector::{http_connector, https_connector, https_mutual_connector};
 
 pub mod composites;
-pub use composites::{GetPath, NotFound, CompositeNewService, CompositeService};
+pub use composites::{CompositeNewService, CompositeService, GetPath, NotFound};
 
 pub mod add_context;
 pub use add_context::AddContext;
 
 pub mod drop_context;
 pub use drop_context::DropContext;
+
+pub mod request_parser;
+pub use request_parser::RequestParser;
 
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
