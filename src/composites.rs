@@ -86,7 +86,9 @@ where
 /// request to the first `Service` in the list for which the associated
 /// base path is a prefix of the request path.
 ///
-/// Usage:
+/// Example Usage
+/// =============
+///
 /// ```ignore
 /// let my_new_service1 = NewService1::new();
 /// let my_new_service2 = NewService2::new();
