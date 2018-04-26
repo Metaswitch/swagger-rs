@@ -30,7 +30,6 @@ use super::{Push, XSpanIdString};
 /// composite_new_service.push(("/base/path/2", swagger_service_two));
 /// composite_new_service.push(("/base/path/3", DropContext::new(plain_service)));
 /// ```
-
 #[derive(Debug)]
 pub struct DropContext<T, C>
 where
