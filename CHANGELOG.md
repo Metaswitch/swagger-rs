@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `RequestParser` trait for retrieving Swagger related info in middlewares.
 
 ### Changed
+- Fixed `DropContext` to remove trait bounds on the type of context it can drop
 
 ### Removed
 
