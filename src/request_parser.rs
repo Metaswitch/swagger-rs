@@ -12,5 +12,5 @@ pub trait RequestParser {
     /// Retrieve the Swagger operation identifier that matches this request.
     ///
     /// Returns `Err(())` if this request does not match any known operation on this API.
-    fn operation_id(req: &Request) -> Result<&'static str, ()>;
+    fn parse_operation_id(req: &Request) -> Result<&'static str, ()>;
 }
