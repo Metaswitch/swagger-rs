@@ -5,7 +5,6 @@ use std::io;
 use std::marker::PhantomData;
 use hyper;
 use hyper::{Request, Response, Error};
-use super::{Push, XSpanIdString};
 
 /// Middleware wrapper service that trops the context from the incoming request
 /// and passes the plain `hyper::Request` to the wrapped service.
@@ -31,18 +30,12 @@ use super::{Push, XSpanIdString};
 /// composite_new_service.push(("/base/path/3", DropContext::new(plain_service)));
 /// ```
 #[derive(Debug)]
-pub struct DropContext<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-{
+pub struct DropContext<T, C> {
     inner: T,
     marker: PhantomData<C>,
 }
 
-impl<T, C> DropContext<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-{
+impl<T, C> DropContext<T, C> {
     /// Create a new DropContext struct wrapping a value
     pub fn new(inner: T) -> Self {
         DropContext {
@@ -54,11 +47,10 @@ where
 
 impl<T, C> hyper::server::NewService for DropContext<T, C>
     where
-        C: Default + Push<XSpanIdString>,
         T: hyper::server::NewService<Request=Request, Response=Response, Error=Error>,
 
 {
-    type Request = (Request, C::Result);
+    type Request = (Request, C);
     type Response = Response;
     type Error = Error;
     type Instance = DropContext<T::Instance, C>;
@@ -70,14 +62,13 @@ impl<T, C> hyper::server::NewService for DropContext<T, C>
 
 impl<T, C> hyper::server::Service for DropContext<T, C>
 where
-    C: Default + Push<XSpanIdString>,
     T: hyper::server::Service<
         Request = Request,
         Response = Response,
         Error = Error,
     >,
 {
-    type Request = (Request, C::Result);
+    type Request = (Request, C);
     type Response = Response;
     type Error = Error;
     type Future = T::Future;

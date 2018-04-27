@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+## [0.12.1] - 2018-04-27
+### Added
+- `RequestParser` trait for retrieving Swagger related info in middlewares.
+
+### Changed
+- Fixed `DropContext` to remove trait bounds on the type of context it can drop
+
+### Removed
+
 ## [0.12.0] - 2018-04-26
 ### Added
 - `DropContext` to pass a raw (context-less) `hyper::Request` to a service.
@@ -63,7 +72,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.12.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.12.1...HEAD
+[0.12.1]: https://github.com/Metaswitch/swagger-rs/compare/0.12.0...0.12.1
 [0.12.0]: https://github.com/Metaswitch/swagger-rs/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/Metaswitch/swagger-rs/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/Metaswitch/swagger-rs/compare/0.9.0...0.10.0
