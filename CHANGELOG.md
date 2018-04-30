@@ -11,14 +11,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+## [1.0.0] - 2018-04-30
+No changes. We now think we've got enough to declare this crate stable.
+
 ## [0.12.1] - 2018-04-27
 ### Added
 - `RequestParser` trait for retrieving Swagger related info in middlewares.
 
 ### Changed
 - Fixed `DropContext` to remove trait bounds on the type of context it can drop
-
-### Removed
 
 ## [0.12.0] - 2018-04-26
 ### Added
@@ -39,8 +40,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.10.0] - 2018-03-16
 ### Added
 - Structs for combining multiple hyper services
-
-### Changed
 
 ## [0.9.0] - 2018-01-25
 ### Added
@@ -72,7 +71,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/0.12.1...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/1.0.0...HEAD
+[0.12.1]: https://github.com/Metaswitch/swagger-rs/compare/0.12.1...1.0.0
 [0.12.1]: https://github.com/Metaswitch/swagger-rs/compare/0.12.0...0.12.1
 [0.12.0]: https://github.com/Metaswitch/swagger-rs/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/Metaswitch/swagger-rs/compare/0.10.0...0.11.0
