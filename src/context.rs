@@ -9,6 +9,8 @@
 use auth::{Authorization, AuthData};
 use std::marker::Sized;
 use super::XSpanIdString;
+use hyper;
+use futures::future::Future;
 
 /// Defines methods for accessing, modifying, adding and removing the data stored
 /// in a context. Used to specify the requirements that a hyper service makes on
@@ -489,6 +491,20 @@ where
     fn with_context(self: &'a Self, context: C) -> ContextWrapper<'a, Self, C> {
         ContextWrapper::<Self, C>::new(self, context)
     }
+}
+
+/// Swagger uses a specific specialization of the hyper Service trait.
+pub trait SwaggerService<C>
+    : Clone
+    + hyper::server::Service<
+    Request = (hyper::server::Request, C),
+    Response = hyper::server::Response,
+    Error = hyper::Error,
+    Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
+>
+where
+    C: Clone + 'static,
+{
 }
 
 #[cfg(test)]
