@@ -21,6 +21,7 @@ matrix:
       script:
       - cargo clippy -- -D warnings
     - rust: stable
+      env: RUSTFMT=1
       before_script:
       - rustup component add rustfmt-preview
       script:
