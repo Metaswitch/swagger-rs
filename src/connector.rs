@@ -1,20 +1,18 @@
 //! Utility methods for instantiating common connectors for clients.
 extern crate hyper_tls;
-extern crate tokio_core;
-extern crate openssl;
 extern crate native_tls;
+extern crate openssl;
+extern crate tokio_core;
 
 use std::path::Path;
 
-use hyper;
 use self::tokio_core::reactor::Handle;
+use hyper;
 
 /// Returns a function which creates an http-connector. Used for instantiating
 /// clients with custom connectors
 pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Send + Sync> {
-    Box::new(move |handle: &Handle| {
-        hyper::client::HttpConnector::new(4, handle)
-    })
+    Box::new(move |handle: &Handle| hyper::client::HttpConnector::new(4, handle))
 }
 
 /// Returns a function which creates an https-connector
@@ -31,8 +29,8 @@ where
     let ca_certificate = ca_certificate.as_ref().to_owned();
     Box::new(move |handle: &Handle| {
         // SSL implementation
-        let mut ssl = openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls())
-            .unwrap();
+        let mut ssl =
+            openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();
 
         // Server authentication
         ssl.set_ca_file(ca_certificate.clone()).unwrap();
@@ -68,8 +66,8 @@ where
     let client_certificate = client_certificate.as_ref().to_owned();
     Box::new(move |handle: &Handle| {
         // SSL implementation
-        let mut ssl = openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls())
-            .unwrap();
+        let mut ssl =
+            openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();
 
         // Server authentication
         ssl.set_ca_file(ca_certificate.clone()).unwrap();

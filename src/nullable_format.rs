@@ -2,11 +2,11 @@
 // dead code.
 #![allow(dead_code)]
 #[cfg(feature = "serdejson")]
-use serde::ser::{Serialize, Serializer};
-#[cfg(feature = "serdejson")]
-use serde::de::{Deserializer, Deserialize, DeserializeOwned};
-#[cfg(feature = "serdejson")]
 use serde::de::Error as SerdeError;
+#[cfg(feature = "serdejson")]
+use serde::de::{Deserialize, DeserializeOwned, Deserializer};
+#[cfg(feature = "serdejson")]
+use serde::ser::{Serialize, Serializer};
 
 use std::mem;
 
@@ -499,7 +499,6 @@ impl<T> Nullable<T> {
     }
 }
 
-
 impl<'a, T: Clone> Nullable<&'a T> {
     /// Maps an `Nullable<&T>` to an `Nullable<T>` by cloning the contents of the
     /// Nullable.
@@ -607,11 +606,9 @@ where
             ::serde::Deserialize::deserialize(deserializer);
         match presence {
             Ok(::serde_json::Value::Null) => Ok(Nullable::Null),
-            Ok(some_value) => {
-                ::serde_json::from_value(some_value)
-                    .map(Nullable::Present)
-                    .map_err(SerdeError::custom)
-            }
+            Ok(some_value) => ::serde_json::from_value(some_value)
+                .map(Nullable::Present)
+                .map_err(SerdeError::custom),
             Err(x) => Err(x),
         }
     }
@@ -676,13 +673,12 @@ mod serde_tests {
                 ::serde_json::from_str($string).expect("Deserialization to JSON Value failed");
             println!("JSON Value:   {:?}", json);
 
-            let thing: $type =
-                ::serde_json::from_value(json.clone()).expect("Deserialization to struct failed");
+            let thing: $type = ::serde_json::from_value(json.clone())
+                .expect("Deserialization to struct failed");
             println!("Struct:       {:?}", thing);
 
-            let json_redux: ::serde_json::Value =
-                ::serde_json::to_value(thing.clone())
-                    .expect("Reserialization to JSON Value failed");
+            let json_redux: ::serde_json::Value = ::serde_json::to_value(thing.clone())
+                .expect("Reserialization to JSON Value failed");
             println!("JSON Redux:   {:?}", json_redux);
 
             let string_redux =
@@ -690,11 +686,10 @@ mod serde_tests {
             println!("String Redux: {:?}", string_redux);
 
             assert_eq!(
-                $string,
-                string_redux,
+                $string, string_redux,
                 "Original did not match after round trip"
             );
-        }
+        };
     }
 
     // The tests:

@@ -1,11 +1,11 @@
 //! Authentication and authorization data structures
 
+use super::Push;
+use hyper;
+use hyper::{Error, Request, Response};
 use std::collections::BTreeSet;
 use std::io;
 use std::marker::PhantomData;
-use hyper;
-use hyper::{Request, Response, Error};
-use super::Push;
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -64,7 +64,9 @@ impl AuthData {
 
     /// Set Bearer token authentication
     pub fn bearer(token: &str) -> Self {
-        AuthData::Bearer(hyper::header::Bearer { token: token.to_owned() })
+        AuthData::Bearer(hyper::header::Bearer {
+            token: token.to_owned(),
+        })
     }
 
     /// Set ApiKey authentication
@@ -100,10 +102,13 @@ where
 }
 
 impl<T, C> hyper::server::NewService for AllowAllAuthenticator<T, C>
-    where
-        C: Push<Option<Authorization>>,
-        T: hyper::server::NewService<Request=(Request, C::Result), Response=Response, Error=Error>,
-
+where
+    C: Push<Option<Authorization>>,
+    T: hyper::server::NewService<
+        Request = (Request, C::Result),
+        Response = Response,
+        Error = Error,
+    >,
 {
     type Request = (Request, C);
     type Response = Response;
@@ -111,14 +116,16 @@ impl<T, C> hyper::server::NewService for AllowAllAuthenticator<T, C>
     type Instance = AllowAllAuthenticator<T::Instance, C>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.inner.new_service().map(|s| AllowAllAuthenticator::new(s, self.subject.clone()))
+        self.inner
+            .new_service()
+            .map(|s| AllowAllAuthenticator::new(s, self.subject.clone()))
     }
 }
 
 impl<T, C> hyper::server::Service for AllowAllAuthenticator<T, C>
-    where
-        C : Push<Option<Authorization>>,
-        T: hyper::server::Service<Request=(Request, C::Result), Response=Response, Error=Error>,
+where
+    C: Push<Option<Authorization>>,
+    T: hyper::server::Service<Request = (Request, C::Result), Response = Response, Error = Error>,
 {
     type Request = (Request, C);
     type Response = Response;
@@ -126,12 +133,11 @@ impl<T, C> hyper::server::Service for AllowAllAuthenticator<T, C>
     type Future = T::Future;
 
     fn call(&self, (req, context): Self::Request) -> Self::Future {
-        let context = context.push(
-            Some(Authorization{
-                subject: self.subject.clone(),
-                scopes: Scopes::All,
-                issuer: None,
-            }));
+        let context = context.push(Some(Authorization {
+            subject: self.subject.clone(),
+            scopes: Scopes::All,
+            issuer: None,
+        }));
         self.inner.call((req, context))
     }
 }
