@@ -508,6 +508,19 @@ where
 {
 }
 
+impl <T, C> SwaggerService<C> for T
+where
+    T: Clone
+        + hyper::server::Service<
+            Request = (hyper::server::Request, C),
+            Response = hyper::server::Response,
+            Error = hyper::Error,
+            Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
+        >,
+    C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static,
+{
+}
+
 #[cfg(test)]
 mod context_tests {
     use super::*;
