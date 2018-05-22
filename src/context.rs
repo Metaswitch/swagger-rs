@@ -8,8 +8,8 @@
 
 use super::XSpanIdString;
 use auth::{AuthData, Authorization};
-use hyper;
 use futures::future::Future;
+use hyper;
 use std::marker::Sized;
 
 /// Defines methods for accessing, modifying, adding and removing the data stored
