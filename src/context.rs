@@ -503,7 +503,7 @@ pub trait SwaggerService<C>
     Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
 >
 where
-    C: Clone + 'static
+    C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static
 {
 }
 
