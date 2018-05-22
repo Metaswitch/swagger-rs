@@ -1,11 +1,11 @@
 //! Hyper service that adds a context to an incoming request and passes it on
 //! to a wrapped service.
 
+use super::{Push, XSpanIdString};
+use hyper;
+use hyper::{Error, Request, Response};
 use std::io;
 use std::marker::PhantomData;
-use hyper;
-use hyper::{Request, Response, Error};
-use super::{Push, XSpanIdString};
 
 /// Middleware wrapper service, that should be used as the outermost layer in a
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
@@ -33,10 +33,13 @@ where
 }
 
 impl<T, C> hyper::server::NewService for AddContext<T, C>
-    where
-        C: Default + Push<XSpanIdString>,
-        T: hyper::server::NewService<Request=(Request, C::Result), Response=Response, Error=Error>,
-
+where
+    C: Default + Push<XSpanIdString>,
+    T: hyper::server::NewService<
+        Request = (Request, C::Result),
+        Response = Response,
+        Error = Error,
+    >,
 {
     type Request = Request;
     type Response = Response;
@@ -51,12 +54,7 @@ impl<T, C> hyper::server::NewService for AddContext<T, C>
 impl<T, C> hyper::server::Service for AddContext<T, C>
 where
     C: Default + Push<XSpanIdString>,
-    T: hyper::server::Service<
-        Request = (Request,
-                   C::Result),
-        Response = Response,
-        Error = Error,
-    >,
+    T: hyper::server::Service<Request = (Request, C::Result), Response = Response, Error = Error>,
 {
     type Request = Request;
     type Response = Response;

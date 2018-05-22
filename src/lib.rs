@@ -19,8 +19,8 @@ extern crate hyper;
 extern crate futures;
 extern crate uuid;
 
-use std::fmt;
 use std::error;
+use std::fmt;
 
 /// Module for encoding API properties in base64.
 pub mod base64_format;

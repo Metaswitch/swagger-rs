@@ -1,10 +1,10 @@
 //! Hyper service that drops a context to an incoming request and passes it on
 //! to a wrapped service.
 
+use hyper;
+use hyper::{Error, Request, Response};
 use std::io;
 use std::marker::PhantomData;
-use hyper;
-use hyper::{Request, Response, Error};
 
 /// Middleware wrapper service that trops the context from the incoming request
 /// and passes the plain `hyper::Request` to the wrapped service.
@@ -46,9 +46,8 @@ impl<T, C> DropContext<T, C> {
 }
 
 impl<T, C> hyper::server::NewService for DropContext<T, C>
-    where
-        T: hyper::server::NewService<Request=Request, Response=Response, Error=Error>,
-
+where
+    T: hyper::server::NewService<Request = Request, Response = Response, Error = Error>,
 {
     type Request = (Request, C);
     type Response = Response;
@@ -62,11 +61,7 @@ impl<T, C> hyper::server::NewService for DropContext<T, C>
 
 impl<T, C> hyper::server::Service for DropContext<T, C>
 where
-    T: hyper::server::Service<
-        Request = Request,
-        Response = Response,
-        Error = Error,
-    >,
+    T: hyper::server::Service<Request = Request, Response = Response, Error = Error>,
 {
     type Request = (Request, C);
     type Response = Response;

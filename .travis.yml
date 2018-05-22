@@ -18,7 +18,11 @@ matrix:
     - rust: nightly-2018-03-07
       before_script:
       - cargo install clippy --vers 0.0.187
-      - cargo install rustfmt --vers 0.9.0 --force
       script:
       - cargo clippy -- -D warnings
+    - rust: stable
+      env: RUSTFMT=1
+      before_script:
+      - rustup component add rustfmt-preview
+      script:
       - cargo fmt -- --write-mode diff

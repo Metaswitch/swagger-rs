@@ -2,11 +2,11 @@
 // dead code.
 #![allow(dead_code)]
 #[cfg(feature = "serdejson")]
-use serde::ser::{Serialize, Serializer};
+use base64::{decode, encode};
 #[cfg(feature = "serdejson")]
 use serde::de::{Deserialize, Deserializer, Error};
 #[cfg(feature = "serdejson")]
-use base64::{encode, decode};
+use serde::ser::{Serialize, Serializer};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]

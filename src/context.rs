@@ -6,11 +6,11 @@
 //!
 //! See the `context_tests` module below for examples of how to use.
 
-use auth::{Authorization, AuthData};
-use std::marker::Sized;
 use super::XSpanIdString;
 use hyper;
 use futures::future::Future;
+use auth::{AuthData, Authorization};
+use std::marker::Sized;
 
 /// Defines methods for accessing, modifying, adding and removing the data stored
 /// in a context. Used to specify the requirements that a hyper service makes on
@@ -378,11 +378,12 @@ macro_rules! new_context_type {
 }
 
 /// Create a default context type to export.
-new_context_type!(ContextBuilder,
-                  EmptyContext,
-                  XSpanIdString,
-                  Option<AuthData>,
-                  Option<Authorization>
+new_context_type!(
+    ContextBuilder,
+    EmptyContext,
+    XSpanIdString,
+    Option<AuthData>,
+    Option<Authorization>
 );
 
 /// Macro for easily defining context types. The first argument should be a
@@ -509,13 +510,13 @@ where
 
 #[cfg(test)]
 mod context_tests {
-    use hyper::server::{NewService, Service};
-    use hyper::{Response, Request, Error, Method, Uri};
-    use std::marker::PhantomData;
-    use std::io;
-    use std::str::FromStr;
-    use futures::future::{Future, ok};
     use super::*;
+    use futures::future::{ok, Future};
+    use hyper::server::{NewService, Service};
+    use hyper::{Error, Method, Request, Response, Uri};
+    use std::io;
+    use std::marker::PhantomData;
+    use std::str::FromStr;
 
     struct ContextItem1;
     struct ContextItem2;
@@ -546,7 +547,6 @@ mod context_tests {
         type Error = Error;
         type Future = Box<Future<Item = Response, Error = Error>>;
         fn call(&self, (_, context): Self::Request) -> Self::Future {
-
             use_item_2(Has::<ContextItem2>::get(&context));
 
             let (item3, _): (ContextItem3, _) = context.pop();
@@ -568,7 +568,9 @@ mod context_tests {
         C: Has<ContextItem2> + Pop<ContextItem3>,
     {
         fn new() -> Self {
-            InnerNewService { marker: PhantomData }
+            InnerNewService {
+                marker: PhantomData,
+            }
         }
     }
 
@@ -581,7 +583,9 @@ mod context_tests {
         type Error = Error;
         type Instance = InnerService<C>;
         fn new_service(&self) -> Result<Self::Instance, io::Error> {
-            Ok(InnerService { marker: PhantomData })
+            Ok(InnerService {
+                marker: PhantomData,
+            })
         }
     }
 
@@ -593,10 +597,12 @@ mod context_tests {
         C: Pop<ContextItem1>,
         C::Result: Push<ContextItem2>,
         <C::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
-        T: Service<Request=(
-            Request,
-            <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result
-        )>,
+        T: Service<
+            Request = (
+                Request,
+                <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result,
+            ),
+        >,
     {
         inner: T,
         marker1: PhantomData<C>,
@@ -628,10 +634,12 @@ mod context_tests {
         C: Pop<ContextItem1>,
         C::Result: Push<ContextItem2>,
         <C::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
-        T: NewService<Request=(
-            Request,
-            <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result
-        )>,
+        T: NewService<
+            Request = (
+                Request,
+                <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result,
+            ),
+        >,
     {
         inner: T,
         marker1: PhantomData<C>,
@@ -649,11 +657,9 @@ mod context_tests {
         type Error = T::Error;
         type Instance = MiddleService<T::Instance, C>;
         fn new_service(&self) -> Result<Self::Instance, io::Error> {
-            self.inner.new_service().map(|s| {
-                MiddleService {
-                    inner: s,
-                    marker1: PhantomData,
-                }
+            self.inner.new_service().map(|s| MiddleService {
+                inner: s,
+                marker1: PhantomData,
             })
         }
     }
@@ -721,11 +727,9 @@ mod context_tests {
         type Error = T::Error;
         type Instance = OuterService<T::Instance, C>;
         fn new_service(&self) -> Result<Self::Instance, io::Error> {
-            self.inner.new_service().map(|s| {
-                OuterService {
-                    inner: s,
-                    marker: PhantomData,
-                }
+            self.inner.new_service().map(|s| OuterService {
+                inner: s,
+                marker: PhantomData,
             })
         }
     }
@@ -748,17 +752,22 @@ mod context_tests {
     // their contexts types have. Use the `new_context_type!` macro to create
     // a context type and empty context type that are capable of containing all the
     // types that your hyper services require.
-    new_context_type!(MyContext, MyEmptyContext, ContextItem1, ContextItem2, ContextItem3);
+    new_context_type!(
+        MyContext,
+        MyEmptyContext,
+        ContextItem1,
+        ContextItem2,
+        ContextItem3
+    );
 
     #[test]
     fn send_request() {
-
         // annotate the outermost service to indicate that the context type it
         // uses is the empty context type created by the above macro invocation.
         // the compiler should infer all the other context types.
-        let new_service = OuterNewService::<_, MyEmptyContext>::new(
-            MiddleNewService::new(InnerNewService::new()),
-        );
+        let new_service = OuterNewService::<_, MyEmptyContext>::new(MiddleNewService::new(
+            InnerNewService::new(),
+        ));
 
         let req = Request::new(Method::Post, Uri::from_str("127.0.0.1:80").unwrap());
         new_service

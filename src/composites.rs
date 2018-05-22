@@ -2,11 +2,11 @@
 //!
 //! Use by passing `hyper::server::NewService` instances to a `CompositeNewService`
 //! together with the base path for requests that should be handled by that service.
-use std::{io, fmt};
-use std::ops::{Deref, DerefMut};
-use hyper::server::{Service, NewService};
-use hyper::{Request, Response, StatusCode};
 use futures::{future, Future};
+use hyper::server::{NewService, Service};
+use hyper::{Request, Response, StatusCode};
+use std::ops::{Deref, DerefMut};
+use std::{fmt, io};
 
 /// Trait for getting the path of a request. Must be implemented on the `Request`
 /// associated type for `NewService`s being combined in a `CompositeNewService`.
@@ -43,14 +43,8 @@ impl NotFound for Response {
 
 type BoxedFuture<V, W> = Box<Future<Item = V, Error = W>>;
 type CompositeNewServiceVec<U, V, W> = Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>;
-type BoxedService<U, V, W> = Box<
-    Service<
-        Request = U,
-        Response = V,
-        Error = W,
-        Future = BoxedFuture<V, W>,
-    >,
->;
+type BoxedService<U, V, W> =
+    Box<Service<Request = U, Response = V, Error = W, Future = BoxedFuture<V, W>>>;
 
 /// Trait for wrapping hyper `NewService`s to make the return type of `new_service` uniform.
 /// This is necessary in order for the `NewService`s with different `Instance` types to
@@ -63,16 +57,10 @@ pub trait BoxedNewService<U, V, W> {
 impl<T, U, V, W> BoxedNewService<U, V, W> for T
 where
     T: NewService<Request = U, Response = V, Error = W>,
-    T::Instance: Service<Future = BoxedFuture<V, W>>
-        + 'static,
+    T::Instance: Service<Future = BoxedFuture<V, W>> + 'static,
 {
     /// Call the `new_service` method of the wrapped `NewService` and `Box` the result
-    fn boxed_new_service(
-        &self,
-    ) -> Result<
-        BoxedService<U, V, W>,
-        io::Error,
-    > {
+    fn boxed_new_service(&self) -> Result<BoxedService<U, V, W>, io::Error> {
         let service = self.new_service()?;
         Ok(Box::new(service))
     }
@@ -146,11 +134,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         // Get vector of base paths
         let str_vec: Vec<&'static str> = self.0.iter().map(|&(base_path, _)| base_path).collect();
-        write!(
-            f,
-            "CompositeNewService accepting base paths: {:?}",
-            str_vec,
-        )
+        write!(f, "CompositeNewService accepting base paths: {:?}", str_vec,)
     }
 }
 
@@ -197,7 +181,6 @@ where
     type Future = Box<Future<Item = V, Error = W>>;
 
     fn call(&self, req: Self::Request) -> Self::Future {
-
         let mut result = None;
 
         for &(base_path, ref service) in &self.0 {
@@ -220,11 +203,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         // Get vector of base paths
         let str_vec: Vec<&'static str> = self.0.iter().map(|&(base_path, _)| base_path).collect();
-        write!(
-            f,
-            "CompositeService accepting base paths: {:?}",
-            str_vec,
-        )
+        write!(f, "CompositeService accepting base paths: {:?}", str_vec,)
     }
 }
 
