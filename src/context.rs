@@ -508,7 +508,7 @@ where
 {
 }
 
-impl <T, C> SwaggerService<C> for T
+impl<T, C> SwaggerService<C> for T
 where
     T: Clone
         + hyper::server::Service<
