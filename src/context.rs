@@ -7,9 +7,9 @@
 //! See the `context_tests` module below for examples of how to use.
 
 use super::XSpanIdString;
+use auth::{AuthData, Authorization};
 use hyper;
 use futures::future::Future;
-use auth::{AuthData, Authorization};
 use std::marker::Sized;
 
 /// Defines methods for accessing, modifying, adding and removing the data stored
@@ -495,16 +495,16 @@ where
 }
 
 /// Swagger uses a specific specialization of the hyper Service trait.
-pub trait SwaggerService<C>
-    : Clone
+pub trait SwaggerService<C>:
+    Clone
     + hyper::server::Service<
-    Request = (hyper::server::Request, C),
-    Response = hyper::server::Response,
-    Error = hyper::Error,
-    Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
->
+        Request = (hyper::server::Request, C),
+        Response = hyper::server::Response,
+        Error = hyper::Error,
+        Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
+    >
 where
-    C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static
+    C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static,
 {
 }
 
