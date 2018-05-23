@@ -497,14 +497,24 @@ where
 /// Trait designed to ensure consistency in context used by swagger middlewares
 ///
 /// ```rust
+/// # extern crate hyper;
+/// # extern crate swagger;
+/// # use swagger::context::*;
+/// # use std::marker::PhantomData;
+/// 
+/// struct ExampleMiddleware<T, C> {
+///     inner: T,
+///     marker: PhantomData<C>,
+/// }
+///
 /// impl<T, C> hyper::server::Service for ExampleMiddleware<T, C>
-///    where
-///        T: SwaggerService<C>,
-///        C: Has<Option<AuthData>> +
-///           Has<Option<Authorization>> +
-///           Has<XSpanIdString> +
-///           Clone +
-///           'static,
+///     where
+///         T: SwaggerService<C>,
+///         C: Has<Option<AuthData>> +
+///            Has<Option<Authorization>> +
+///            Has<XSpanIdString> +
+///            Clone +
+///            'static,
 /// {
 /// }
 /// ```
