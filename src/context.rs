@@ -503,7 +503,7 @@ where
 /// # use std::marker::PhantomData;
 /// # use swagger::auth::{AuthData, Authorization};
 /// # use swagger::XSpanIdString;
-/// 
+///
 /// struct ExampleMiddleware<T, C> {
 ///     inner: T,
 ///     marker: PhantomData<C>,
