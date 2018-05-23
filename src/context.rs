@@ -501,6 +501,8 @@ where
 /// # extern crate swagger;
 /// # use swagger::context::*;
 /// # use std::marker::PhantomData;
+/// # use swagger::auth::{AuthData, Authorization};
+/// # use swagger::XSpanIdString;
 /// 
 /// struct ExampleMiddleware<T, C> {
 ///     inner: T,
@@ -516,6 +518,13 @@ where
 ///            Clone +
 ///            'static,
 /// {
+///     type Request = (hyper::Request, C);
+///     type Response = T::Response;
+///     type Error = T::Error;
+///     type Future = T::Future;
+///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
+///         self.inner.call((req, context))
+///     }    
 /// }
 /// ```
 pub trait SwaggerService<C>:
