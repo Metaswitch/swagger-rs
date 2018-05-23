@@ -494,7 +494,18 @@ where
     }
 }
 
-/// Swagger uses a specific specialization of the hyper Service trait.
+/// Trait designed to ensure consistency in context used by swagger middlewares
+///
+/// ```rust
+/// impl<T, C> hyper::server::Service for ExampleMiddleware<T, C>
+///    where
+///        T: SwaggerService<C>,
+///        C: Has<Option<AuthData>> +
+///           Has<Option<Authorization>> +
+///           Has<XSpanIdString> +
+///           Clone +
+///           'static,
+/// ```
 pub trait SwaggerService<C>:
     Clone
     + hyper::server::Service<
