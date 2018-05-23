@@ -505,6 +505,8 @@ where
 ///           Has<XSpanIdString> +
 ///           Clone +
 ///           'static,
+/// {
+/// }
 /// ```
 pub trait SwaggerService<C>:
     Clone
