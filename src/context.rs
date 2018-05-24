@@ -8,6 +8,8 @@
 
 use super::XSpanIdString;
 use auth::{AuthData, Authorization};
+use futures::future::Future;
+use hyper;
 use std::marker::Sized;
 
 /// Defines methods for accessing, modifying, adding and removing the data stored
@@ -490,6 +492,65 @@ where
     fn with_context(self: &'a Self, context: C) -> ContextWrapper<'a, Self, C> {
         ContextWrapper::<Self, C>::new(self, context)
     }
+}
+
+/// Trait designed to ensure consistency in context used by swagger middlewares
+///
+/// ```rust
+/// # extern crate hyper;
+/// # extern crate swagger;
+/// # use swagger::context::*;
+/// # use std::marker::PhantomData;
+/// # use swagger::auth::{AuthData, Authorization};
+/// # use swagger::XSpanIdString;
+///
+/// struct ExampleMiddleware<T, C> {
+///     inner: T,
+///     marker: PhantomData<C>,
+/// }
+///
+/// impl<T, C> hyper::server::Service for ExampleMiddleware<T, C>
+///     where
+///         T: SwaggerService<C>,
+///         C: Has<Option<AuthData>> +
+///            Has<Option<Authorization>> +
+///            Has<XSpanIdString> +
+///            Clone +
+///            'static,
+/// {
+///     type Request = (hyper::Request, C);
+///     type Response = T::Response;
+///     type Error = T::Error;
+///     type Future = T::Future;
+///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
+///         self.inner.call((req, context))
+///     }    
+/// }
+/// ```
+pub trait SwaggerService<C>:
+    Clone
+    + hyper::server::Service<
+        Request = (hyper::server::Request, C),
+        Response = hyper::server::Response,
+        Error = hyper::Error,
+        Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
+    >
+where
+    C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static,
+{
+}
+
+impl<T, C> SwaggerService<C> for T
+where
+    T: Clone
+        + hyper::server::Service<
+            Request = (hyper::server::Request, C),
+            Response = hyper::server::Response,
+            Error = hyper::Error,
+            Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
+        >,
+    C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static,
+{
 }
 
 #[cfg(test)]
