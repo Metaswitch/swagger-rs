@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+## [1.0.2] - 2018-07-23
+### Added
+- Added (non-HTTPS) support for Windows/MacOS/iOS
+
 ## [1.0.1] - 2018-05-24
 ### Added
 - `SwaggerService` trait used by swagger-codegen middlewares.
@@ -75,7 +79,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/1.0.1...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/1.0.2...HEAD
+[1.0.2]: https://github.com/Metaswitch/swagger-rs/compare/1.0.1...1.0.2
 [1.0.1]: https://github.com/Metaswitch/swagger-rs/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/Metaswitch/swagger-rs/compare/0.12.1...1.0.0
 [0.12.1]: https://github.com/Metaswitch/swagger-rs/compare/0.12.0...0.12.1
