@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Updated the changelog for a new release
-set -exou pipefail
+set -eou pipefail
 
 version=$1
 date=$(date +%Y-%m-%d)
+
+
+sed -i "s/^version = \".\+\"$/version = \"$version\"/" Cargo.toml
 
 sed -i "s/## \[Unreleased\]/## [Unreleased]\n### Added\n\n### Changed\n\n### Removed\n\n## [$version] - $date/" CHANGELOG.md
 
