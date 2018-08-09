@@ -673,8 +673,8 @@ mod serde_tests {
                 ::serde_json::from_str($string).expect("Deserialization to JSON Value failed");
             println!("JSON Value:   {:?}", json);
 
-            let thing: $type = ::serde_json::from_value(json.clone())
-                .expect("Deserialization to struct failed");
+            let thing: $type =
+                ::serde_json::from_value(json.clone()).expect("Deserialization to struct failed");
             println!("Struct:       {:?}", thing);
 
             let json_redux: ::serde_json::Value = ::serde_json::to_value(thing.clone())
