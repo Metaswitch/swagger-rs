@@ -550,8 +550,7 @@ where
             Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
         >,
     C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static,
-{
-}
+{}
 
 #[cfg(test)]
 mod context_tests {
