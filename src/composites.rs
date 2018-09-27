@@ -2,12 +2,11 @@
 //!
 //! Use by passing `hyper::server::NewService` instances to a `CompositeNewService`
 //! together with the base path for requests that should be handled by that service.
-use std::{io, fmt};
-use std::ops::{Deref, DerefMut};
-use hyper::server::{Service, NewService};
-use hyper::{Request, Response, StatusCode};
 use futures::{future, Future};
-use context::Context;
+use hyper::server::{NewService, Service};
+use hyper::{Request, Response, StatusCode};
+use std::ops::{Deref, DerefMut};
+use std::{fmt, io};
 
 /// Trait for getting the path of a request. Must be implemented on the `Request`
 /// associated type for `NewService`s being combined in a `CompositeNewService`.
@@ -22,7 +21,7 @@ impl GetPath for Request {
     }
 }
 
-impl GetPath for (Request, Context) {
+impl<C> GetPath for (Request, C) {
     fn path(&self) -> &str {
         self.0.path()
     }
@@ -44,14 +43,8 @@ impl NotFound for Response {
 
 type BoxedFuture<V, W> = Box<Future<Item = V, Error = W>>;
 type CompositeNewServiceVec<U, V, W> = Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>;
-type BoxedService<U, V, W> = Box<
-    Service<
-        Request = U,
-        Response = V,
-        Error = W,
-        Future = BoxedFuture<V, W>,
-    >,
->;
+type BoxedService<U, V, W> =
+    Box<Service<Request = U, Response = V, Error = W, Future = BoxedFuture<V, W>>>;
 
 /// Trait for wrapping hyper `NewService`s to make the return type of `new_service` uniform.
 /// This is necessary in order for the `NewService`s with different `Instance` types to
@@ -64,16 +57,10 @@ pub trait BoxedNewService<U, V, W> {
 impl<T, U, V, W> BoxedNewService<U, V, W> for T
 where
     T: NewService<Request = U, Response = V, Error = W>,
-    T::Instance: Service<Future = BoxedFuture<V, W>>
-        + 'static,
+    T::Instance: Service<Future = BoxedFuture<V, W>> + 'static,
 {
     /// Call the `new_service` method of the wrapped `NewService` and `Box` the result
-    fn boxed_new_service(
-        &self,
-    ) -> Result<
-        BoxedService<U, V, W>,
-        io::Error,
-    > {
+    fn boxed_new_service(&self) -> Result<BoxedService<U, V, W>, io::Error> {
         let service = self.new_service()?;
         Ok(Box::new(service))
     }
@@ -87,16 +74,18 @@ where
 /// request to the first `Service` in the list for which the associated
 /// base path is a prefix of the request path.
 ///
-/// Usage:
-/// ```
-/// let my_new_service1 = ...
-/// let my_new_service2 = ...
+/// Example Usage
+/// =============
+///
+/// ```ignore
+/// let my_new_service1 = NewService1::new();
+/// let my_new_service2 = NewService2::new();
 ///
 /// let mut composite_new_service = CompositeNewService::new();
 /// composite_new_service.push(("/base/path/1", my_new_service1));
 /// composite_new_service.push(("/base/path/2", my_new_service2));
 ///
-/// <use as you would any `NewService` instance>
+/// // use as you would any `NewService` instance
 /// ```
 #[derive(Default)]
 pub struct CompositeNewService<U, V, W>(CompositeNewServiceVec<U, V, W>)
@@ -105,8 +94,15 @@ where
     V: NotFound + 'static,
     W: 'static;
 
-// Clippy bug? This lint triggers despite having a #[derive(Default)]
-#[cfg_attr(feature = "cargo-clippy", allow(new_without_default_derive))]
+// Workaround for https://github.com/rust-lang-nursery/rust-clippy/issues/2226
+#[cfg_attr(
+    feature = "cargo-clippy",
+    allow(
+        renamed_and_removed_lints,
+        new_without_default_derive,
+        clippy::new_without_default_derive
+    )
+)]
 impl<U: GetPath, V: NotFound, W> CompositeNewService<U, V, W> {
     /// create an empty `CompositeNewService`
     pub fn new() -> Self {
@@ -145,11 +141,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         // Get vector of base paths
         let str_vec: Vec<&'static str> = self.0.iter().map(|&(base_path, _)| base_path).collect();
-        write!(
-            f,
-            "CompositeNewService accepting base paths: {:?}",
-            str_vec,
-        )
+        write!(f, "CompositeNewService accepting base paths: {:?}", str_vec,)
     }
 }
 
@@ -196,7 +188,6 @@ where
     type Future = Box<Future<Item = V, Error = W>>;
 
     fn call(&self, req: Self::Request) -> Self::Future {
-
         let mut result = None;
 
         for &(base_path, ref service) in &self.0 {
@@ -219,11 +210,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         // Get vector of base paths
         let str_vec: Vec<&'static str> = self.0.iter().map(|&(base_path, _)| base_path).collect();
-        write!(
-            f,
-            "CompositeService accepting base paths: {:?}",
-            str_vec,
-        )
+        write!(f, "CompositeService accepting base paths: {:?}", str_vec,)
     }
 }
 

@@ -1,10 +1,11 @@
 //! Authentication and authorization data structures
 
+use super::Push;
+use hyper;
+use hyper::{Error, Request, Response};
 use std::collections::BTreeSet;
 use std::io;
-use hyper;
-use hyper::{Request, Response, Error};
-use super::Context;
+use std::marker::PhantomData;
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -52,93 +53,91 @@ pub enum AuthData {
     ApiKey(String),
 }
 
-/// No Authenticator, that does not insert any authorization data, denying all
-/// access to endpoints that require authentication.
-#[derive(Debug)]
-pub struct NoAuthentication<T>(pub T);
-
-impl<T> hyper::server::NewService for NoAuthentication<T>
-where
-    T: hyper::server::NewService<
-        Request = (Request,
-                   Context),
-        Response = Response,
-        Error = Error,
-    >,
-{
-    type Request = Request;
-    type Response = Response;
-    type Error = Error;
-    type Instance = NoAuthentication<T::Instance>;
-
-    fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.0.new_service().map(NoAuthentication)
+impl AuthData {
+    /// Set Basic authentication
+    pub fn basic(username: &str, password: &str) -> Self {
+        AuthData::Basic(hyper::header::Basic {
+            username: username.to_owned(),
+            password: Some(password.to_owned()),
+        })
     }
-}
 
-impl<T> hyper::server::Service for NoAuthentication<T>
-where
-    T: hyper::server::Service<
-        Request = (Request,
-                   Context),
-        Response = Response,
-        Error = Error,
-    >,
-{
-    type Request = Request;
-    type Response = Response;
-    type Error = Error;
-    type Future = T::Future;
+    /// Set Bearer token authentication
+    pub fn bearer(token: &str) -> Self {
+        AuthData::Bearer(hyper::header::Bearer {
+            token: token.to_owned(),
+        })
+    }
 
-    fn call(&self, req: Self::Request) -> Self::Future {
-        self.0.call((req, Context::default()))
+    /// Set ApiKey authentication
+    pub fn apikey(apikey: &str) -> Self {
+        AuthData::ApiKey(apikey.to_owned())
     }
 }
 
 /// Dummy Authenticator, that blindly inserts authorization data, allowing all
 /// access to an endpoint with the specified subject.
 #[derive(Debug)]
-pub struct AllowAllAuthenticator<T> {
+pub struct AllowAllAuthenticator<T, C>
+where
+    C: Push<Option<Authorization>>,
+{
     inner: T,
     subject: String,
+    marker: PhantomData<C>,
 }
 
-impl<T> AllowAllAuthenticator<T> {
+impl<T, C> AllowAllAuthenticator<T, C>
+where
+    C: Push<Option<Authorization>>,
+{
     /// Create a middleware that authorizes with the configured subject.
-    pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T> {
+    pub fn new<U: Into<String>>(inner: T, subject: U) -> AllowAllAuthenticator<T, C> {
         AllowAllAuthenticator {
             inner,
             subject: subject.into(),
+            marker: PhantomData,
         }
     }
 }
 
-impl<T> hyper::server::NewService for AllowAllAuthenticator<T>
-    where T: hyper::server::NewService<Request=(Request,Context), Response=Response, Error=Error> {
-    type Request = (Request, Option<AuthData>);
+impl<T, C> hyper::server::NewService for AllowAllAuthenticator<T, C>
+where
+    C: Push<Option<Authorization>>,
+    T: hyper::server::NewService<
+        Request = (Request, C::Result),
+        Response = Response,
+        Error = Error,
+    >,
+{
+    type Request = (Request, C);
     type Response = Response;
     type Error = Error;
-    type Instance = AllowAllAuthenticator<T::Instance>;
+    type Instance = AllowAllAuthenticator<T::Instance, C>;
 
     fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.inner.new_service().map(|s| AllowAllAuthenticator::new(s, self.subject.clone()))
+        self.inner
+            .new_service()
+            .map(|s| AllowAllAuthenticator::new(s, self.subject.clone()))
     }
 }
 
-impl<T> hyper::server::Service for AllowAllAuthenticator<T>
-    where T: hyper::server::Service<Request=(Request,Context), Response=Response, Error=Error> {
-    type Request = (Request, Option<AuthData>);
+impl<T, C> hyper::server::Service for AllowAllAuthenticator<T, C>
+where
+    C: Push<Option<Authorization>>,
+    T: hyper::server::Service<Request = (Request, C::Result), Response = Response, Error = Error>,
+{
+    type Request = (Request, C);
     type Response = Response;
     type Error = Error;
     type Future = T::Future;
 
-    fn call(&self, (req, _): Self::Request) -> Self::Future {
-        let mut context = Context::default();
-        context.authorization = Some(Authorization{
+    fn call(&self, (req, context): Self::Request) -> Self::Future {
+        let context = context.push(Some(Authorization {
             subject: self.subject.clone(),
             scopes: Scopes::All,
             issuer: None,
-        });
+        }));
         self.inner.call((req, context))
     }
 }

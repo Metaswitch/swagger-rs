@@ -15,10 +15,14 @@ matrix:
   allow_failures:
     - rust: nightly
   include:
-    - rust: nightly-2018-03-07
+    - rust: nightly-2018-09-12
       before_script:
-      - cargo install clippy --vers 0.0.187
-      - cargo install rustfmt --vers 0.9.0 --force
+      - rustup component add clippy-preview
       script:
       - cargo clippy -- -D warnings
-      - cargo fmt -- --write-mode diff
+    - rust: stable
+      env: RUSTFMT=1
+      before_script:
+      - rustup component add rustfmt-preview
+      script:
+      - cargo fmt -- --check

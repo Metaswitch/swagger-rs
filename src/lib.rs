@@ -1,7 +1,7 @@
 //! Support crate for Swagger codegen.
-
 #![warn(missing_docs, missing_debug_implementations)]
 #![deny(unused_extern_crates)]
+#![cfg_attr(feature = "cargo-clippy", feature(tool_lints))]
 
 #[cfg(feature = "serdejson")]
 extern crate serde;
@@ -17,9 +17,10 @@ extern crate base64;
 extern crate hyper;
 
 extern crate futures;
+extern crate uuid;
 
-use std::fmt;
 use std::error;
+use std::fmt;
 
 /// Module for encoding API properties in base64.
 pub mod base64_format;
@@ -30,21 +31,53 @@ pub mod nullable_format;
 pub use nullable_format::Nullable;
 
 pub mod auth;
-pub use auth::{Authorization, AuthData};
+pub use auth::{AuthData, Authorization};
 
 pub mod context;
-pub use context::{Context, ContextWrapper};
+pub use context::{ContextBuilder, ContextWrapper, EmptyContext, Has, Pop, Push};
 
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
 pub use connector::{http_connector, https_connector, https_mutual_connector};
 
 pub mod composites;
-pub use composites::{GetPath, NotFound, CompositeNewService, CompositeService};
+pub use composites::{CompositeNewService, CompositeService, GetPath, NotFound};
+
+pub mod add_context;
+pub use add_context::AddContext;
+
+pub mod drop_context;
+pub use drop_context::DropContext;
+
+pub mod request_parser;
+pub use request_parser::RequestParser;
 
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
     (XSpanId, "X-Span-ID") => [String]
+}
+
+/// Wrapper for a string being used as an X-Span-ID.
+#[derive(Debug, Clone, Default)]
+pub struct XSpanIdString(pub String);
+
+impl XSpanIdString {
+    /// Extract an X-Span-ID from a request header if present, and if not
+    /// generate a new one.
+    pub fn get_or_generate(req: &hyper::Request) -> Self {
+        XSpanIdString(
+            req.headers()
+                .get::<XSpanId>()
+                .map(XSpanId::to_string)
+                .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+        )
+    }
+}
+
+impl fmt::Display for XSpanIdString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
 /// Very simple error type - just holds a description of the error. This is useful for human

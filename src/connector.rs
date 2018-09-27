@@ -1,20 +1,36 @@
 //! Utility methods for instantiating common connectors for clients.
 extern crate hyper_tls;
-extern crate tokio_core;
-extern crate openssl;
+#[cfg(
+    not(
+        any(
+            target_os = "macos",
+            target_os = "windows",
+            target_os = "ios"
+        )
+    )
+)]
 extern crate native_tls;
+#[cfg(
+    not(
+        any(
+            target_os = "macos",
+            target_os = "windows",
+            target_os = "ios"
+        )
+    )
+)]
+extern crate openssl;
+extern crate tokio_core;
 
 use std::path::Path;
 
-use hyper;
 use self::tokio_core::reactor::Handle;
+use hyper;
 
 /// Returns a function which creates an http-connector. Used for instantiating
 /// clients with custom connectors
 pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Send + Sync> {
-    Box::new(move |handle: &Handle| {
-        hyper::client::HttpConnector::new(4, handle)
-    })
+    Box::new(move |handle: &Handle| hyper::client::HttpConnector::new(4, handle))
 }
 
 /// Returns a function which creates an https-connector
@@ -22,6 +38,15 @@ pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Sen
 /// # Arguments
 ///
 /// * `ca_certificate` - Path to CA certificate used to authenticate the server
+#[cfg(
+    not(
+        any(
+            target_os = "macos",
+            target_os = "windows",
+            target_os = "ios"
+        )
+    )
+)]
 pub fn https_connector<CA>(
     ca_certificate: CA,
 ) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
@@ -31,8 +56,8 @@ where
     let ca_certificate = ca_certificate.as_ref().to_owned();
     Box::new(move |handle: &Handle| {
         // SSL implementation
-        let mut ssl = openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls())
-            .unwrap();
+        let mut ssl =
+            openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();
 
         // Server authentication
         ssl.set_ca_file(ca_certificate.clone()).unwrap();
@@ -47,12 +72,39 @@ where
     })
 }
 
+/// Not currently implemented on Mac OS X, iOS and Windows.
+/// This function will panic when called.
+#[cfg(
+    any(
+        target_os = "macos",
+        target_os = "windows",
+        target_os = "ios"
+    )
+)]
+pub fn https_connector<CA>(
+    _ca_certificate: CA,
+) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+where
+    CA: AsRef<Path>,
+{
+    unimplemented!("See issue #43 (https://github.com/Metaswitch/swagger-rs/issues/43)")
+}
+
 /// Returns a function which creates https-connectors for mutually authenticated connections.
 /// # Arguments
 ///
 /// * `ca_certificate` - Path to CA certificate used to authenticate the server
 /// * `client_key` - Path to the client private key
 /// * `client_certificate` - Path to the client's public certificate associated with the private key
+#[cfg(
+    not(
+        any(
+            target_os = "macos",
+            target_os = "windows",
+            target_os = "ios"
+        )
+    )
+)]
 pub fn https_mutual_connector<CA, K, C>(
     ca_certificate: CA,
     client_key: K,
@@ -68,8 +120,8 @@ where
     let client_certificate = client_certificate.as_ref().to_owned();
     Box::new(move |handle: &Handle| {
         // SSL implementation
-        let mut ssl = openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls())
-            .unwrap();
+        let mut ssl =
+            openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();
 
         // Server authentication
         ssl.set_ca_file(ca_certificate.clone()).unwrap();
@@ -89,4 +141,26 @@ where
             (connector, builder.build().unwrap()).into();
         connector
     })
+}
+
+/// Not currently implemented on Mac OS X, iOS and Windows.
+/// This function will panic when called.
+#[cfg(
+    any(
+        target_os = "macos",
+        target_os = "windows",
+        target_os = "ios"
+    )
+)]
+pub fn https_mutual_connector<CA, K, C>(
+    _ca_certificate: CA,
+    _client_key: K,
+    _client_certificate: C,
+) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+where
+    CA: AsRef<Path>,
+    K: AsRef<Path>,
+    C: AsRef<Path>,
+{
+    unimplemented!("See issue #43 (https://github.com/Metaswitch/swagger-rs/issues/43)")
 }
