@@ -46,7 +46,7 @@ pub use composites::{CompositeNewService, CompositeService, GetPath, NotFound};
 #[allow(deprecated)]
 pub mod add_context;
 #[allow(deprecated)]
-pub use add_context::{AddContextNewService, AddContextService, AddContext};
+pub use add_context::{AddContext, AddContextNewService, AddContextService};
 
 pub mod drop_context;
 pub use drop_context::DropContext;

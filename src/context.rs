@@ -171,9 +171,7 @@ pub trait Push<T> {
 /// type name.
 ///
 /// All list types constructed using the generated types will implement `Push<T>`
-/// for all `T`, but it should ony be used when `T` is one of the types passed
-/// to the macro invocation, otherwise it might not be possible to retrieve the
-/// inserted value.
+/// for all types `T` that appear in the list passed to the macro invocation.
 ///
 /// E.g.
 ///
@@ -181,9 +179,13 @@ pub trait Push<T> {
 /// # #[macro_use] extern crate swagger;
 /// # use swagger::{Has, Pop, Push};
 ///
+/// #[derive(Default)]
 /// struct MyType1;
+/// #[derive(Default)]
 /// struct MyType2;
+/// #[derive(Default)]
 /// struct MyType3;
+/// #[derive(Default)]
 /// struct MyType4;
 ///
 /// new_context_type!(MyContext, MyEmpContext, MyType1, MyType2, MyType3);
@@ -211,13 +213,13 @@ pub trait Push<T> {
 ///
 ///     use_has_my_type_1(&context);
 ///     use_has_my_type_2(&context);
-///     // use_has_my_type3(&context);      // will fail
+///     // use_has_my_type_3(&context);      // will fail
 ///
-///     let bad_context: BadContext =
-///         MyEmpContext::default()
-///         .push(MyType4{})
-///         .push(MyType1{});
-///     // use_has_my_type_4(&bad_context);     // will fail
+///     // Will fail because `MyType4`// was not passed to `new_context_type!`
+///     // let context = MyEmpContext::default().push(MyType4{});
+///
+///     let bad_context: BadContext = BadContext::default();
+///     // use_has_my_type_4(&bad_context);  // will fail
 ///
 /// }
 /// ```
@@ -239,45 +241,48 @@ macro_rules! new_context_type {
         #[derive(Debug, Clone, Default, PartialEq, Eq)]
         pub struct $empty_context_name;
 
-        // implement `Push<T>` on the empty context type for any `T`, so that
-        // items can be added to the context
-        impl<U> $crate::Push<U> for $empty_context_name {
-            type Result = $context_name<U, Self>;
-            fn push(self, item: U) -> Self::Result {
+        // implement `Push<T>` on the empty context type for each type `T` that
+        // was passed to the macro
+        $(
+        impl Push<$types> for $empty_context_name {
+            type Result = $context_name<$types, Self>;
+            fn push(self, item: $types) -> Self::Result {
                 $context_name{head: item, tail: Self::default()}
             }
         }
 
         // implement `Has<T>` for a list where `T` is the type of the head
-        impl<T, C> $crate::Has<T> for $context_name<T, C> {
-            fn set(&mut self, item: T) {
+        impl<C> $crate::Has<$types> for $context_name<$types, C> {
+            fn set(&mut self, item: $types) {
                 self.head = item;
             }
 
-            fn get(&self) -> &T {
+            fn get(&self) -> &$types {
                 &self.head
             }
 
-            fn get_mut(&mut self) -> &mut T {
+            fn get_mut(&mut self) -> &mut $types {
                 &mut self.head
             }
         }
 
         // implement `Pop<T>` for a list where `T` is the type of the head
-        impl<T, C> $crate::Pop<T> for $context_name<T, C> {
+        impl<C> $crate::Pop<$types> for $context_name<$types, C> {
             type Result = C;
-            fn pop(self) -> (T, Self::Result) {
+            fn pop(self) -> ($types, Self::Result) {
                 (self.head, self.tail)
             }
         }
 
-        // implement `Push<U>` for non-empty lists, for all types `U`
-        impl<C, T, U> $crate::Push<U> for $context_name<T, C> {
-            type Result = $context_name<U, Self>;
-            fn push(self, item: U) -> Self::Result {
+        // implement `Push<U>` for non-empty lists, for each type `U` that was passed
+        // to the macro
+        impl<C, T> Push<$types> for $context_name<T, C> {
+            type Result = $context_name<$types, Self>;
+            fn push(self, item: $types) -> Self::Result {
                 $context_name{head: item, tail: self}
             }
         }
+        )+
 
         // Add implementations of `Has<T>` and `Pop<T>` when `T` is any type stored in
         // the list, not just the head.
@@ -297,7 +302,6 @@ macro_rules! new_context_type {
     // impls for all distinct pairs of types in the original list.
     (impl extend_has $context_name:ident, $empty_context_name:ident, $head:ty, $($tail:ty),+ ) => {
 
-        //
         new_context_type!(
             impl extend_has_helper
             $context_name,
@@ -524,7 +528,7 @@ where
 ///     type Future = T::Future;
 ///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
 ///         self.inner.call((req, context))
-///     }    
+///     }
 /// }
 /// ```
 pub trait SwaggerService<C>:
