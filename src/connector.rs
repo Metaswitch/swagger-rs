@@ -1,24 +1,8 @@
 //! Utility methods for instantiating common connectors for clients.
 extern crate hyper_tls;
-#[cfg(
-    not(
-        any(
-            target_os = "macos",
-            target_os = "windows",
-            target_os = "ios"
-        )
-    )
-)]
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 extern crate native_tls;
-#[cfg(
-    not(
-        any(
-            target_os = "macos",
-            target_os = "windows",
-            target_os = "ios"
-        )
-    )
-)]
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 extern crate openssl;
 extern crate tokio_core;
 
@@ -38,15 +22,7 @@ pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Sen
 /// # Arguments
 ///
 /// * `ca_certificate` - Path to CA certificate used to authenticate the server
-#[cfg(
-    not(
-        any(
-            target_os = "macos",
-            target_os = "windows",
-            target_os = "ios"
-        )
-    )
-)]
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 pub fn https_connector<CA>(
     ca_certificate: CA,
 ) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
@@ -74,13 +50,7 @@ where
 
 /// Not currently implemented on Mac OS X, iOS and Windows.
 /// This function will panic when called.
-#[cfg(
-    any(
-        target_os = "macos",
-        target_os = "windows",
-        target_os = "ios"
-    )
-)]
+#[cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))]
 pub fn https_connector<CA>(
     _ca_certificate: CA,
 ) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
@@ -96,15 +66,7 @@ where
 /// * `ca_certificate` - Path to CA certificate used to authenticate the server
 /// * `client_key` - Path to the client private key
 /// * `client_certificate` - Path to the client's public certificate associated with the private key
-#[cfg(
-    not(
-        any(
-            target_os = "macos",
-            target_os = "windows",
-            target_os = "ios"
-        )
-    )
-)]
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 pub fn https_mutual_connector<CA, K, C>(
     ca_certificate: CA,
     client_key: K,
@@ -145,13 +107,7 @@ where
 
 /// Not currently implemented on Mac OS X, iOS and Windows.
 /// This function will panic when called.
-#[cfg(
-    any(
-        target_os = "macos",
-        target_os = "windows",
-        target_os = "ios"
-    )
-)]
+#[cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))]
 pub fn https_mutual_connector<CA, K, C>(
     _ca_certificate: CA,
     _client_key: K,

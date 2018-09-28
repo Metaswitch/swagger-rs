@@ -98,9 +98,7 @@ where
 #[cfg_attr(
     feature = "cargo-clippy",
     allow(
-        renamed_and_removed_lints,
-        new_without_default_derive,
-        clippy::new_without_default_derive
+        renamed_and_removed_lints, new_without_default_derive, clippy::new_without_default_derive
     )
 )]
 impl<U: GetPath, V: NotFound, W> CompositeNewService<U, V, W> {
