@@ -123,7 +123,10 @@ where
 /// Middleware wrapper service, that should be used as the outermost layer in a
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
 /// used by subsequent layers in the stack.
-#[deprecated(since = "2.0.0", note = "Replace with `AddContextNewService` or `AddContextService`")]
+#[deprecated(
+    since = "2.0.0",
+    note = "Replace with `AddContextNewService` or `AddContextService`"
+)]
 #[derive(Debug)]
 pub struct AddContext<T, C>
 where
