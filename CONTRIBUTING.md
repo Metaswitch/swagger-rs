@@ -8,7 +8,17 @@ To help us help you get pull requests merged quickly and smoothly, open an issue
 
 Contributions that add/improve tests are awesome. Please add tests for every change.
 
-`swagger-rs` uses [`rustfmt-nightly`](https://github.com/rust-lang-nursery/rustfmt) for formatting and [`clippy`](https://github.com/rust-lang-nursery/rust-clippy) for linting.
+`swagger-rs` uses [`rustfmt`](https://github.com/rust-lang-nursery/rustfmt) for formatting and [`clippy`](https://github.com/rust-lang-nursery/rust-clippy) for linting. See .travis.yml for the versions we use.
+
+## Testing against openapi-generator
+
+If you are making a non-trivial change, please open a simultaneous PR against openapi-generator. This will allow the openapi-generator CI pipeline to verify that your change is compatible.
+
+You will need to update `modules/openapi-generator/src/main/resources/rust-server/Cargo.mustache` as follows:
+
+```toml
+swagger = { git = "https://github.com/foo/swagger-rs.git", branch = "bar"}
+```
 
 ## Conduct
 
