@@ -1,7 +1,6 @@
 //! Support crate for Swagger codegen.
 #![warn(missing_docs, missing_debug_implementations)]
 #![deny(unused_extern_crates)]
-#![cfg_attr(feature = "cargo-clippy", feature(tool_lints))]
 
 #[cfg(feature = "serdejson")]
 extern crate serde;
