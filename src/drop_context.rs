@@ -10,7 +10,7 @@ use std::marker::PhantomData;
 /// and passes the plain `hyper::Request` to the wrapped service.
 ///
 /// This service can be used to to include services that take a plain `hyper::Request`
-/// in a `CompositeService` wrapped in an `AddContext` service.
+/// in a `CompositeService` wrapped in an `AddContextService`.
 ///
 /// Example Usage
 /// =============

@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+## [2.0.0] - 2018-09-28
+
+### Changed
+- Added the `AddContextNewService` and `AddContextService` structs, and deprecated the old `AddContext` struct. One or other of the new structs should be a drop-in replacement for the `AddContext`, depending on whether it was being used as a `NewService` or `Service`.
+- modified the `new_context_type` macro to only implement `Push`, `Pop` and `Has` for types explicitly passed to the macro. This is a breaking change, which should only require minor changes such as adding type annotations if the macro was used as recommended in the docs.
+
 ## [1.0.2] - 2018-07-23
 ### Added
 - Added (non-HTTPS) support for Windows/MacOS/iOS
@@ -79,7 +85,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/1.0.2...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/2.0.0...HEAD
+[2.0.0]: https://github.com/Metaswitch/swagger-rs/compare/1.0.2...2.0.0
 [1.0.2]: https://github.com/Metaswitch/swagger-rs/compare/1.0.1...1.0.2
 [1.0.1]: https://github.com/Metaswitch/swagger-rs/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/Metaswitch/swagger-rs/compare/0.12.1...1.0.0
