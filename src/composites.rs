@@ -95,14 +95,7 @@ where
     W: 'static;
 
 // Workaround for https://github.com/rust-lang-nursery/rust-clippy/issues/2226
-#[cfg_attr(
-    feature = "cargo-clippy",
-    allow(
-        renamed_and_removed_lints,
-        new_without_default_derive,
-        clippy::new_without_default_derive
-    )
-)]
+#[cfg_attr(feature = "cargo-clippy", allow(new_without_default_derive))]
 impl<U: GetPath, V: NotFound, W> CompositeNewService<U, V, W> {
     /// create an empty `CompositeNewService`
     pub fn new() -> Self {
