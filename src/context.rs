@@ -483,6 +483,15 @@ impl<'a, T, C> ContextWrapper<'a, T, C> {
     }
 }
 
+impl<'a, T, C: Clone> Clone for ContextWrapper<'a, T, C> {
+    fn clone(&self) -> Self {
+        ContextWrapper {
+            api: self.api,
+            context: self.context.clone(),
+        }
+    }
+}
+
 /// Trait to extend an API to make it easy to bind it to a context.
 pub trait ContextWrapperExt<'a, C>
 where
