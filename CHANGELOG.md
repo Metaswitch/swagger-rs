@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+## [2.0.1] - 2018-11-12
+### Changed
+* Make compatible with clippy on stable (1.30.1)
+
 ## [2.0.0] - 2018-09-28
 
 ### Changed
@@ -85,7 +89,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/2.0.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/2.0.1...HEAD
+[2.0.1]: https://github.com/Metaswitch/swagger-rs/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/Metaswitch/swagger-rs/compare/1.0.2...2.0.0
 [1.0.2]: https://github.com/Metaswitch/swagger-rs/compare/1.0.1...1.0.2
 [1.0.1]: https://github.com/Metaswitch/swagger-rs/compare/1.0.0...1.0.1
