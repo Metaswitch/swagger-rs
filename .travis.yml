@@ -15,7 +15,7 @@ matrix:
   allow_failures:
     - rust: nightly
   include:
-    - rust: nightly-2018-07-16
+    - rust: stable
       before_script:
       - rustup component add clippy-preview
       script:
