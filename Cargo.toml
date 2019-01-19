@@ -18,7 +18,7 @@ default = ["serdejson"]
 serdejson = ["serde", "serde_json", "serde_derive"]
 
 [dependencies]
-base64 = "0.5"
+base64 = "0.10"
 serde = { version = "1.0", optional = true }
 serde_json = { version = "1.0", optional = true }
 serde_derive = { version = "1.0", optional = true }
