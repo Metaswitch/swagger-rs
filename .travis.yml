@@ -27,3 +27,8 @@ matrix:
       - rustup component add rustfmt-preview
       script:
       - cargo fmt -- --check
+branches:
+  only:
+   - staging
+   - trying
+   - master
