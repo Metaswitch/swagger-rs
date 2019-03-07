@@ -80,7 +80,7 @@ where
     let ca_certificate = ca_certificate.as_ref().to_owned();
     let client_key = client_key.as_ref().to_owned();
     let client_certificate = client_certificate.as_ref().to_owned();
-    Box::new(move |_| { 
+    Box::new(move |_| {
         // SSL implementation
         let mut ssl =
             openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();

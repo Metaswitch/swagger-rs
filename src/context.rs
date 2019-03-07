@@ -616,7 +616,7 @@ mod context_tests {
     use super::*;
     use futures::future::{ok, Future, FutureResult};
     use hyper::service::{MakeService, Service};
-    use hyper::{Error, Method, Request, Response, Uri, Body};
+    use hyper::{Body, Error, Method, Request, Response, Uri};
     use std::io;
     use std::marker::PhantomData;
     use std::str::FromStr;
@@ -725,7 +725,7 @@ mod context_tests {
         D: Push<ContextItem2, Result = E>,
         E: Push<ContextItem3>,
         T: Service<ReqBody = ContextualPayload<Body, E::Result>>,
-        E::Result: Send + 'static
+        E::Result: Send + 'static,
     {
         type ReqBody = ContextualPayload<Body, C>;
         type ResBody = T::ResBody;
@@ -736,7 +736,13 @@ mod context_tests {
             let (item, context) = body.context.pop();
             use_item_1_owned(item);
             let context = context.push(ContextItem2 {}).push(ContextItem3 {});
-            let req = Request::from_parts(head, ContextualPayload { inner: body.inner, context });
+            let req = Request::from_parts(
+                head,
+                ContextualPayload {
+                    inner: body.inner,
+                    context,
+                },
+            );
             self.inner.call(req)
         }
     }
@@ -747,7 +753,8 @@ mod context_tests {
         RC::Result: Push<ContextItem2>,
         <RC::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
         <<RC::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result: Send + 'static,
-        T: MakeService<SC,
+        T: MakeService<
+            SC,
             ReqBody = ContextualPayload<
                 Body,
                 <<RC::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result,
@@ -766,13 +773,13 @@ mod context_tests {
         E: Push<ContextItem3>,
         T: MakeService<SC, ReqBody = ContextualPayload<Body, E::Result>>,
         T::Future: 'static,
-        E::Result: Send + 'static
+        E::Result: Send + 'static,
     {
         type ReqBody = ContextualPayload<Body, RC>;
         type ResBody = T::ResBody;
         type Error = T::Error;
         type Service = MiddleService<T::Service, RC>;
-        type Future = Box<Future<Item=Self::Service, Error=Self::MakeError>>;
+        type Future = Box<Future<Item = Self::Service, Error = Self::MakeError>>;
         type MakeError = T::MakeError;
 
         fn make_service(&mut self, sc: SC) -> Self::Future {
@@ -789,13 +796,13 @@ mod context_tests {
         D: Push<ContextItem2, Result = E>,
         E: Push<ContextItem3>,
         T: MakeService<SC, ReqBody = ContextualPayload<Body, E::Result>>,
-        E::Result: Send + 'static
+        E::Result: Send + 'static,
     {
         fn new(inner: T) -> Self {
             MiddleMakeService {
                 inner,
                 marker1: PhantomData,
-                marker2: PhantomData
+                marker2: PhantomData,
             }
         }
     }
@@ -806,7 +813,7 @@ mod context_tests {
     where
         C: Default + Push<ContextItem1>,
         T: Service<ReqBody = ContextualPayload<Body, C::Result>>,
-        C::Result: Send + 'static
+        C::Result: Send + 'static,
     {
         inner: T,
         marker: PhantomData<C>,
@@ -819,7 +826,7 @@ mod context_tests {
     where
         C: Default + Push<ContextItem1>,
         T: Service<ReqBody = ContextualPayload<Body, C::Result>>,
-        C::Result: Send + 'static
+        C::Result: Send + 'static,
     {
         type ReqBody = Body;
         type ResBody = T::ResBody;
@@ -828,7 +835,13 @@ mod context_tests {
         fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
             let context = C::default().push(ContextItem1 {});
             let (header, body) = req.into_parts();
-            let req = Request::from_parts(header, ContextualPayload { inner: body, context });
+            let req = Request::from_parts(
+                header,
+                ContextualPayload {
+                    inner: body,
+                    context,
+                },
+            );
             self.inner.call(req)
         }
     }
@@ -837,7 +850,7 @@ mod context_tests {
     where
         RC: Default + Push<ContextItem1>,
         T: MakeService<SC, ReqBody = ContextualPayload<Body, RC::Result>>,
-        RC::Result: Send + 'static
+        RC::Result: Send + 'static,
     {
         inner: T,
         marker1: PhantomData<RC>,
@@ -855,7 +868,7 @@ mod context_tests {
         type ResBody = T::ResBody;
         type Error = T::Error;
         type Service = OuterService<T::Service, RC>;
-        type Future = Box<Future<Item=Self::Service, Error=Self::MakeError>>;
+        type Future = Box<Future<Item = Self::Service, Error = Self::MakeError>>;
         type MakeError = T::MakeError;
 
         fn make_service(&mut self, sc: SC) -> Self::Future {
@@ -899,11 +912,14 @@ mod context_tests {
         // annotate the outermost service to indicate that the context type it
         // uses is the empty context type created by the above macro invocation.
         // the compiler should infer all the other context types.
-        let mut make_service = OuterMakeService::<_, _, MyEmptyContext>::new(MiddleMakeService::new(
-            InnerMakeService::new(),
-        ));
+        let mut make_service = OuterMakeService::<_, _, MyEmptyContext>::new(
+            MiddleMakeService::new(InnerMakeService::new()),
+        );
 
-        let req = Request::builder().method(Method::POST).uri(Uri::from_str("127.0.0.1:80").unwrap()).body(Body::empty());
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri(Uri::from_str("127.0.0.1:80").unwrap())
+            .body(Body::empty());
 
         make_service
             .make_service(())
