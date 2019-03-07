@@ -8,25 +8,6 @@ use hyper::{Request, Response, StatusCode};
 use std::ops::{Deref, DerefMut};
 use std::{fmt, io};
 
-/// Trait for getting the path of a request. Must be implemented on the `Request`
-/// associated type for `NewService`s being combined in a `CompositeNewService`.
-pub trait GetPath {
-    /// Retrieve the path
-    fn path(&self) -> &str;
-}
-
-impl GetPath for hyper::Body {
-    fn path(&self) -> &str {
-        self.path()
-    }
-}
-
-impl<C> GetPath for (hyper::Body, C) {
-    fn path(&self) -> &str {
-        self.0.path()
-    }
-}
-
 /// Trait for generating a default "not found" response. Must be implemented on
 /// the `Response` associated type for `NewService`s being combined in a
 /// `CompositeNewService`.
@@ -106,7 +87,6 @@ where
 #[derive(Default)]
 pub struct CompositeNewService<C, U, V, W>(CompositeNewServiceVec<C, U, V, W>)
 where
-    U: GetPath,
     V: NotFound<V> + 'static,
     W: 'static;
 
@@ -119,7 +99,7 @@ where
         clippy::new_without_default_derive
     )
 )]
-impl<C, U: GetPath, V: NotFound<V>, W> CompositeNewService<C, U, V, W> {
+impl<C, U, V: NotFound<V>, W> CompositeNewService<C, U, V, W> {
     /// create an empty `CompositeNewService`
     pub fn new() -> Self {
         CompositeNewService(Vec::new())
@@ -128,7 +108,7 @@ impl<C, U: GetPath, V: NotFound<V>, W> CompositeNewService<C, U, V, W> {
 
 impl<C, U, V, W> MakeService<C> for CompositeNewService<C, U, V, W>
 where
-    U: GetPath + hyper::body::Payload,
+    U: hyper::body::Payload,
     V: NotFound<V> + 'static + hyper::body::Payload,
     W: std::error::Error + Send + Sync + 'static,
 {
@@ -141,7 +121,7 @@ where
 
     fn make_service(
         &mut self,
-        service_ctx: C,
+        _service_ctx: C,
     ) -> futures::future::FutureResult<Self::Service, io::Error> {
         let mut vec = Vec::new();
 
@@ -155,7 +135,6 @@ where
 
 impl<C, U, V, W> fmt::Debug for CompositeNewService<C, U, V, W>
 where
-    U: GetPath,
     V: NotFound<V> + 'static,
     W: 'static,
 {
@@ -168,7 +147,6 @@ where
 
 impl<C, U, V, W> Deref for CompositeNewService<C, U, V, W>
 where
-    U: GetPath,
     V: NotFound<V> + 'static,
     W: 'static,
 {
@@ -180,7 +158,6 @@ where
 
 impl<C, U, V, W> DerefMut for CompositeNewService<C, U, V, W>
 where
-    U: GetPath,
     V: NotFound<V> + 'static,
     W: 'static,
 {
@@ -193,13 +170,12 @@ where
 /// and a `Service` instance.
 pub struct CompositeService<U, V, W>(Vec<(&'static str, BoxedService<U, V, W>)>)
 where
-    U: GetPath,
     V: NotFound<V> + 'static,
     W: 'static;
 
 impl<U, V, W> Service for CompositeService<U, V, W>
 where
-    U: GetPath + hyper::body::Payload,
+    U: hyper::body::Payload,
     V: NotFound<V> + 'static + hyper::body::Payload,
     W: 'static + std::error::Error + Send + Sync,
 {
@@ -224,7 +200,6 @@ where
 
 impl<U, V, W> fmt::Debug for CompositeService<U, V, W>
 where
-    U: GetPath,
     V: NotFound<V> + 'static,
     W: 'static,
 {
@@ -237,7 +212,6 @@ where
 
 impl<U, V, W> Deref for CompositeService<U, V, W>
 where
-    U: GetPath,
     V: NotFound<V> + 'static,
     W: 'static,
 {
@@ -249,7 +223,6 @@ where
 
 impl<U, V, W> DerefMut for CompositeService<U, V, W>
 where
-    U: GetPath,
     V: NotFound<V> + 'static,
     W: 'static,
 {

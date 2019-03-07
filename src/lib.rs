@@ -12,7 +12,6 @@ extern crate serde_json;
 extern crate serde_derive;
 extern crate base64;
 
-#[macro_use]
 extern crate hyper;
 
 extern crate futures;
@@ -40,7 +39,7 @@ pub mod connector;
 pub use connector::{http_connector, https_connector, https_mutual_connector};
 
 pub mod composites;
-pub use composites::{CompositeNewService, CompositeService, GetPath, NotFound};
+pub use composites::{CompositeNewService, CompositeService, NotFound};
 
 #[allow(deprecated)]
 pub mod add_context;

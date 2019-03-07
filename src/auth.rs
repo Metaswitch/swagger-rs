@@ -1,9 +1,10 @@
 //! Authentication and authorization data structures
 
 use super::Push;
+use crate::context::ContextualPayload;
 use futures::future::Future;
 use hyper;
-use hyper::{Error, Request, Response};
+use hyper::{Error, Request};
 use std::collections::BTreeSet;
 use std::io;
 use std::marker::PhantomData;
@@ -42,14 +43,19 @@ pub struct Authorization {
     pub issuer: Option<String>,
 }
 
+/// Credential holder for Basic Authentication
 #[derive(Debug, Clone, PartialEq)]
 pub struct Basic {
+    /// The username as a possibly empty string
     pub username: String,
+    /// The password, or None if the : delimieter was not part of the parsed input
     pub password: Option<String>,
 }
 
+/// Token holder for Bearer Authentication, most commonly used by OAuth
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bearer {
+    /// Bearer token as a String
     pub token: String,
 }
 
@@ -110,29 +116,6 @@ where
             subject: subject.into(),
             marker: PhantomData,
         }
-    }
-}
-
-#[derive(Clone)]
-pub struct ContextualPayload<P, Ctx>
-where
-    P: hyper::body::Payload,
-    Ctx: Send + 'static,
-{
-    pub inner: P,
-    pub context: Ctx,
-}
-
-impl<P, Ctx> hyper::body::Payload for ContextualPayload<P, Ctx>
-where
-    P: hyper::body::Payload,
-    Ctx: Send + 'static,
-{
-    type Data = P::Data;
-    type Error = P::Error;
-
-    fn poll_data(&mut self) -> futures::Poll<Option<Self::Data>, Self::Error> {
-        self.inner.poll_data()
     }
 }
 

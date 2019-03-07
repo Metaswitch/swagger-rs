@@ -14,7 +14,7 @@ use hyper;
 /// Returns a function which creates an http-connector. Used for instantiating
 /// clients with custom connectors
 pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Send + Sync> {
-    Box::new(move |handle: &Handle| hyper::client::HttpConnector::new(4))
+    Box::new(move |_| hyper::client::HttpConnector::new(4))
 }
 
 /// Returns a function which creates an https-connector
@@ -30,7 +30,7 @@ where
     CA: AsRef<Path>,
 {
     let ca_certificate = ca_certificate.as_ref().to_owned();
-    Box::new(move |handle: &Handle| {
+    Box::new(move |_| {
         // SSL implementation
         let mut ssl =
             openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();
@@ -80,7 +80,7 @@ where
     let ca_certificate = ca_certificate.as_ref().to_owned();
     let client_key = client_key.as_ref().to_owned();
     let client_certificate = client_certificate.as_ref().to_owned();
-    Box::new(move |handle: &Handle| {
+    Box::new(move |_| { 
         // SSL implementation
         let mut ssl =
             openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();

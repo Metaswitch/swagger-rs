@@ -2,10 +2,10 @@
 //! to a wrapped service.
 
 use super::{Push, XSpanIdString};
-use auth::ContextualPayload;
+use context::ContextualPayload;
 use futures::Future;
 use hyper;
-use hyper::{Error, Request, Response};
+use hyper::{Error, Request};
 use std::io;
 use std::marker::PhantomData;
 

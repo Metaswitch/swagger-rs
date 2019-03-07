@@ -1,10 +1,10 @@
 //! Hyper service that drops a context to an incoming request and passes it on
 //! to a wrapped service.
 
-use auth::ContextualPayload;
+use context::ContextualPayload;
 use futures::Future;
 use hyper;
-use hyper::{Error, Request, Response};
+use hyper::{Error, Request};
 use std::io;
 use std::marker::PhantomData;
 

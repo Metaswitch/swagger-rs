@@ -7,7 +7,7 @@
 //! See the `context_tests` module below for examples of how to use.
 
 use super::XSpanIdString;
-use auth::{AuthData, Authorization, ContextualPayload};
+use auth::{AuthData, Authorization};
 use futures::future::Future;
 use hyper;
 use std::marker::Sized;
@@ -32,16 +32,17 @@ use std::marker::Sized;
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<C> hyper::server::Service for MyService<C>
-///     where C: Has<MyItem>,
+/// impl<C> hyper::service::Service for MyService<C>
+///     where C: Has<MyItem> + Send + 'static
 /// {
-///     type Request = (hyper::Request, C);
-///     type Response = hyper::Response;
-///     type Error = hyper::Error;
-///     type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
-///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
-///         do_something_with_my_item(Has::<MyItem>::get(&context));
-///         Box::new(ok(hyper::Response::new()))
+///     type ReqBody = ContextualPayload<hyper::Body, C>;
+///     type ResBody = hyper::Body;
+///     type Error = std::io::Error;
+///     type Future = Box<Future<Item=hyper::Response<Self::ResBody>, Error=Self::Error>>;
+///     fn call(&mut self, req : hyper::Request<Self::ReqBody>) -> Self::Future {
+///         let (head, body) = req.into_parts();
+///         do_something_with_my_item(Has::<MyItem>::get(&body.context));
+///         Box::new(ok(hyper::Response::new(hyper::Body::empty())))
 ///     }
 /// }
 ///
@@ -78,25 +79,29 @@ pub trait Has<T> {
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<T, C, D, E> hyper::server::Service for MiddlewareService<T, C>
+/// impl<T, C, D, E> hyper::service::Service for MiddlewareService<T, C>
 ///     where
-///         C: Pop<MyItem1, Result=D>,
+///         C: Pop<MyItem1, Result=D> + Send + 'static,
 ///         D: Pop<MyItem2, Result=E>,
 ///         E: Pop<MyItem3>,
-///         T: hyper::server::Service<Request = (hyper::Request, E::Result)>
+///         E::Result: Send + 'static,
+///         T: hyper::service::Service<ReqBody=ContextualPayload<hyper::Body, E::Result>>
 /// {
-///     type Request = (hyper::Request, C);
-///     type Response = T::Response;
+///     type ReqBody = ContextualPayload<hyper::Body, C>;
+///     type ResBody = T::ResBody;
 ///     type Error = T::Error;
 ///     type Future = T::Future;
-///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
+///     fn call(&mut self, req : hyper::Request<Self::ReqBody>) -> Self::Future {
+///         let (head, body) = req.into_parts();
+///         let context = body.context;
 ///
 ///         // type annotations optional, included for illustrative purposes
 ///         let (_, context): (MyItem1, D) = context.pop();
 ///         let (_, context): (MyItem2, E) = context.pop();
 ///         let (_, context): (MyItem3, E::Result) = context.pop();
 ///
-///         self.inner.call((req, context))
+///         let req = hyper::Request::from_parts(head, ContextualPayload { inner: body.inner, context });
+///         self.inner.call(req)
 ///     }
 /// }
 ///
@@ -130,23 +135,26 @@ pub trait Pop<T> {
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<T, C, D, E> hyper::server::Service for MiddlewareService<T, C>
+/// impl<T, C, D, E> hyper::service::Service for MiddlewareService<T, C>
 ///     where
-///         C: Push<MyItem1, Result=D>,
+///         C: Push<MyItem1, Result=D> + Send + 'static,
 ///         D: Push<MyItem2, Result=E>,
 ///         E: Push<MyItem3>,
-///         T: hyper::server::Service<Request = (hyper::Request, E::Result)>
+///         E::Result: Send + 'static,
+///         T: hyper::service::Service<ReqBody=ContextualPayload<hyper::Body, E::Result>>
 /// {
-///     type Request = (hyper::Request, C);
-///     type Response = T::Response;
+///     type ReqBody = ContextualPayload<hyper::Body, C>;
+///     type ResBody = T::ResBody;
 ///     type Error = T::Error;
 ///     type Future = T::Future;
-///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
-///         let context = context
+///     fn call(&mut self, req : hyper::Request<Self::ReqBody>) -> Self::Future {
+///         let (head, body) = req.into_parts();
+///         let context = body.context
 ///             .push(MyItem1{})
 ///             .push(MyItem2{})
 ///             .push(MyItem3{});
-///         self.inner.call((req, context))
+///         let req = hyper::Request::from_parts(head, ContextualPayload { inner: body.inner, context });
+///         self.inner.call(req)
 ///     }
 /// }
 ///
@@ -522,21 +530,22 @@ where
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<T, C> hyper::server::Service for ExampleMiddleware<T, C>
+/// impl<T, C> hyper::service::Service for ExampleMiddleware<T, C>
 ///     where
 ///         T: SwaggerService<C>,
 ///         C: Has<Option<AuthData>> +
 ///            Has<Option<Authorization>> +
 ///            Has<XSpanIdString> +
 ///            Clone +
+///            Send +
 ///            'static,
 /// {
-///     type Request = (hyper::Request, C);
-///     type Response = T::Response;
+///     type ReqBody = ContextualPayload<hyper::Body, C>;
+///     type ResBody = T::ResBody;
 ///     type Error = T::Error;
 ///     type Future = T::Future;
-///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
-///         self.inner.call((req, context))
+///     fn call(&mut self, req: hyper::Request<Self::ReqBody>) -> Self::Future {
+///         self.inner.call(req)
 ///     }
 /// }
 /// ```
@@ -576,12 +585,38 @@ where
 {
 }
 
+/// This represents context provided as part of the request or the response
+#[derive(Clone, Debug)]
+pub struct ContextualPayload<P, Ctx>
+where
+    P: hyper::body::Payload,
+    Ctx: Send + 'static,
+{
+    /// The inner payload for this request/response
+    pub inner: P,
+    /// Request or Response Context
+    pub context: Ctx,
+}
+
+impl<P, Ctx> hyper::body::Payload for ContextualPayload<P, Ctx>
+where
+    P: hyper::body::Payload,
+    Ctx: Send + 'static,
+{
+    type Data = P::Data;
+    type Error = P::Error;
+
+    fn poll_data(&mut self) -> futures::Poll<Option<Self::Data>, Self::Error> {
+        self.inner.poll_data()
+    }
+}
+
 #[cfg(test)]
 mod context_tests {
     use super::*;
-    use futures::future::{ok, Future};
+    use futures::future::{ok, Future, FutureResult};
     use hyper::service::{MakeService, Service};
-    use hyper::{Error, Method, Request, Response, Uri};
+    use hyper::{Error, Method, Request, Response, Uri, Body};
     use std::io;
     use std::marker::PhantomData;
     use std::str::FromStr;
@@ -608,50 +643,55 @@ mod context_tests {
     // or `Has` if a reference is enough.
     impl<C> Service for InnerService<C>
     where
-        C: Has<ContextItem2> + Pop<ContextItem3>,
+        C: Has<ContextItem2> + Pop<ContextItem3> + Send + 'static,
     {
-        type ReqBody = (Request, C);
-        type Response = Response;
+        type ReqBody = ContextualPayload<Body, C>;
+        type ResBody = Body;
         type Error = Error;
-        type Future = Box<Future<Item = Response, Error = Error>>;
-        fn call(&self, (_, context): Self::Request) -> Self::Future {
-            use_item_2(Has::<ContextItem2>::get(&context));
+        type Future = Box<Future<Item = Response<Body>, Error = Error>>;
+        fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
+            use_item_2(Has::<ContextItem2>::get(&req.body().context));
 
-            let (item3, _): (ContextItem3, _) = context.pop();
+            let (_, body) = req.into_parts();
+
+            let (item3, _): (ContextItem3, _) = body.context.pop();
             use_item_3_owned(item3);
 
-            Box::new(ok(Response::new()))
+            Box::new(ok(Response::new(Body::empty())))
         }
     }
 
-    struct InnerNewService<C>
+    struct InnerMakeService<RC>
     where
-        C: Has<ContextItem2> + Pop<ContextItem3>,
+        RC: Has<ContextItem2> + Pop<ContextItem3>,
     {
-        marker: PhantomData<C>,
+        marker: PhantomData<RC>,
     }
 
-    impl<C> InnerNewService<C>
+    impl<RC> InnerMakeService<RC>
     where
-        C: Has<ContextItem2> + Pop<ContextItem3>,
+        RC: Has<ContextItem2> + Pop<ContextItem3>,
     {
         fn new() -> Self {
-            InnerNewService {
+            InnerMakeService {
                 marker: PhantomData,
             }
         }
     }
 
-    impl<C> NewService for InnerNewService<C>
+    impl<RC, SC> MakeService<SC> for InnerMakeService<RC>
     where
-        C: Has<ContextItem2> + Pop<ContextItem3>,
+        RC: Has<ContextItem2> + Pop<ContextItem3> + Send + 'static,
     {
-        type Request = (Request, C);
-        type Response = Response;
+        type ReqBody = ContextualPayload<Body, RC>;
+        type ResBody = Body;
         type Error = Error;
-        type Instance = InnerService<C>;
-        fn new_service(&self) -> Result<Self::Instance, io::Error> {
-            Ok(InnerService {
+        type Service = InnerService<RC>;
+        type Future = FutureResult<Self::Service, Self::MakeError>;
+        type MakeError = io::Error;
+
+        fn make_service(&mut self, _: SC) -> FutureResult<Self::Service, io::Error> {
+            ok(InnerService {
                 marker: PhantomData,
             })
         }
@@ -660,89 +700,102 @@ mod context_tests {
     // Example of a middleware service using contexts, i.e. a hyper service that
     // processes a request (and its context) and passes it on to another wrapped
     // service.
-    struct MiddleService<T, C>
+    struct MiddleService<T, RC>
     where
-        C: Pop<ContextItem1>,
-        C::Result: Push<ContextItem2>,
-        <C::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
+        RC: Pop<ContextItem1>,
+        RC::Result: Push<ContextItem2>,
+        <RC::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
+        <<RC::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result: Send + 'static,
         T: Service<
-            Request = (
-                Request,
-                <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result,
-            ),
+            ReqBody = ContextualPayload<
+                Body,
+                <<RC::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result,
+            >,
         >,
     {
         inner: T,
-        marker1: PhantomData<C>,
+        marker1: PhantomData<RC>,
     }
 
     // Use trait bounds to indicate what modifications your service will make
     // to the context, chaining them as below.
     impl<T, C, D, E> Service for MiddleService<T, C>
     where
-        C: Pop<ContextItem1, Result = D>,
+        C: Pop<ContextItem1, Result = D> + Send + 'static,
         D: Push<ContextItem2, Result = E>,
         E: Push<ContextItem3>,
-        T: Service<Request = (Request, E::Result)>,
+        T: Service<ReqBody = ContextualPayload<Body, E::Result>>,
+        E::Result: Send + 'static
     {
-        type Request = (Request, C);
-        type Response = T::Response;
+        type ReqBody = ContextualPayload<Body, C>;
+        type ResBody = T::ResBody;
         type Error = T::Error;
         type Future = T::Future;
-        fn call(&self, (req, context): Self::Request) -> Self::Future {
-            let (item, context) = context.pop();
+        fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
+            let (head, body) = req.into_parts();
+            let (item, context) = body.context.pop();
             use_item_1_owned(item);
             let context = context.push(ContextItem2 {}).push(ContextItem3 {});
-            self.inner.call((req, context))
+            let req = Request::from_parts(head, ContextualPayload { inner: body.inner, context });
+            self.inner.call(req)
         }
     }
 
-    struct MiddleNewService<T, C>
+    struct MiddleMakeService<T, SC, RC>
     where
-        C: Pop<ContextItem1>,
-        C::Result: Push<ContextItem2>,
-        <C::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
-        T: NewService<
-            Request = (
-                Request,
-                <<C::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result,
-            ),
+        RC: Pop<ContextItem1>,
+        RC::Result: Push<ContextItem2>,
+        <RC::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
+        <<RC::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result: Send + 'static,
+        T: MakeService<SC,
+            ReqBody = ContextualPayload<
+                Body,
+                <<RC::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result,
+            >,
         >,
     {
         inner: T,
-        marker1: PhantomData<C>,
+        marker1: PhantomData<RC>,
+        marker2: PhantomData<SC>,
     }
 
-    impl<T, C, D, E> NewService for MiddleNewService<T, C>
+    impl<T, SC, RC, D, E> MakeService<SC> for MiddleMakeService<T, SC, RC>
     where
-        C: Pop<ContextItem1, Result = D>,
+        RC: Pop<ContextItem1, Result = D> + Send + 'static,
         D: Push<ContextItem2, Result = E>,
         E: Push<ContextItem3>,
-        T: NewService<Request = (Request, E::Result)>,
+        T: MakeService<SC, ReqBody = ContextualPayload<Body, E::Result>>,
+        T::Future: 'static,
+        E::Result: Send + 'static
     {
-        type Request = (Request, C);
-        type Response = T::Response;
+        type ReqBody = ContextualPayload<Body, RC>;
+        type ResBody = T::ResBody;
         type Error = T::Error;
-        type Instance = MiddleService<T::Instance, C>;
-        fn new_service(&self) -> Result<Self::Instance, io::Error> {
-            self.inner.new_service().map(|s| MiddleService {
+        type Service = MiddleService<T::Service, RC>;
+        type Future = Box<Future<Item=Self::Service, Error=Self::MakeError>>;
+        type MakeError = T::MakeError;
+
+        fn make_service(&mut self, sc: SC) -> Self::Future {
+            Box::new(self.inner.make_service(sc).map(|s| MiddleService {
                 inner: s,
                 marker1: PhantomData,
-            })
+            }))
         }
     }
 
-    impl<T, C, D, E> MiddleNewService<T, C>
+    impl<T, SC, RC, D, E> MiddleMakeService<T, SC, RC>
     where
-        C: Pop<ContextItem1, Result = D>,
+        RC: Pop<ContextItem1, Result = D>,
         D: Push<ContextItem2, Result = E>,
         E: Push<ContextItem3>,
-        T: NewService<Request = (Request, E::Result)>,
+        T: MakeService<SC, ReqBody = ContextualPayload<Body, E::Result>>,
+        E::Result: Send + 'static
     {
         fn new(inner: T) -> Self {
-            MiddleNewService {
+            MiddleMakeService {
                 inner,
                 marker1: PhantomData,
+                marker2: PhantomData
             }
         }
     }
@@ -752,7 +805,8 @@ mod context_tests {
     struct OuterService<T, C>
     where
         C: Default + Push<ContextItem1>,
-        T: Service<Request = (Request, C::Result)>,
+        T: Service<ReqBody = ContextualPayload<Body, C::Result>>,
+        C::Result: Send + 'static
     {
         inner: T,
         marker: PhantomData<C>,
@@ -764,53 +818,65 @@ mod context_tests {
     impl<T, C> Service for OuterService<T, C>
     where
         C: Default + Push<ContextItem1>,
-        T: Service<Request = (Request, C::Result)>,
+        T: Service<ReqBody = ContextualPayload<Body, C::Result>>,
+        C::Result: Send + 'static
     {
-        type Request = Request;
-        type Response = T::Response;
+        type ReqBody = Body;
+        type ResBody = T::ResBody;
         type Error = T::Error;
         type Future = T::Future;
-        fn call(&self, req: Self::Request) -> Self::Future {
+        fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
             let context = C::default().push(ContextItem1 {});
-            self.inner.call((req, context))
+            let (header, body) = req.into_parts();
+            let req = Request::from_parts(header, ContextualPayload { inner: body, context });
+            self.inner.call(req)
         }
     }
 
-    struct OuterNewService<T, C>
+    struct OuterMakeService<T, SC, RC>
     where
-        C: Default + Push<ContextItem1>,
-        T: NewService<Request = (Request, C::Result)>,
+        RC: Default + Push<ContextItem1>,
+        T: MakeService<SC, ReqBody = ContextualPayload<Body, RC::Result>>,
+        RC::Result: Send + 'static
     {
         inner: T,
-        marker: PhantomData<C>,
+        marker1: PhantomData<RC>,
+        marker2: PhantomData<SC>,
     }
 
-    impl<T, C> NewService for OuterNewService<T, C>
+    impl<T, SC, RC> MakeService<SC> for OuterMakeService<T, SC, RC>
     where
-        C: Default + Push<ContextItem1>,
-        T: NewService<Request = (Request, C::Result)>,
+        RC: Default + Push<ContextItem1>,
+        RC::Result: Send + 'static,
+        T: MakeService<SC, ReqBody = ContextualPayload<Body, RC::Result>>,
+        T::Future: 'static,
     {
-        type Request = Request;
-        type Response = T::Response;
+        type ReqBody = Body;
+        type ResBody = T::ResBody;
         type Error = T::Error;
-        type Instance = OuterService<T::Instance, C>;
-        fn new_service(&self) -> Result<Self::Instance, io::Error> {
-            self.inner.new_service().map(|s| OuterService {
+        type Service = OuterService<T::Service, RC>;
+        type Future = Box<Future<Item=Self::Service, Error=Self::MakeError>>;
+        type MakeError = T::MakeError;
+
+        fn make_service(&mut self, sc: SC) -> Self::Future {
+            Box::new(self.inner.make_service(sc).map(|s| OuterService {
                 inner: s,
                 marker: PhantomData,
-            })
+            }))
         }
     }
 
-    impl<T, C> OuterNewService<T, C>
+    impl<T, SC, RC> OuterMakeService<T, SC, RC>
     where
-        C: Default + Push<ContextItem1>,
-        T: NewService<Request = (Request, C::Result)>,
+        RC: Default + Push<ContextItem1>,
+        RC::Result: Send + 'static,
+        T: MakeService<SC, ReqBody = ContextualPayload<Body, RC::Result>>,
     {
         fn new(inner: T) -> Self {
-            OuterNewService {
+            OuterMakeService {
                 inner,
-                marker: PhantomData,
+                marker1: PhantomData,
+                marker2: PhantomData,
             }
         }
     }
@@ -833,15 +899,17 @@ mod context_tests {
         // annotate the outermost service to indicate that the context type it
         // uses is the empty context type created by the above macro invocation.
         // the compiler should infer all the other context types.
-        let new_service = OuterNewService::<_, MyEmptyContext>::new(MiddleNewService::new(
-            InnerNewService::new(),
+        let mut make_service = OuterMakeService::<_, _, MyEmptyContext>::new(MiddleMakeService::new(
+            InnerMakeService::new(),
         ));
 
-        let req = Request::new(Method::Post, Uri::from_str("127.0.0.1:80").unwrap());
-        new_service
-            .new_service()
+        let req = Request::builder().method(Method::POST).uri(Uri::from_str("127.0.0.1:80").unwrap()).body(Body::empty());
+
+        make_service
+            .make_service(())
+            .wait()
             .expect("Failed to start new service")
-            .call(req)
+            .call(req.unwrap())
             .wait()
             .expect("Service::call returned an error");
     }
