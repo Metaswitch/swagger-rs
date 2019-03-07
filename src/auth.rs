@@ -1,6 +1,7 @@
 //! Authentication and authorization data structures
 
 use super::Push;
+use futures::future::Future;
 use hyper;
 use hyper::{Error, Request, Response};
 use std::collections::BTreeSet;
@@ -41,14 +42,25 @@ pub struct Authorization {
     pub issuer: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Basic {
+    pub username: String,
+    pub password: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Bearer {
+    pub token: String,
+}
+
 /// Storage of raw authentication data, used both for storing incoming
 /// request authentication, and for authenticating outgoing client requests.
 #[derive(Clone, Debug, PartialEq)]
 pub enum AuthData {
     /// HTTP Basic auth.
-    Basic(hyper::header::Basic),
+    Basic(Basic),
     /// HTTP Bearer auth, used for OAuth2.
-    Bearer(hyper::header::Bearer),
+    Bearer(Bearer),
     /// Header-based or query parameter-based API key auth.
     ApiKey(String),
 }
@@ -56,7 +68,7 @@ pub enum AuthData {
 impl AuthData {
     /// Set Basic authentication
     pub fn basic(username: &str, password: &str) -> Self {
-        AuthData::Basic(hyper::header::Basic {
+        AuthData::Basic(Basic {
             username: username.to_owned(),
             password: Some(password.to_owned()),
         })
@@ -64,7 +76,7 @@ impl AuthData {
 
     /// Set Bearer token authentication
     pub fn bearer(token: &str) -> Self {
-        AuthData::Bearer(hyper::header::Bearer {
+        AuthData::Bearer(Bearer {
             token: token.to_owned(),
         })
     }
@@ -101,43 +113,85 @@ where
     }
 }
 
-impl<T, C> hyper::server::NewService for AllowAllAuthenticator<T, C>
+#[derive(Clone)]
+pub struct ContextualPayload<P, Ctx>
 where
-    C: Push<Option<Authorization>>,
-    T: hyper::server::NewService<
-        Request = (Request, C::Result),
-        Response = Response,
-        Error = Error,
-    >,
+    P: hyper::body::Payload,
+    Ctx: Send + 'static,
 {
-    type Request = (Request, C);
-    type Response = Response;
-    type Error = Error;
-    type Instance = AllowAllAuthenticator<T::Instance, C>;
+    pub inner: P,
+    pub context: Ctx,
+}
 
-    fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.inner
-            .new_service()
-            .map(|s| AllowAllAuthenticator::new(s, self.subject.clone()))
+impl<P, Ctx> hyper::body::Payload for ContextualPayload<P, Ctx>
+where
+    P: hyper::body::Payload,
+    Ctx: Send + 'static,
+{
+    type Data = P::Data;
+    type Error = P::Error;
+
+    fn poll_data(&mut self) -> futures::Poll<Option<Self::Data>, Self::Error> {
+        self.inner.poll_data()
     }
 }
 
-impl<T, C> hyper::server::Service for AllowAllAuthenticator<T, C>
+impl<T, C> hyper::service::MakeService<C> for AllowAllAuthenticator<T, C>
 where
-    C: Push<Option<Authorization>>,
-    T: hyper::server::Service<Request = (Request, C::Result), Response = Response, Error = Error>,
+    C: Push<Option<Authorization>> + Send + 'static,
+    C::Result: Send + 'static,
+    T: hyper::service::MakeService<
+        C,
+        ReqBody = ContextualPayload<hyper::Body, C::Result>,
+        ResBody = hyper::Body,
+        Error = hyper::Error,
+        MakeError = io::Error,
+    >,
+    T::Future: 'static,
 {
-    type Request = (Request, C);
-    type Response = Response;
+    type ReqBody = ContextualPayload<hyper::Body, C>;
+    type ResBody = T::ResBody;
+    type Error = hyper::Error;
+    type MakeError = io::Error;
+    type Future = Box<Future<Item = Self::Service, Error = io::Error>>;
+    type Service = AllowAllAuthenticator<T::Service, C>;
+
+    fn make_service(&mut self, service_ctx: C) -> Self::Future {
+        let subject = self.subject.clone();
+        Box::new(
+            self.inner
+                .make_service(service_ctx)
+                .map(|s| AllowAllAuthenticator::new(s, subject)),
+        )
+    }
+}
+
+impl<T, C> hyper::service::Service for AllowAllAuthenticator<T, C>
+where
+    C: Push<Option<Authorization>> + Send + 'static,
+    C::Result: Send + 'static,
+    T: hyper::service::Service<
+        ReqBody = ContextualPayload<hyper::Body, C::Result>,
+        ResBody = hyper::Body,
+        Error = Error,
+    >,
+{
+    type ReqBody = ContextualPayload<hyper::Body, C>;
+    type ResBody = T::ResBody;
     type Error = Error;
     type Future = T::Future;
 
-    fn call(&self, (req, context): Self::Request) -> Self::Future {
-        let context = context.push(Some(Authorization {
-            subject: self.subject.clone(),
-            scopes: Scopes::All,
-            issuer: None,
-        }));
-        self.inner.call((req, context))
+    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
+        let (head, body) = req.into_parts();
+        let body = ContextualPayload {
+            inner: body.inner,
+            context: body.context.push(Some(Authorization {
+                subject: self.subject.clone(),
+                scopes: Scopes::All,
+                issuer: None,
+            })),
+        };
+
+        self.inner.call(Request::from_parts(head, body))
     }
 }

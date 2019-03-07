@@ -7,7 +7,7 @@
 //! See the `context_tests` module below for examples of how to use.
 
 use super::XSpanIdString;
-use auth::{AuthData, Authorization};
+use auth::{AuthData, Authorization, ContextualPayload};
 use futures::future::Future;
 use hyper;
 use std::marker::Sized;
@@ -542,27 +542,37 @@ where
 /// ```
 pub trait SwaggerService<C>:
     Clone
-    + hyper::server::Service<
-        Request = (hyper::server::Request, C),
-        Response = hyper::server::Response,
+    + hyper::service::Service<
+        ReqBody = ContextualPayload<hyper::Body, C>,
+        ResBody = hyper::Body,
         Error = hyper::Error,
-        Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
+        Future = Box<Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error>>,
     >
 where
-    C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static,
+    C: Has<Option<AuthData>>
+        + Has<Option<Authorization>>
+        + Has<XSpanIdString>
+        + Clone
+        + 'static
+        + Send,
 {
 }
 
 impl<T, C> SwaggerService<C> for T
 where
     T: Clone
-        + hyper::server::Service<
-            Request = (hyper::server::Request, C),
-            Response = hyper::server::Response,
+        + hyper::service::Service<
+            ReqBody = ContextualPayload<hyper::Body, C>,
+            ResBody = hyper::Body,
             Error = hyper::Error,
-            Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
+            Future = Box<Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error>>,
         >,
-    C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static,
+    C: Has<Option<AuthData>>
+        + Has<Option<Authorization>>
+        + Has<XSpanIdString>
+        + Clone
+        + 'static
+        + Send,
 {
 }
 
@@ -570,7 +580,7 @@ where
 mod context_tests {
     use super::*;
     use futures::future::{ok, Future};
-    use hyper::server::{NewService, Service};
+    use hyper::service::{MakeService, Service};
     use hyper::{Error, Method, Request, Response, Uri};
     use std::io;
     use std::marker::PhantomData;
@@ -600,7 +610,7 @@ mod context_tests {
     where
         C: Has<ContextItem2> + Pop<ContextItem3>,
     {
-        type Request = (Request, C);
+        type ReqBody = (Request, C);
         type Response = Response;
         type Error = Error;
         type Future = Box<Future<Item = Response, Error = Error>>;

@@ -3,7 +3,7 @@
 //! Use by passing `hyper::server::NewService` instances to a `CompositeNewService`
 //! together with the base path for requests that should be handled by that service.
 use futures::{future, Future};
-use hyper::server::{NewService, Service};
+use hyper::service::{MakeService, Service};
 use hyper::{Request, Response, StatusCode};
 use std::ops::{Deref, DerefMut};
 use std::{fmt, io};
@@ -15,13 +15,13 @@ pub trait GetPath {
     fn path(&self) -> &str;
 }
 
-impl GetPath for Request {
+impl GetPath for hyper::Body {
     fn path(&self) -> &str {
         self.path()
     }
 }
 
-impl<C> GetPath for (Request, C) {
+impl<C> GetPath for (hyper::Body, C) {
     fn path(&self) -> &str {
         self.0.path()
     }
@@ -30,38 +30,54 @@ impl<C> GetPath for (Request, C) {
 /// Trait for generating a default "not found" response. Must be implemented on
 /// the `Response` associated type for `NewService`s being combined in a
 /// `CompositeNewService`.
-pub trait NotFound {
+pub trait NotFound<V> {
     /// Return a "not found" response
-    fn not_found() -> Self;
+    fn not_found() -> hyper::Response<V>;
 }
 
-impl NotFound for Response {
-    fn not_found() -> Self {
-        Response::new().with_status(StatusCode::NotFound)
+impl NotFound<hyper::Body> for hyper::Body {
+    fn not_found() -> hyper::Response<hyper::Body> {
+        Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(hyper::Body::empty())
+            .unwrap()
     }
 }
 
 type BoxedFuture<V, W> = Box<Future<Item = V, Error = W>>;
-type CompositeNewServiceVec<U, V, W> = Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>;
+type CompositeNewServiceVec<C, U, V, W> = Vec<(&'static str, Box<BoxedNewService<C, U, V, W>>)>;
 type BoxedService<U, V, W> =
-    Box<Service<Request = U, Response = V, Error = W, Future = BoxedFuture<V, W>>>;
+    Box<Service<ReqBody = U, ResBody = V, Error = W, Future = BoxedFuture<Response<V>, W>>>;
 
 /// Trait for wrapping hyper `NewService`s to make the return type of `new_service` uniform.
 /// This is necessary in order for the `NewService`s with different `Instance` types to
 /// be stored in a single collection.
-pub trait BoxedNewService<U, V, W> {
+pub trait BoxedNewService<C, U, V, W> {
     /// Create a new `Service` trait object
-    fn boxed_new_service(&self) -> Result<BoxedService<U, V, W>, io::Error>;
+    fn boxed_new_service(&mut self) -> Result<BoxedService<U, V, W>, io::Error>;
 }
 
-impl<T, U, V, W> BoxedNewService<U, V, W> for T
+impl<C, T, Rq, Rs, Er, S> BoxedNewService<C, Rq, Rs, Er> for T
 where
-    T: NewService<Request = U, Response = V, Error = W>,
-    T::Instance: Service<Future = BoxedFuture<V, W>> + 'static,
+    S: Service<ReqBody = Rq, ResBody = Rs, Error = Er, Future = BoxedFuture<Response<Rs>, Er>>
+        + 'static,
+    T: MakeService<
+        C,
+        ReqBody = Rq,
+        ResBody = Rs,
+        Error = Er,
+        Future = futures::future::FutureResult<S, io::Error>,
+        Service = S,
+        MakeError = io::Error,
+    >,
+    Rq: hyper::body::Payload,
+    Rs: hyper::body::Payload,
+    Er: std::error::Error + Send + Sync + 'static,
+    C: Default,
 {
     /// Call the `new_service` method of the wrapped `NewService` and `Box` the result
-    fn boxed_new_service(&self) -> Result<BoxedService<U, V, W>, io::Error> {
-        let service = self.new_service()?;
+    fn boxed_new_service(&mut self) -> Result<BoxedService<Rq, Rs, Er>, io::Error> {
+        let service = self.make_service(C::default()).wait()?;
         Ok(Box::new(service))
     }
 }
@@ -88,10 +104,10 @@ where
 /// // use as you would any `NewService` instance
 /// ```
 #[derive(Default)]
-pub struct CompositeNewService<U, V, W>(CompositeNewServiceVec<U, V, W>)
+pub struct CompositeNewService<C, U, V, W>(CompositeNewServiceVec<C, U, V, W>)
 where
     U: GetPath,
-    V: NotFound + 'static,
+    V: NotFound<V> + 'static,
     W: 'static;
 
 // Workaround for https://github.com/rust-lang-nursery/rust-clippy/issues/2226
@@ -103,39 +119,44 @@ where
         clippy::new_without_default_derive
     )
 )]
-impl<U: GetPath, V: NotFound, W> CompositeNewService<U, V, W> {
+impl<C, U: GetPath, V: NotFound<V>, W> CompositeNewService<C, U, V, W> {
     /// create an empty `CompositeNewService`
     pub fn new() -> Self {
         CompositeNewService(Vec::new())
     }
 }
 
-impl<U, V, W> NewService for CompositeNewService<U, V, W>
+impl<C, U, V, W> MakeService<C> for CompositeNewService<C, U, V, W>
 where
-    U: GetPath,
-    V: NotFound + 'static,
-    W: 'static,
+    U: GetPath + hyper::body::Payload,
+    V: NotFound<V> + 'static + hyper::body::Payload,
+    W: std::error::Error + Send + Sync + 'static,
 {
-    type Request = U;
-    type Response = V;
+    type ReqBody = U;
+    type ResBody = V;
     type Error = W;
-    type Instance = CompositeService<U, V, W>;
+    type Service = CompositeService<U, V, W>;
+    type MakeError = io::Error;
+    type Future = futures::future::FutureResult<Self::Service, io::Error>;
 
-    fn new_service(&self) -> Result<Self::Instance, io::Error> {
+    fn make_service(
+        &mut self,
+        service_ctx: C,
+    ) -> futures::future::FutureResult<Self::Service, io::Error> {
         let mut vec = Vec::new();
 
-        for &(base_path, ref new_service) in &self.0 {
-            vec.push((base_path, new_service.boxed_new_service()?))
+        for &mut (base_path, ref mut new_service) in &mut self.0 {
+            vec.push((base_path, new_service.boxed_new_service().expect("Error")))
         }
 
-        Ok(CompositeService(vec))
+        future::FutureResult::from(Ok(CompositeService(vec)))
     }
 }
 
-impl<U, V, W> fmt::Debug for CompositeNewService<U, V, W>
+impl<C, U, V, W> fmt::Debug for CompositeNewService<C, U, V, W>
 where
     U: GetPath,
-    V: NotFound + 'static,
+    V: NotFound<V> + 'static,
     W: 'static,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -145,22 +166,22 @@ where
     }
 }
 
-impl<U, V, W> Deref for CompositeNewService<U, V, W>
+impl<C, U, V, W> Deref for CompositeNewService<C, U, V, W>
 where
     U: GetPath,
-    V: NotFound + 'static,
+    V: NotFound<V> + 'static,
     W: 'static,
 {
-    type Target = CompositeNewServiceVec<U, V, W>;
+    type Target = CompositeNewServiceVec<C, U, V, W>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<U, V, W> DerefMut for CompositeNewService<U, V, W>
+impl<C, U, V, W> DerefMut for CompositeNewService<C, U, V, W>
 where
     U: GetPath,
-    V: NotFound + 'static,
+    V: NotFound<V> + 'static,
     W: 'static,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -173,25 +194,25 @@ where
 pub struct CompositeService<U, V, W>(Vec<(&'static str, BoxedService<U, V, W>)>)
 where
     U: GetPath,
-    V: NotFound + 'static,
+    V: NotFound<V> + 'static,
     W: 'static;
 
 impl<U, V, W> Service for CompositeService<U, V, W>
 where
-    U: GetPath,
-    V: NotFound + 'static,
-    W: 'static,
+    U: GetPath + hyper::body::Payload,
+    V: NotFound<V> + 'static + hyper::body::Payload,
+    W: 'static + std::error::Error + Send + Sync,
 {
-    type Request = U;
-    type Response = V;
+    type ReqBody = U;
+    type ResBody = V;
     type Error = W;
-    type Future = Box<Future<Item = V, Error = W>>;
+    type Future = Box<Future<Item = Response<V>, Error = W>>;
 
-    fn call(&self, req: Self::Request) -> Self::Future {
+    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
         let mut result = None;
 
-        for &(base_path, ref service) in &self.0 {
-            if req.path().starts_with(base_path) {
+        for &mut (base_path, ref mut service) in &mut self.0 {
+            if req.uri().path().starts_with(base_path) {
                 result = Some(service.call(req));
                 break;
             }
@@ -204,7 +225,7 @@ where
 impl<U, V, W> fmt::Debug for CompositeService<U, V, W>
 where
     U: GetPath,
-    V: NotFound + 'static,
+    V: NotFound<V> + 'static,
     W: 'static,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -217,7 +238,7 @@ where
 impl<U, V, W> Deref for CompositeService<U, V, W>
 where
     U: GetPath,
-    V: NotFound + 'static,
+    V: NotFound<V> + 'static,
     W: 'static,
 {
     type Target = Vec<(&'static str, BoxedService<U, V, W>)>;
@@ -229,7 +250,7 @@ where
 impl<U, V, W> DerefMut for CompositeService<U, V, W>
 where
     U: GetPath,
-    V: NotFound + 'static,
+    V: NotFound<V> + 'static,
     W: 'static,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {

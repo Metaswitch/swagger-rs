@@ -1,12 +1,14 @@
 //! Hyper service that drops a context to an incoming request and passes it on
 //! to a wrapped service.
 
+use auth::ContextualPayload;
+use futures::Future;
 use hyper;
 use hyper::{Error, Request, Response};
 use std::io;
 use std::marker::PhantomData;
 
-/// Middleware wrapper service that trops the context from the incoming request
+/// Middleware wrapper service that drops the context from the incoming request
 /// and passes the plain `hyper::Request` to the wrapped service.
 ///
 /// This service can be used to to include services that take a plain `hyper::Request`
@@ -45,30 +47,44 @@ impl<T, C> DropContext<T, C> {
     }
 }
 
-impl<T, C> hyper::server::NewService for DropContext<T, C>
+impl<T, C> hyper::service::MakeService<C> for DropContext<T, C>
 where
-    T: hyper::server::NewService<Request = Request, Response = Response, Error = Error>,
+    C: Send + 'static,
+    T: hyper::service::MakeService<
+        C,
+        ReqBody = hyper::Body,
+        ResBody = hyper::Body,
+        Error = Error,
+        MakeError = io::Error,
+    >,
+    T::Future: 'static,
+    T::Service: 'static,
 {
-    type Request = (Request, C);
-    type Response = Response;
+    type ReqBody = ContextualPayload<hyper::Body, C>;
+    type ResBody = hyper::Body;
     type Error = Error;
-    type Instance = DropContext<T::Instance, C>;
+    type MakeError = io::Error;
+    type Future = Box<Future<Item = Self::Service, Error = io::Error>>;
+    type Service = DropContext<T::Service, C>;
 
-    fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.inner.new_service().map(DropContext::new)
+    fn make_service(&mut self, service_ctx: C) -> Self::Future {
+        Box::new(self.inner.make_service(service_ctx).map(DropContext::new))
     }
 }
 
-impl<T, C> hyper::server::Service for DropContext<T, C>
+impl<T, C> hyper::service::Service for DropContext<T, C>
 where
-    T: hyper::server::Service<Request = Request, Response = Response, Error = Error>,
+    C: Send + 'static,
+    T: hyper::service::Service<ReqBody = hyper::Body, ResBody = hyper::Body, Error = Error>,
 {
-    type Request = (Request, C);
-    type Response = Response;
+    type ReqBody = ContextualPayload<hyper::Body, C>;
+    type ResBody = hyper::Body;
     type Error = Error;
     type Future = T::Future;
 
-    fn call(&self, (req, _): Self::Request) -> Self::Future {
-        self.inner.call(req)
+    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
+        let (head, body) = req.into_parts();
+        let body = body.inner;
+        self.inner.call(Request::from_parts(head, body))
     }
 }

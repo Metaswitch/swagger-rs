@@ -53,10 +53,10 @@ pub use drop_context::DropContext;
 pub mod request_parser;
 pub use request_parser::RequestParser;
 
-header! {
-    /// `X-Span-ID` header, used to track a request through a chain of microservices.
-    (XSpanId, "X-Span-ID") => [String]
-}
+// header! {
+//     /// `X-Span-ID` header, used to track a request through a chain of microservices.
+//     (XSpanId, "X-Span-ID") => [String]
+// }
 
 /// Wrapper for a string being used as an X-Span-ID.
 #[derive(Debug, Clone, Default)]
@@ -65,13 +65,13 @@ pub struct XSpanIdString(pub String);
 impl XSpanIdString {
     /// Extract an X-Span-ID from a request header if present, and if not
     /// generate a new one.
-    pub fn get_or_generate(req: &hyper::Request) -> Self {
-        XSpanIdString(
-            req.headers()
-                .get::<XSpanId>()
-                .map(XSpanId::to_string)
-                .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
-        )
+    pub fn get_or_generate<T>(req: &hyper::Request<T>) -> Self {
+        let x_span_id = req.headers().get("X-Span-ID");
+
+        match x_span_id {
+            Some(x) => XSpanIdString(x.to_str().unwrap().to_string()),
+            None => XSpanIdString(uuid::Uuid::new_v4().to_string()),
+        }
     }
 }
 
