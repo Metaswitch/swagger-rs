@@ -50,11 +50,6 @@ pub use drop_context::DropContext;
 pub mod request_parser;
 pub use request_parser::RequestParser;
 
-// header! {
-//     /// `X-Span-ID` header, used to track a request through a chain of microservices.
-//     (XSpanId, "X-Span-ID") => [String]
-// }
-
 /// Wrapper for a string being used as an X-Span-ID.
 #[derive(Debug, Clone, Default)]
 pub struct XSpanIdString(pub String);

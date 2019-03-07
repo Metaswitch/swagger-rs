@@ -13,7 +13,7 @@ use std::marker::PhantomData;
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
 /// used by subsequent layers in the stack.
 #[derive(Debug)]
-pub struct AddContextNewService<T, C>
+pub struct AddContextMakeService<T, C>
 where
     C: Default + Push<XSpanIdString>,
     C::Result: Send + 'static,
@@ -28,7 +28,7 @@ where
     marker: PhantomData<C>,
 }
 
-impl<T, C> AddContextNewService<T, C>
+impl<T, C> AddContextMakeService<T, C>
 where
     C: Default + Push<XSpanIdString>,
     C::Result: Send + 'static,
@@ -39,16 +39,16 @@ where
         Error = hyper::Error,
     >,
 {
-    /// Create a new AddContextNewService struct wrapping a value
+    /// Create a new AddContextMakeService struct wrapping a value
     pub fn new(inner: T) -> Self {
-        AddContextNewService {
+        AddContextMakeService {
             inner,
             marker: PhantomData,
         }
     }
 }
 
-impl<T, C> hyper::service::MakeService<C> for AddContextNewService<T, C>
+impl<T, C> hyper::service::MakeService<C> for AddContextMakeService<T, C>
 where
     C: Default + Push<XSpanIdString> + 'static + Send,
     C::Result: Send + 'static,
@@ -82,7 +82,7 @@ where
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
 /// used by subsequent layers in the stack. The `AddContextService` struct should
 /// not usually be used directly - when constructing a hyper stack use
-/// `AddContextNewService`, which will create `AddContextService` instances as needed.
+/// `AddContextMakeService`, which will create `AddContextService` instances as needed.
 #[derive(Debug)]
 pub struct AddContextService<T, C>
 where
