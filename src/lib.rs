@@ -41,10 +41,8 @@ pub use connector::{http_connector, https_connector, https_mutual_connector};
 pub mod composites;
 pub use composites::{CompositeNewService, CompositeService, NotFound};
 
-#[allow(deprecated)]
 pub mod add_context;
-#[allow(deprecated)]
-pub use add_context::{AddContext, AddContextNewService, AddContextService};
+pub use add_context::AddContextService;
 
 pub mod drop_context;
 pub use drop_context::DropContext;
