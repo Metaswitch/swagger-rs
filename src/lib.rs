@@ -15,6 +15,8 @@ extern crate base64;
 extern crate futures;
 extern crate hyper;
 extern crate hyper_old_types;
+#[cfg(feature = "multipart")]
+extern crate mime;
 extern crate uuid;
 
 use std::error;
@@ -72,6 +74,9 @@ impl fmt::Display for XSpanIdString {
         write!(f, "{}", self.0)
     }
 }
+
+#[cfg(feature = "multipart")]
+pub mod multipart;
 
 /// Very simple error type - just holds a description of the error. This is useful for human
 /// diagnosis and troubleshooting, but not for applications to parse. The justification for this
