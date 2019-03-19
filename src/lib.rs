@@ -12,6 +12,7 @@ extern crate serde_json;
 extern crate serde_derive;
 
 extern crate base64;
+extern crate chrono;
 extern crate futures;
 extern crate hyper;
 extern crate hyper_old_types;
@@ -52,28 +53,8 @@ pub use drop_context::DropContext;
 pub mod request_parser;
 pub use request_parser::RequestParser;
 
-/// Wrapper for a string being used as an X-Span-ID.
-#[derive(Debug, Clone, Default)]
-pub struct XSpanIdString(pub String);
-
-impl XSpanIdString {
-    /// Extract an X-Span-ID from a request header if present, and if not
-    /// generate a new one.
-    pub fn get_or_generate<T>(req: &hyper::Request<T>) -> Self {
-        let x_span_id = req.headers().get("X-Span-ID");
-
-        match x_span_id {
-            Some(x) => XSpanIdString(x.to_str().unwrap().to_string()),
-            None => XSpanIdString(uuid::Uuid::new_v4().to_string()),
-        }
-    }
-}
-
-impl fmt::Display for XSpanIdString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
+mod header;
+pub use header::{IntoHeaderValue, XSpanIdString};
 
 #[cfg(feature = "multipart")]
 pub mod multipart;
