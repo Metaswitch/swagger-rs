@@ -5,7 +5,7 @@ use std::ops::Deref;
 use uuid::Uuid;
 
 /// Wrapper for a string being used as an X-Span-ID.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct XSpanIdString(pub String);
 
 impl XSpanIdString {
@@ -16,8 +16,14 @@ impl XSpanIdString {
 
         match x_span_id {
             Some(x) => XSpanIdString(x.to_str().unwrap().to_string()),
-            None => XSpanIdString(Uuid::new_v4().to_string()),
+            None => Self::default(),
         }
+    }
+}
+
+impl Default for XSpanIdString {
+    fn default() -> Self {
+        XSpanIdString(Uuid::new_v4().to_string())
     }
 }
 
