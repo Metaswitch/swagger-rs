@@ -4,9 +4,12 @@ use super::Push;
 use crate::context::ContextualPayload;
 use futures::future::Future;
 use hyper;
-use hyper::{Error, Request};
+use hyper::header::AUTHORIZATION;
+use hyper::{Error, HeaderMap, Request};
 pub use hyper_old_types::header::Authorization as Header;
+use hyper_old_types::header::Header as HeaderTrait;
 pub use hyper_old_types::header::{Basic, Bearer};
+use hyper_old_types::header::{Raw, Scheme};
 use std::collections::BTreeSet;
 use std::io;
 use std::marker::PhantomData;
@@ -163,4 +166,25 @@ where
 
         self.inner.call(Request::from_parts(head, body))
     }
+}
+
+/// Retrieve an authorization scheme data from a set of headers
+pub fn from_headers<S: Scheme>(headers: &HeaderMap) -> Option<S>
+where
+    S: std::str::FromStr + 'static,
+    S::Err: 'static,
+{
+    headers
+        .get(AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| Header::<S>::parse_header(&Raw::from(s)).ok())
+        .map(|a| a.0)
+}
+
+/// Retrieve an API key from a header
+pub fn api_key_from_header(headers: &HeaderMap, header: &'static str) -> Option<String> {
+    headers
+        .get(header)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string())
 }
