@@ -5,6 +5,8 @@ use crate::context::ContextualPayload;
 use futures::future::Future;
 use hyper;
 use hyper::{Error, Request};
+pub use hyper_old_types::header::Authorization as Header;
+pub use hyper_old_types::header::{Basic, Bearer};
 use std::collections::BTreeSet;
 use std::io;
 use std::marker::PhantomData;
@@ -41,22 +43,6 @@ pub struct Authorization {
     /// the `issuer` is still the original client which was authorized by
     /// the resource owner.
     pub issuer: Option<String>,
-}
-
-/// Credential holder for Basic Authentication
-#[derive(Debug, Clone, PartialEq)]
-pub struct Basic {
-    /// The username as a possibly empty string
-    pub username: String,
-    /// The password, or None if the : delimieter was not part of the parsed input
-    pub password: Option<String>,
-}
-
-/// Token holder for Bearer Authentication, most commonly used by OAuth
-#[derive(Debug, Clone, PartialEq)]
-pub struct Bearer {
-    /// Bearer token as a String
-    pub token: String,
 }
 
 /// Storage of raw authentication data, used both for storing incoming

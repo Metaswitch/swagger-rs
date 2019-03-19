@@ -10,11 +10,11 @@ extern crate serde_json;
 #[cfg(test)]
 #[macro_use]
 extern crate serde_derive;
+
 extern crate base64;
-
-extern crate hyper;
-
 extern crate futures;
+extern crate hyper;
+extern crate hyper_old_types;
 extern crate uuid;
 
 use std::error;
