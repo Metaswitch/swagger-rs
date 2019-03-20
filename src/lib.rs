@@ -59,6 +59,11 @@ pub use header::{IntoHeaderValue, XSpanIdString};
 #[cfg(feature = "multipart")]
 pub mod multipart;
 
+/// Helper Bound for Errors for MakeService/Service wrappers
+pub trait ErrorBound: Into<Box<std::error::Error + Send + Sync>> {}
+
+impl<T> ErrorBound for T where T: Into<Box<std::error::Error + Send + Sync>> {}
+
 /// Very simple error type - just holds a description of the error. This is useful for human
 /// diagnosis and troubleshooting, but not for applications to parse. The justification for this
 /// is to deny applications visibility into the communication layer, forcing the application code
