@@ -6,38 +6,21 @@ use context::ContextualPayload;
 use futures::Future;
 use hyper;
 use hyper::Request;
-use std::io;
 use std::marker::PhantomData;
+
+use ErrorBound;
 
 /// Middleware wrapper service, that should be used as the outermost layer in a
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
 /// used by subsequent layers in the stack.
 #[derive(Debug)]
 pub struct AddContextMakeService<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-    C::Result: Send + 'static,
-    T: hyper::service::MakeService<
-        C,
-        ReqBody = ContextualPayload<hyper::Body, C::Result>,
-        ResBody = hyper::Body,
-        Error = hyper::Error,
-    >,
 {
     inner: T,
     marker: PhantomData<C>,
 }
 
 impl<T, C> AddContextMakeService<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-    C::Result: Send + 'static,
-    T: hyper::service::MakeService<
-        C,
-        ReqBody = ContextualPayload<hyper::Body, C::Result>,
-        ResBody = hyper::Body,
-        Error = hyper::Error,
-    >,
 {
     /// Create a new AddContextMakeService struct wrapping a value
     pub fn new(inner: T) -> Self {
@@ -48,28 +31,37 @@ where
     }
 }
 
-impl<T, C> hyper::service::MakeService<C> for AddContextMakeService<T, C>
+impl<'a, T, SC, RC, E, ME, S, F> hyper::service::MakeService<&'a SC> for AddContextMakeService<T, RC>
 where
-    C: Default + Push<XSpanIdString> + 'static + Send,
-    C::Result: Send + 'static,
+    RC: Default + Push<XSpanIdString> + 'static + Send,
+    RC::Result: Send + 'static,
     T: hyper::service::MakeService<
-        C,
-        ReqBody = ContextualPayload<hyper::Body, C::Result>,
+        &'a SC,
+        Service = S,
+        ReqBody = ContextualPayload<hyper::Body, RC::Result>,
         ResBody = hyper::Body,
-        Error = hyper::Error,
-        MakeError = io::Error,
+        Error = E,
+        MakeError = ME,
+        Future = F
     >,
-    T::Service: 'static,
-    T::Future: 'static,
+    S: hyper::service::Service<
+        ReqBody = ContextualPayload<hyper::Body, RC::Result>,
+        ResBody = hyper::Body,
+        Error = E,
+    > + 'static,
+    ME: ErrorBound,
+    E: ErrorBound,
+    F: Future<Item = S, Error=ME> + Send + 'static,
+    S::Future: Send
 {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
-    type Error = hyper::Error;
-    type Service = AddContextService<T::Service, C>;
-    type MakeError = io::Error;
-    type Future = Box<Future<Item = Self::Service, Error = io::Error>>;
+    type Error = E;
+    type Service = AddContextService<S, RC>;
+    type MakeError = ME;
+    type Future = Box<Future<Item = Self::Service, Error = ME> + Send>;
 
-    fn make_service(&mut self, service_ctx: C) -> Self::Future {
+    fn make_service(&mut self, service_ctx: &'a SC) -> Self::Future {
         Box::new(
             self.inner
                 .make_service(service_ctx)
@@ -85,28 +77,12 @@ where
 /// `AddContextMakeService`, which will create `AddContextService` instances as needed.
 #[derive(Debug)]
 pub struct AddContextService<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-    C::Result: Send + 'static,
-    T: hyper::service::Service<
-        ReqBody = ContextualPayload<hyper::Body, C::Result>,
-        ResBody = hyper::Body,
-        Error = hyper::Error,
-    >,
 {
     inner: T,
     marker: PhantomData<C>,
 }
 
 impl<T, C> AddContextService<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-    C::Result: Send + 'static,
-    T: hyper::service::Service<
-        ReqBody = ContextualPayload<hyper::Body, C::Result>,
-        ResBody = hyper::Body,
-        Error = hyper::Error,
-    >,
 {
     /// Create a new AddContextService struct wrapping a value
     pub fn new(inner: T) -> Self {
@@ -117,19 +93,20 @@ where
     }
 }
 
-impl<T, C> hyper::service::Service for AddContextService<T, C>
+impl<T, C, E> hyper::service::Service for AddContextService<T, C>
 where
     C: Default + Push<XSpanIdString>,
     C::Result: Send + 'static,
     T: hyper::service::Service<
         ReqBody = ContextualPayload<hyper::Body, C::Result>,
         ResBody = hyper::Body,
-        Error = hyper::Error,
+        Error = E,
     >,
+    E: ErrorBound
 {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
-    type Error = hyper::Error;
+    type Error = E;
     type Future = T::Future;
 
     fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {

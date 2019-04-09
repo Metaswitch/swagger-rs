@@ -45,7 +45,7 @@ pub mod composites;
 pub use composites::{CompositeNewService, CompositeService, NotFound};
 
 pub mod add_context;
-pub use add_context::AddContextService;
+pub use add_context::{AddContextMakeService, AddContextService};
 
 pub mod drop_context;
 pub use drop_context::DropContext;
