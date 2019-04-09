@@ -60,6 +60,7 @@ pub use header::{IntoHeaderValue, XSpanIdString};
 pub mod multipart;
 
 /// Wrapper for hyper::Client so that it implements hyper::Service
+#[derive(Debug)]
 pub struct ClientService<C, B>(pub hyper::Client<C, B>)
 where
     B: hyper::body::Payload + Send + 'static,
