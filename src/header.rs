@@ -4,11 +4,12 @@ use std::fmt;
 use std::ops::Deref;
 use uuid::Uuid;
 
+/// Header - `X-Span-ID` - used to track a request through a chain of microservices.
+pub const X_SPAN_ID: &'static str = "X-Span-ID";
+
 /// Wrapper for a string being used as an X-Span-ID.
 #[derive(Debug, Clone)]
 pub struct XSpanIdString(pub String);
-
-pub const X_SPAN_ID: &'static str = "X-Span-ID";
 
 impl XSpanIdString {
     /// Extract an X-Span-ID from a request header if present, and if not
