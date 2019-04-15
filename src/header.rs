@@ -8,11 +8,13 @@ use uuid::Uuid;
 #[derive(Debug, Clone)]
 pub struct XSpanIdString(pub String);
 
+pub const X_SPAN_ID: &'static str = "X-Span-ID";
+
 impl XSpanIdString {
     /// Extract an X-Span-ID from a request header if present, and if not
     /// generate a new one.
     pub fn get_or_generate<T>(req: &hyper::Request<T>) -> Self {
-        let x_span_id = req.headers().get("X-Span-ID");
+        let x_span_id = req.headers().get(X_SPAN_ID);
 
         match x_span_id {
             Some(x) => XSpanIdString(x.to_str().unwrap().to_string()),
