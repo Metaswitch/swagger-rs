@@ -555,7 +555,7 @@ pub trait SwaggerService<C>:
         ReqBody = ContextualPayload<hyper::Body, C>,
         ResBody = hyper::Body,
         Error = hyper::Error,
-        Future = Box<Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error>>,
+        Future = Box<Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error> + Send>,
     >
 where
     C: Has<Option<AuthData>>
@@ -574,7 +574,7 @@ where
             ReqBody = ContextualPayload<hyper::Body, C>,
             ResBody = hyper::Body,
             Error = hyper::Error,
-            Future = Box<Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error>>,
+            Future = Box<Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error> + Send>,
         >,
     C: Has<Option<AuthData>>
         + Has<Option<Authorization>>
