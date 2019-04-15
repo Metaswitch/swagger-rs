@@ -14,14 +14,12 @@ use ErrorBound;
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
 /// used by subsequent layers in the stack.
 #[derive(Debug)]
-pub struct AddContextMakeService<T, C>
-{
+pub struct AddContextMakeService<T, C> {
     inner: T,
     marker: PhantomData<C>,
 }
 
-impl<T, C> AddContextMakeService<T, C>
-{
+impl<T, C> AddContextMakeService<T, C> {
     /// Create a new AddContextMakeService struct wrapping a value
     pub fn new(inner: T) -> Self {
         AddContextMakeService {
@@ -31,7 +29,8 @@ impl<T, C> AddContextMakeService<T, C>
     }
 }
 
-impl<'a, T, SC, RC, E, ME, S, F> hyper::service::MakeService<&'a SC> for AddContextMakeService<T, RC>
+impl<'a, T, SC, RC, E, ME, S, F> hyper::service::MakeService<&'a SC>
+    for AddContextMakeService<T, RC>
 where
     RC: Default + Push<XSpanIdString> + 'static + Send,
     RC::Result: Send + 'static,
@@ -42,17 +41,17 @@ where
         ResBody = hyper::Body,
         Error = E,
         MakeError = ME,
-        Future = F
+        Future = F,
     >,
     S: hyper::service::Service<
-        ReqBody = ContextualPayload<hyper::Body, RC::Result>,
-        ResBody = hyper::Body,
-        Error = E,
-    > + 'static,
+            ReqBody = ContextualPayload<hyper::Body, RC::Result>,
+            ResBody = hyper::Body,
+            Error = E,
+        > + 'static,
     ME: ErrorBound,
     E: ErrorBound,
-    F: Future<Item = S, Error=ME> + Send + 'static,
-    S::Future: Send
+    F: Future<Item = S, Error = ME> + Send + 'static,
+    S::Future: Send,
 {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
@@ -76,14 +75,12 @@ where
 /// not usually be used directly - when constructing a hyper stack use
 /// `AddContextMakeService`, which will create `AddContextService` instances as needed.
 #[derive(Debug)]
-pub struct AddContextService<T, C>
-{
+pub struct AddContextService<T, C> {
     inner: T,
     marker: PhantomData<C>,
 }
 
-impl<T, C> AddContextService<T, C>
-{
+impl<T, C> AddContextService<T, C> {
     /// Create a new AddContextService struct wrapping a value
     pub fn new(inner: T) -> Self {
         AddContextService {
@@ -102,7 +99,7 @@ where
         ResBody = hyper::Body,
         Error = E,
     >,
-    E: ErrorBound
+    E: ErrorBound,
 {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
