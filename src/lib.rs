@@ -39,6 +39,9 @@ pub use context::{
     ContextBuilder, ContextWrapper, ContextualPayload, EmptyContext, Has, Pop, Push,
 };
 
+/// Module to support client middleware
+pub mod client;
+
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
 pub use connector::{http_connector, https_connector, https_mutual_connector};
@@ -60,34 +63,6 @@ pub use header::{IntoHeaderValue, XSpanIdString, X_SPAN_ID};
 
 #[cfg(feature = "multipart")]
 pub mod multipart;
-
-/// Wrapper for hyper::Client so that it implements hyper::Service
-#[derive(Debug)]
-pub struct ClientService<C, B>(pub hyper::Client<C, B>)
-where
-    B: hyper::body::Payload + Send + 'static,
-    B::Data: Send,
-    C: hyper::client::connect::Connect + Sync + 'static,
-    C::Transport: 'static,
-    C::Future: 'static;
-
-impl<C, B> hyper::service::Service for ClientService<C, B>
-where
-    B: hyper::body::Payload + Send + 'static,
-    B::Data: Send,
-    C: hyper::client::connect::Connect + Sync + 'static,
-    C::Transport: 'static,
-    C::Future: 'static,
-{
-    type ReqBody = B;
-    type ResBody = hyper::Body;
-    type Error = hyper::Error;
-    type Future = hyper::client::ResponseFuture;
-
-    fn call(&mut self, req: hyper::Request<Self::ReqBody>) -> Self::Future {
-        self.0.request(req)
-    }
-}
 
 /// Helper Bound for Errors for MakeService/Service wrappers
 pub trait ErrorBound: Into<Box<std::error::Error + Send + Sync>> {}
