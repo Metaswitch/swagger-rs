@@ -47,7 +47,7 @@ pub mod connector;
 pub use connector::{http_connector, https_connector, https_mutual_connector};
 
 pub mod composites;
-pub use composites::{CompositeNewService, CompositeService, NotFound};
+pub use composites::{CompositeMakeService, CompositeService, NotFound};
 
 pub mod add_context;
 pub use add_context::{AddContextMakeService, AddContextService};
