@@ -107,7 +107,7 @@ No changes. We now think we've got enough to declare this crate stable.
 - Start of changelog.
 
 [Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/3.0.0...HEAD
-[3.0.0]: https://github.com/Metaswitch/swagger-rs/compare/3.0.0...3.0.0
+[3.0.0]: https://github.com/Metaswitch/swagger-rs/compare/2.0.2...3.0.0
 [2.0.2]: https://github.com/Metaswitch/swagger-rs/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/Metaswitch/swagger-rs/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/Metaswitch/swagger-rs/compare/1.0.2...2.0.0
