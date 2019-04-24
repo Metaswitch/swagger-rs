@@ -113,7 +113,7 @@ where
 
         let body = ContextualPayload {
             inner: body,
-            context: context,
+            context,
         };
         self.inner.call(hyper::Request::from_parts(head, body))
     }

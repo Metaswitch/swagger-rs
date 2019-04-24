@@ -14,6 +14,7 @@ pub use hyper_old_types::header::{Basic, Bearer};
 use hyper_old_types::header::{Raw, Scheme};
 use std::collections::BTreeSet;
 use std::marker::PhantomData;
+use std::string::ToString;
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -211,7 +212,7 @@ pub fn api_key_from_header(headers: &HeaderMap, header: &'static str) -> Option<
     headers
         .get(header)
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string())
+        .map(ToString::to_string)
 }
 
 #[cfg(test)]

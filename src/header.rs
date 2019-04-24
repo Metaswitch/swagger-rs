@@ -5,7 +5,7 @@ use std::ops::Deref;
 use uuid::Uuid;
 
 /// Header - `X-Span-ID` - used to track a request through a chain of microservices.
-pub const X_SPAN_ID: &'static str = "X-Span-ID";
+pub const X_SPAN_ID: &str = "X-Span-ID";
 
 /// Wrapper for a string being used as an X-Span-ID.
 #[derive(Debug, Clone)]

@@ -7,6 +7,7 @@ use serde::de::Error as SerdeError;
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 #[cfg(feature = "serdejson")]
 use serde::ser::{Serialize, Serializer};
+use std::clone::Clone;
 
 use std::mem;
 
@@ -515,7 +516,7 @@ impl<'a, T: Clone> Nullable<&'a T> {
     /// assert_eq!(cloned, Nullable::Present(12));
     /// ```
     pub fn cloned(self) -> Nullable<T> {
-        self.map(|t| t.clone())
+        self.map(Clone::clone)
     }
 }
 

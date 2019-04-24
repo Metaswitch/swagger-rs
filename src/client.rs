@@ -12,7 +12,8 @@ pub trait Service {
     fn request(&self, req: hyper::Request<Self::ReqBody>) -> Self::Future;
 }
 
-impl<C,B> Service for hyper::Client<C, B> where
+impl<C, B> Service for hyper::Client<C, B>
+where
     B: hyper::body::Payload + Send + 'static,
     B::Data: Send,
     C: hyper::client::connect::Connect + Sync + 'static,
