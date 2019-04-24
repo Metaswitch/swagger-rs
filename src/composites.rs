@@ -141,7 +141,11 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         // Get vector of base paths
         let str_vec: Vec<&'static str> = self.0.iter().map(|&(base_path, _)| base_path).collect();
-        write!(f, "CompositeMakeService accepting base paths: {:?}", str_vec,)
+        write!(
+            f,
+            "CompositeMakeService accepting base paths: {:?}",
+            str_vec,
+        )
     }
 }
 
