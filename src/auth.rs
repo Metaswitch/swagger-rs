@@ -92,13 +92,21 @@ impl<T> RcBound for T where T: Push<Option<Authorization>> + Send + 'static {}
 /// Dummy Authenticator, that blindly inserts authorization data, allowing all
 /// access to an endpoint with the specified subject.
 #[derive(Debug)]
-pub struct MakeAllowAllAuthenticator<T, RC> {
+pub struct MakeAllowAllAuthenticator<T, RC>
+where
+    RC: RcBound,
+    RC::Result: Send + 'static,
+{
     inner: T,
     subject: String,
     marker: PhantomData<RC>,
 }
 
-impl<T, RC> MakeAllowAllAuthenticator<T, RC> {
+impl<T, RC> MakeAllowAllAuthenticator<T, RC>
+where
+    RC: RcBound,
+    RC::Result: Send + 'static,
+{
     /// Create a middleware that authorizes with the configured subject.
     pub fn new<U: Into<String>>(inner: T, subject: U) -> Self {
         MakeAllowAllAuthenticator {

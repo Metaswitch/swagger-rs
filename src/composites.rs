@@ -35,15 +35,15 @@ type BoxedService<U, V, W> =
 /// be stored in a single collection.
 pub trait BoxedMakeService<C, U, V, W> {
     /// Create a new `Service` trait object
-    fn boxed_make_service(&mut self) -> Result<BoxedService<U, V, W>, io::Error>;
+    fn boxed_make_service(&mut self, context: C) -> Result<BoxedService<U, V, W>, io::Error>;
 }
 
-impl<C, T, Rq, Rs, Er, S> BoxedMakeService<C, Rq, Rs, Er> for T
+impl<'a, SC, T, Rq, Rs, Er, S> BoxedMakeService<&'a SC, Rq, Rs, Er> for T
 where
     S: Service<ReqBody = Rq, ResBody = Rs, Error = Er, Future = BoxedFuture<Response<Rs>, Er>>
         + 'static,
     T: MakeService<
-        C,
+        &'a SC,
         ReqBody = Rq,
         ResBody = Rs,
         Error = Er,
@@ -54,11 +54,13 @@ where
     Rq: hyper::body::Payload,
     Rs: hyper::body::Payload,
     Er: std::error::Error + Send + Sync + 'static,
-    C: Default,
 {
     /// Call the `make_service` method of the wrapped `MakeService` and `Box` the result
-    fn boxed_make_service(&mut self) -> Result<BoxedService<Rq, Rs, Er>, io::Error> {
-        let service = self.make_service(C::default()).wait()?;
+    fn boxed_make_service(
+        &mut self,
+        context: &'a SC,
+    ) -> Result<BoxedService<Rq, Rs, Er>, io::Error> {
+        let service = self.make_service(context).wait()?;
         Ok(Box::new(service))
     }
 }
@@ -106,7 +108,7 @@ impl<C, U, V: NotFound<V>, W> CompositeMakeService<C, U, V, W> {
     }
 }
 
-impl<C, U, V, W> MakeService<C> for CompositeMakeService<C, U, V, W>
+impl<'a, C, U, V, W> MakeService<&'a C> for CompositeMakeService<&'a C, U, V, W>
 where
     U: hyper::body::Payload,
     V: NotFound<V> + 'static + hyper::body::Payload,
@@ -121,12 +123,17 @@ where
 
     fn make_service(
         &mut self,
-        _service_ctx: C,
+        _service_ctx: &'a C,
     ) -> futures::future::FutureResult<Self::Service, io::Error> {
         let mut vec = Vec::new();
 
         for &mut (base_path, ref mut make_service) in &mut self.0 {
-            vec.push((base_path, make_service.boxed_make_service().expect("Error")))
+            vec.push((
+                base_path,
+                make_service
+                    .boxed_make_service(_service_ctx)
+                    .expect("Error"),
+            ))
         }
 
         future::FutureResult::from(Ok(CompositeService(vec)))

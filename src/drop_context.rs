@@ -17,7 +17,7 @@ use std::marker::PhantomData;
 /// Example Usage
 /// =============
 ///
-/// In the following example `SwaggerService` implements `hyper::server::NewService`
+/// In the following example `SwaggerService` implements `hyper::service::MakeService`
 /// with `Request = (hyper::Request, SomeContext)`, and `PlainService` implements it
 /// with `Request = hyper::Request`
 ///
@@ -26,53 +26,93 @@ use std::marker::PhantomData;
 /// let swagger_service_two = SwaggerService::new();
 /// let plain_service = PlainService::new();
 ///
-/// let mut composite_new_service = CompositeNewService::new();
+/// let mut composite_new_service = CompositeMakeService::new();
 /// composite_new_service.push(("/base/path/1", swagger_service_one));
 /// composite_new_service.push(("/base/path/2", swagger_service_two));
-/// composite_new_service.push(("/base/path/3", DropContext::new(plain_service)));
+/// composite_new_service.push(("/base/path/3", DropContextMakeService::new(plain_service)));
 /// ```
 #[derive(Debug)]
-pub struct DropContext<T, C> {
+pub struct DropContextMakeService<T, C>
+where
+    C: Send + 'static,
+{
     inner: T,
     marker: PhantomData<C>,
 }
 
-impl<T, C> DropContext<T, C> {
-    /// Create a new DropContext struct wrapping a value
+impl<T, C> DropContextMakeService<T, C>
+where
+    C: Send + 'static,
+{
+    /// Create a new DropContextMakeService struct wrapping a value
     pub fn new(inner: T) -> Self {
-        DropContext {
+        Self {
             inner,
             marker: PhantomData,
         }
     }
 }
 
-impl<T, C> hyper::service::MakeService<C> for DropContext<T, C>
+impl<'a, SC, RC, T, S, F> hyper::service::MakeService<&'a SC> for DropContextMakeService<T, RC>
 where
-    C: Send + 'static,
+    RC: Send + 'static,
     T: hyper::service::MakeService<
-        C,
+        &'a SC,
         ReqBody = hyper::Body,
         ResBody = hyper::Body,
         Error = Error,
         MakeError = io::Error,
+        Service = S,
+        Future = F,
     >,
     T::Future: 'static,
-    T::Service: 'static,
+    S: hyper::service::Service<ReqBody = hyper::Body, ResBody = hyper::Body, Error = Error>
+        + 'static,
+    F: Future<Item = S, Error = io::Error>,
 {
-    type ReqBody = ContextualPayload<hyper::Body, C>;
+    type ReqBody = ContextualPayload<hyper::Body, RC>;
     type ResBody = hyper::Body;
     type Error = Error;
     type MakeError = io::Error;
     type Future = Box<Future<Item = Self::Service, Error = io::Error>>;
-    type Service = DropContext<T::Service, C>;
+    type Service = DropContextService<S, RC>;
 
-    fn make_service(&mut self, service_ctx: C) -> Self::Future {
-        Box::new(self.inner.make_service(service_ctx).map(DropContext::new))
+    fn make_service(&mut self, service_ctx: &'a SC) -> Self::Future {
+        Box::new(
+            self.inner
+                .make_service(service_ctx)
+                .map(DropContextService::new),
+        )
     }
 }
 
-impl<T, C> hyper::service::Service for DropContext<T, C>
+/// Swagger Middleware that wraps a `hyper::service::Service`, and drops any contextual information
+/// on the request. Services will normally want to use `DropContextMakeService`, which will create
+/// a `DropContextService` to handle each connection.
+#[derive(Debug)]
+pub struct DropContextService<T, C>
+where
+    C: Send + 'static,
+    T: hyper::service::Service<ReqBody = hyper::Body, ResBody = hyper::Body, Error = Error>,
+{
+    inner: T,
+    marker: PhantomData<C>,
+}
+
+impl<T, C> DropContextService<T, C>
+where
+    C: Send + 'static,
+    T: hyper::service::Service<ReqBody = hyper::Body, ResBody = hyper::Body, Error = Error>,
+{
+    /// Create a new DropContextService struct wrapping a value
+    pub fn new(inner: T) -> Self {
+        Self {
+            inner,
+            marker: PhantomData,
+        }
+    }
+}
+impl<T, C> hyper::service::Service for DropContextService<T, C>
 where
     C: Send + 'static,
     T: hyper::service::Service<ReqBody = hyper::Body, ResBody = hyper::Body, Error = Error>,

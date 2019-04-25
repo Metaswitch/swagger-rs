@@ -53,7 +53,7 @@ pub mod add_context;
 pub use add_context::{AddContextMakeService, AddContextService};
 
 pub mod drop_context;
-pub use drop_context::DropContext;
+pub use drop_context::{DropContextMakeService, DropContextService};
 
 pub mod request_parser;
 pub use request_parser::RequestParser;

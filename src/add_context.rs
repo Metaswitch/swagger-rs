@@ -14,12 +14,20 @@ use ErrorBound;
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
 /// used by subsequent layers in the stack.
 #[derive(Debug)]
-pub struct AddContextMakeService<T, C> {
+pub struct AddContextMakeService<T, C>
+where
+    C: Default + Push<XSpanIdString> + 'static + Send,
+    C::Result: Send + 'static,
+{
     inner: T,
     marker: PhantomData<C>,
 }
 
-impl<T, C> AddContextMakeService<T, C> {
+impl<T, C> AddContextMakeService<T, C>
+where
+    C: Default + Push<XSpanIdString> + 'static + Send,
+    C::Result: Send + 'static,
+{
     /// Create a new AddContextMakeService struct wrapping a value
     pub fn new(inner: T) -> Self {
         AddContextMakeService {
@@ -75,12 +83,20 @@ where
 /// not usually be used directly - when constructing a hyper stack use
 /// `AddContextMakeService`, which will create `AddContextService` instances as needed.
 #[derive(Debug)]
-pub struct AddContextService<T, C> {
+pub struct AddContextService<T, C>
+where
+    C: Default + Push<XSpanIdString>,
+    C::Result: Send + 'static,
+{
     inner: T,
     marker: PhantomData<C>,
 }
 
-impl<T, C> AddContextService<T, C> {
+impl<T, C> AddContextService<T, C>
+where
+    C: Default + Push<XSpanIdString>,
+    C::Result: Send + 'static,
+{
     /// Create a new AddContextService struct wrapping a value
     pub fn new(inner: T) -> Self {
         AddContextService {
