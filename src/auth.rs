@@ -208,7 +208,7 @@ where
 }
 
 /// Retrieve an API key from a header
-pub fn api_key_from_header(headers: &HeaderMap, header: &'static str) -> Option<String> {
+pub fn api_key_from_header(headers: &HeaderMap, header: &str) -> Option<String> {
     headers
         .get(header)
         .and_then(|v| v.to_str().ok())
@@ -244,6 +244,7 @@ mod tests {
         IB: Payload,
         OB: Payload,
     {
+        // This function is here merely to force a type check against the given bounds.
     }
 
     fn check_type<S, A, B, C>(_: &S)
@@ -254,6 +255,7 @@ mod tests {
         B: Payload,
         C: Payload,
     {
+        // This function is here merely to force a type check against the given bounds.
     }
 
     struct TestService<IB>(std::net::SocketAddr, PhantomData<IB>);

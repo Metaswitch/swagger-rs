@@ -1,12 +1,12 @@
 /// Common trait for swagger based client middleware
 pub trait Service {
-    /// Request body taken by client. Should implement `hyper::body::Payload`.
+    /// Request body taken by client.
     /// Likely either `hyper::Body`, `hyper::Chunk` or `swagger::ContextualPayload`.
-    type ReqBody;
+    type ReqBody: hyper::body::Payload;
 
     /// Future response from client service.
     /// Likely: `Future<Item=hyper::Response<hyper::Body>, Error=hyper::Error>`
-    type Future;
+    type Future: futures::Future;
 
     /// Handle the given request
     fn request(&self, req: hyper::Request<Self::ReqBody>) -> Self::Future;
