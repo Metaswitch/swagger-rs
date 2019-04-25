@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+## [3.0.0] - 2019-03-08
+### Changed
+- Hyper 0.12 support.
+
+  This creates large scale changes with corresponding renaming (e.g. `NewService` -> `MakeService`) and other fall out.
+
+  Hyper Services don't have Request as a type parameters -  instead the body of the request / response are type parameters.
+
+  As such context for requests, such as authorization data is kept in a `ContextualPayload` struct, instead of a tuple.
+
+### Removed
+- `AddContext` structs which we were previously deprecated are now removed.
+
 ## [2.0.2] - 2018-12-13
 ### Added
 - Allow ContextWrapper to be cloned.
@@ -93,7 +106,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/2.0.2...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/3.0.0...HEAD
+[3.0.0]: https://github.com/Metaswitch/swagger-rs/compare/2.0.2...3.0.0
 [2.0.2]: https://github.com/Metaswitch/swagger-rs/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/Metaswitch/swagger-rs/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/Metaswitch/swagger-rs/compare/1.0.2...2.0.0

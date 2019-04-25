@@ -4,17 +4,15 @@ extern crate hyper_tls;
 extern crate native_tls;
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 extern crate openssl;
-extern crate tokio_core;
 
 use std::path::Path;
 
-use self::tokio_core::reactor::Handle;
 use hyper;
 
 /// Returns a function which creates an http-connector. Used for instantiating
 /// clients with custom connectors
-pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Send + Sync> {
-    Box::new(move |handle: &Handle| hyper::client::HttpConnector::new(4, handle))
+pub fn http_connector() -> Box<Fn() -> hyper::client::HttpConnector + Send + Sync> {
+    Box::new(move || hyper::client::HttpConnector::new(4))
 }
 
 /// Returns a function which creates an https-connector
@@ -25,12 +23,12 @@ pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Sen
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 pub fn https_connector<CA>(
     ca_certificate: CA,
-) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+) -> Box<Fn() -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
 where
     CA: AsRef<Path>,
 {
     let ca_certificate = ca_certificate.as_ref().to_owned();
-    Box::new(move |handle: &Handle| {
+    Box::new(move || {
         // SSL implementation
         let mut ssl =
             openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();
@@ -40,7 +38,7 @@ where
 
         let builder: native_tls::TlsConnectorBuilder =
             native_tls::backend::openssl::TlsConnectorBuilderExt::from_openssl(ssl);
-        let mut connector = hyper::client::HttpConnector::new(4, handle);
+        let mut connector = hyper::client::HttpConnector::new(4);
         connector.enforce_http(false);
         let connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
             (connector, builder.build().unwrap()).into();
@@ -53,7 +51,7 @@ where
 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))]
 pub fn https_connector<CA>(
     _ca_certificate: CA,
-) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+) -> Box<Fn() -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
 where
     CA: AsRef<Path>,
 {
@@ -71,7 +69,7 @@ pub fn https_mutual_connector<CA, K, C>(
     ca_certificate: CA,
     client_key: K,
     client_certificate: C,
-) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+) -> Box<Fn() -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
 where
     CA: AsRef<Path>,
     K: AsRef<Path>,
@@ -80,7 +78,7 @@ where
     let ca_certificate = ca_certificate.as_ref().to_owned();
     let client_key = client_key.as_ref().to_owned();
     let client_certificate = client_certificate.as_ref().to_owned();
-    Box::new(move |handle: &Handle| {
+    Box::new(move || {
         // SSL implementation
         let mut ssl =
             openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();
@@ -97,7 +95,7 @@ where
 
         let builder: native_tls::TlsConnectorBuilder =
             native_tls::backend::openssl::TlsConnectorBuilderExt::from_openssl(ssl);
-        let mut connector = hyper::client::HttpConnector::new(4, handle);
+        let mut connector = hyper::client::HttpConnector::new(4);
         connector.enforce_http(false);
         let connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
             (connector, builder.build().unwrap()).into();
@@ -112,7 +110,7 @@ pub fn https_mutual_connector<CA, K, C>(
     _ca_certificate: CA,
     _client_key: K,
     _client_certificate: C,
-) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+) -> Box<Fn() -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
 where
     CA: AsRef<Path>,
     K: AsRef<Path>,

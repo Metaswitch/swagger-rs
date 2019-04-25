@@ -10,12 +10,14 @@ extern crate serde_json;
 #[cfg(test)]
 #[macro_use]
 extern crate serde_derive;
+
 extern crate base64;
-
-#[macro_use]
-extern crate hyper;
-
+extern crate chrono;
 extern crate futures;
+extern crate hyper;
+extern crate hyper_old_types;
+#[cfg(feature = "multipart")]
+extern crate mime;
 extern crate uuid;
 
 use std::error;
@@ -33,53 +35,39 @@ pub mod auth;
 pub use auth::{AuthData, Authorization};
 
 pub mod context;
-pub use context::{ContextBuilder, ContextWrapper, EmptyContext, Has, Pop, Push};
+pub use context::{
+    ContextBuilder, ContextWrapper, ContextualPayload, EmptyContext, Has, Pop, Push,
+};
+
+/// Module to support client middleware
+pub mod client;
 
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
 pub use connector::{http_connector, https_connector, https_mutual_connector};
 
 pub mod composites;
-pub use composites::{CompositeNewService, CompositeService, GetPath, NotFound};
+pub use composites::{CompositeMakeService, CompositeService, NotFound};
 
-#[allow(deprecated)]
 pub mod add_context;
-#[allow(deprecated)]
-pub use add_context::{AddContext, AddContextNewService, AddContextService};
+pub use add_context::{AddContextMakeService, AddContextService};
 
 pub mod drop_context;
-pub use drop_context::DropContext;
+pub use drop_context::{DropContextMakeService, DropContextService};
 
 pub mod request_parser;
 pub use request_parser::RequestParser;
 
-header! {
-    /// `X-Span-ID` header, used to track a request through a chain of microservices.
-    (XSpanId, "X-Span-ID") => [String]
-}
+mod header;
+pub use header::{IntoHeaderValue, XSpanIdString, X_SPAN_ID};
 
-/// Wrapper for a string being used as an X-Span-ID.
-#[derive(Debug, Clone, Default)]
-pub struct XSpanIdString(pub String);
+#[cfg(feature = "multipart")]
+pub mod multipart;
 
-impl XSpanIdString {
-    /// Extract an X-Span-ID from a request header if present, and if not
-    /// generate a new one.
-    pub fn get_or_generate(req: &hyper::Request) -> Self {
-        XSpanIdString(
-            req.headers()
-                .get::<XSpanId>()
-                .map(XSpanId::to_string)
-                .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
-        )
-    }
-}
+/// Helper Bound for Errors for MakeService/Service wrappers
+pub trait ErrorBound: Into<Box<std::error::Error + Send + Sync>> {}
 
-impl fmt::Display for XSpanIdString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
+impl<T> ErrorBound for T where T: Into<Box<std::error::Error + Send + Sync>> {}
 
 /// Very simple error type - just holds a description of the error. This is useful for human
 /// diagnosis and troubleshooting, but not for applications to parse. The justification for this

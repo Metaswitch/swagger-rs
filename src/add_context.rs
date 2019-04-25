@@ -2,62 +2,78 @@
 //! to a wrapped service.
 
 use super::{Push, XSpanIdString};
+use context::ContextualPayload;
+use futures::Future;
 use hyper;
-use hyper::{Error, Request, Response};
-use std::io;
+use hyper::Request;
 use std::marker::PhantomData;
+
+use ErrorBound;
 
 /// Middleware wrapper service, that should be used as the outermost layer in a
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
 /// used by subsequent layers in the stack.
 #[derive(Debug)]
-pub struct AddContextNewService<T, C>
+pub struct AddContextMakeService<T, C>
 where
-    C: Default + Push<XSpanIdString>,
-    T: hyper::server::NewService<
-        Request = (hyper::Request, C::Result),
-        Response = hyper::Response,
-        Error = hyper::Error,
-    >,
+    C: Default + Push<XSpanIdString> + 'static + Send,
+    C::Result: Send + 'static,
 {
     inner: T,
     marker: PhantomData<C>,
 }
 
-impl<T, C> AddContextNewService<T, C>
+impl<T, C> AddContextMakeService<T, C>
 where
-    C: Default + Push<XSpanIdString>,
-    T: hyper::server::NewService<
-        Request = (hyper::Request, C::Result),
-        Response = hyper::Response,
-        Error = hyper::Error,
-    >,
+    C: Default + Push<XSpanIdString> + 'static + Send,
+    C::Result: Send + 'static,
 {
-    /// Create a new AddContextNewService struct wrapping a value
+    /// Create a new AddContextMakeService struct wrapping a value
     pub fn new(inner: T) -> Self {
-        AddContextNewService {
+        AddContextMakeService {
             inner,
             marker: PhantomData,
         }
     }
 }
 
-impl<T, C> hyper::server::NewService for AddContextNewService<T, C>
+impl<'a, T, SC, RC, E, ME, S, F> hyper::service::MakeService<&'a SC>
+    for AddContextMakeService<T, RC>
 where
-    C: Default + Push<XSpanIdString>,
-    T: hyper::server::NewService<
-        Request = (hyper::Request, C::Result),
-        Response = hyper::Response,
-        Error = hyper::Error,
+    RC: Default + Push<XSpanIdString> + 'static + Send,
+    RC::Result: Send + 'static,
+    T: hyper::service::MakeService<
+        &'a SC,
+        Service = S,
+        ReqBody = ContextualPayload<hyper::Body, RC::Result>,
+        ResBody = hyper::Body,
+        Error = E,
+        MakeError = ME,
+        Future = F,
     >,
+    S: hyper::service::Service<
+            ReqBody = ContextualPayload<hyper::Body, RC::Result>,
+            ResBody = hyper::Body,
+            Error = E,
+        > + 'static,
+    ME: ErrorBound,
+    E: ErrorBound,
+    F: Future<Item = S, Error = ME> + Send + 'static,
+    S::Future: Send,
 {
-    type Request = hyper::Request;
-    type Response = hyper::Response;
-    type Error = hyper::Error;
-    type Instance = AddContextService<T::Instance, C>;
+    type ReqBody = hyper::Body;
+    type ResBody = hyper::Body;
+    type Error = E;
+    type Service = AddContextService<S, RC>;
+    type MakeError = ME;
+    type Future = Box<Future<Item = Self::Service, Error = ME> + Send>;
 
-    fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.inner.new_service().map(AddContextService::new)
+    fn make_service(&mut self, service_ctx: &'a SC) -> Self::Future {
+        Box::new(
+            self.inner
+                .make_service(service_ctx)
+                .map(AddContextService::new),
+        )
     }
 }
 
@@ -65,16 +81,12 @@ where
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
 /// used by subsequent layers in the stack. The `AddContextService` struct should
 /// not usually be used directly - when constructing a hyper stack use
-/// `AddContextNewService`, which will create `AddContextService` instances as needed.
+/// `AddContextMakeService`, which will create `AddContextService` instances as needed.
 #[derive(Debug)]
 pub struct AddContextService<T, C>
 where
     C: Default + Push<XSpanIdString>,
-    T: hyper::server::Service<
-        Request = (hyper::Request, C::Result),
-        Response = hyper::Response,
-        Error = hyper::Error,
-    >,
+    C::Result: Send + 'static,
 {
     inner: T,
     marker: PhantomData<C>,
@@ -83,11 +95,7 @@ where
 impl<T, C> AddContextService<T, C>
 where
     C: Default + Push<XSpanIdString>,
-    T: hyper::server::Service<
-        Request = (hyper::Request, C::Result),
-        Response = hyper::Response,
-        Error = hyper::Error,
-    >,
+    C::Result: Send + 'static,
 {
     /// Create a new AddContextService struct wrapping a value
     pub fn new(inner: T) -> Self {
@@ -98,92 +106,31 @@ where
     }
 }
 
-impl<T, C> hyper::server::Service for AddContextService<T, C>
+impl<T, C, E> hyper::service::Service for AddContextService<T, C>
 where
     C: Default + Push<XSpanIdString>,
-    T: hyper::server::Service<
-        Request = (hyper::Request, C::Result),
-        Response = hyper::Response,
-        Error = hyper::Error,
+    C::Result: Send + 'static,
+    T: hyper::service::Service<
+        ReqBody = ContextualPayload<hyper::Body, C::Result>,
+        ResBody = hyper::Body,
+        Error = E,
     >,
+    E: ErrorBound,
 {
-    type Request = hyper::Request;
-    type Response = hyper::Response;
-    type Error = hyper::Error;
+    type ReqBody = hyper::Body;
+    type ResBody = hyper::Body;
+    type Error = E;
     type Future = T::Future;
 
-    fn call(&self, req: Self::Request) -> Self::Future {
+    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
         let x_span_id = XSpanIdString::get_or_generate(&req);
+        let (head, body) = req.into_parts();
         let context = C::default().push(x_span_id);
-        self.inner.call((req, context))
-    }
-}
 
-/// **DEPRECATED - USE `AddContextNewService` AND `AddContextService` INSTEAD**
-/// Middleware wrapper service, that should be used as the outermost layer in a
-/// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
-/// used by subsequent layers in the stack.
-#[deprecated(
-    since = "2.0.0",
-    note = "Replace with `AddContextNewService` or `AddContextService`"
-)]
-#[derive(Debug)]
-pub struct AddContext<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-{
-    inner: T,
-    marker: PhantomData<C>,
-}
-
-#[allow(deprecated)]
-impl<T, C> AddContext<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-{
-    /// Create a new AddContext struct wrapping a value
-    pub fn new(inner: T) -> Self {
-        AddContext {
-            inner,
-            marker: PhantomData,
-        }
-    }
-}
-
-#[allow(deprecated)]
-impl<T, C> hyper::server::NewService for AddContext<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-    T: hyper::server::NewService<
-        Request = (Request, C::Result),
-        Response = Response,
-        Error = Error,
-    >,
-{
-    type Request = Request;
-    type Response = Response;
-    type Error = Error;
-    type Instance = AddContext<T::Instance, C>;
-
-    fn new_service(&self) -> Result<Self::Instance, io::Error> {
-        self.inner.new_service().map(AddContext::new)
-    }
-}
-
-#[allow(deprecated)]
-impl<T, C> hyper::server::Service for AddContext<T, C>
-where
-    C: Default + Push<XSpanIdString>,
-    T: hyper::server::Service<Request = (Request, C::Result), Response = Response, Error = Error>,
-{
-    type Request = Request;
-    type Response = Response;
-    type Error = Error;
-    type Future = T::Future;
-
-    fn call(&self, req: Self::Request) -> Self::Future {
-        let x_span_id = XSpanIdString::get_or_generate(&req);
-        let context = C::default().push(x_span_id);
-        self.inner.call((req, context))
+        let body = ContextualPayload {
+            inner: body,
+            context,
+        };
+        self.inner.call(hyper::Request::from_parts(head, body))
     }
 }
