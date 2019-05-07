@@ -27,3 +27,13 @@ where
         hyper::Client::request(self, req)
     }
 }
+
+/// Factory trait for creating Services - swagger based client middleware
+pub trait MakeService<Context> {
+    /// Future response creating the service.
+    /// Likely: `Future<Item=Service, Error=hyper::Error>`
+    type Future: futures::Future;
+
+    /// Handle the given request
+    fn make_service(&self, ctx: Context) -> Self::Future;
+}
