@@ -30,9 +30,14 @@ where
 
 /// Factory trait for creating Services - swagger based client middleware
 pub trait MakeService<Context> {
+    /// Service that this creates
+    type Service: Service;
+
+    /// Potential error from creating the service.
+    type Error;
+
     /// Future response creating the service.
-    /// Likely: `Future<Item=Service, Error=hyper::Error>`
-    type Future: futures::Future;
+    type Future: futures::Future<Item=Self::Service, Error=Self::Error>;
 
     /// Handle the given request
     fn make_service(&self, ctx: Context) -> Self::Future;
