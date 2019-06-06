@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+## [3.2.0] - 2019-06-06
+- Add `swagger::client::ClonableService` trait
+
 ## [3.1.0] - 2019-05-07
 ### Added
 - Add `swagger::client::MakeService` trait
