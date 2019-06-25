@@ -43,11 +43,15 @@ pub trait MakeService<Context> {
     fn make_service(&self, ctx: Context) -> Self::Future;
 }
 
+/// Trait representing a client service which can be cloned.
 pub trait CloneableService {
     type ReqBody: hyper::body::Payload;
     type Future: Future;
 
+    /// Clone the service
     fn service_clone(&self) -> Box<CloneableService<ReqBody=Self::ReqBody, Future=Self::Future> + Send>;
+
+    /// Perform a request on the given service
     fn request(&self, hyper::Request<Self::ReqBody>) -> Self::Future;
 }
 
