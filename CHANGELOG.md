@@ -5,11 +5,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ### Added
 
 ### Changed
 
 ### Removed
+
+## [3.2.0] - 2019-08-02
+### Added
+- Add `swagger::client::Client` definition
 
 ## [3.1.0] - 2019-05-07
 ### Added
@@ -110,7 +115,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/3.1.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/3.2.0...HEAD
+[3.2.0]: https://github.com/Metaswitch/swagger-rs/compare/3.1.0...3.2.0
 [3.1.0]: https://github.com/Metaswitch/swagger-rs/compare/3.0.0...3.1.0
 [3.0.0]: https://github.com/Metaswitch/swagger-rs/compare/2.0.2...3.0.0
 [2.0.2]: https://github.com/Metaswitch/swagger-rs/compare/2.0.1...2.0.2

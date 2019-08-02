@@ -20,6 +20,9 @@ extern crate hyper_old_types;
 extern crate mime;
 extern crate uuid;
 
+#[macro_use]
+extern crate url;
+
 use std::error;
 use std::fmt;
 
