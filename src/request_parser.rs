@@ -4,6 +4,10 @@ use hyper::Request;
 /// A macro for joining together two or more RequestParsers to create a struct that implements
 /// RequestParser with a function parse_operation_id that matches hyper requests against the different
 /// RequestParsers in turn until it gets a match (or returns an error if none match)
+///
+/// The order in which the request parsers are passed to the macro specifies the order in which the request
+/// is tested against them. If there is any possibility of two RequestParsers matching the same request
+/// this should not be used.
 #[macro_export]
 macro_rules! request_parser_joiner {
     ($name:ident ,$($T:ty), *) => {
@@ -11,7 +15,7 @@ macro_rules! request_parser_joiner {
 
         impl RequestParser for $name {
             fn parse_operation_id(request: &hyper::Request) -> Result<&'static str, ()> {
-                inner!(request, $($T), *)
+                __impl_request_parser_joiner!(request, $($T), *)
             }
         }
     };
@@ -19,12 +23,13 @@ macro_rules! request_parser_joiner {
 
 /// This macro should only be used by the request_parser_joiner macro
 #[macro_export]
-macro_rules! inner {
+#[doc(hidden)]
+macro_rules! __impl_request_parser_joiner {
     ($argname:expr, $head:ty) => {<$head as RequestParser>::parse_operation_id(&$argname)};
     ($argname:expr, $head:ty, $( $tail:ty), *) => {
         match <$head as RequestParser>::parse_operation_id(&$argname) {
                 Ok(s) => Ok(s),
-                Err(_) => inner!($argname, $( $tail), *),
+                Err(_) => __impl_request_parser_joiner!($argname, $( $tail), *),
         }
     };
 }
@@ -48,8 +53,6 @@ mod context_tests {
     use super::*;
     use hyper::{Method, Uri};
     use std::str::FromStr;
-
-    //This is not needed in hyper > v12, Method::from_bytes can be used
 
     struct TestParser1;
 
