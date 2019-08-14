@@ -389,7 +389,7 @@ macro_rules! new_context_type {
     };
 }
 
-/// Create a default context type to export.
+// Create a default context type to export.
 new_context_type!(
     ContextBuilder,
     EmptyContext,
