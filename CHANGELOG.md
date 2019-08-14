@@ -6,10 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- Added macro `request_parser_joiner` to easily create a composite RequestParser that will match a request against multiple RequestParsers
+
 ### Changed
 
 ### Removed
+
+## [2.1.0] - 2019-08-14
+### Added
+- Added macro `request_parser_joiner` to easily create a composite RequestParser that will match a request against multiple RequestParsers
 
 ## [2.0.2] - 2018-12-13
 ### Added
@@ -93,7 +97,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/2.0.2...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/2.1.0...HEAD
+[2.1.0]: https://github.com/Metaswitch/swagger-rs/compare/2.0.2...2.1.0
 [2.0.2]: https://github.com/Metaswitch/swagger-rs/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/Metaswitch/swagger-rs/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/Metaswitch/swagger-rs/compare/1.0.2...2.0.0
