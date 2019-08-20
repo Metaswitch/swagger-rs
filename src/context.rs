@@ -38,7 +38,7 @@ use std::marker::Sized;
 ///     type ReqBody = ContextualPayload<hyper::Body, C>;
 ///     type ResBody = hyper::Body;
 ///     type Error = std::io::Error;
-///     type Future = Box<Future<Item=hyper::Response<Self::ResBody>, Error=Self::Error>>;
+///     type Future = Box<dyn Future<Item=hyper::Response<Self::ResBody>, Error=Self::Error>>;
 ///     fn call(&mut self, req : hyper::Request<Self::ReqBody>) -> Self::Future {
 ///         let (head, body) = req.into_parts();
 ///         do_something_with_my_item(Has::<MyItem>::get(&body.context));
@@ -555,7 +555,7 @@ pub trait SwaggerService<C>:
         ReqBody = ContextualPayload<hyper::Body, C>,
         ResBody = hyper::Body,
         Error = hyper::Error,
-        Future = Box<Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error> + Send>,
+        Future = Box<dyn Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error> + Send>,
     >
 where
     C: Has<Option<AuthData>>
@@ -574,7 +574,9 @@ where
             ReqBody = ContextualPayload<hyper::Body, C>,
             ResBody = hyper::Body,
             Error = hyper::Error,
-            Future = Box<Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error> + Send>,
+            Future = Box<
+                dyn Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error> + Send,
+            >,
         >,
     C: Has<Option<AuthData>>
         + Has<Option<Authorization>>
@@ -648,7 +650,7 @@ mod context_tests {
         type ReqBody = ContextualPayload<Body, C>;
         type ResBody = Body;
         type Error = Error;
-        type Future = Box<Future<Item = Response<Body>, Error = Error>>;
+        type Future = Box<dyn Future<Item = Response<Body>, Error = Error>>;
         fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
             use_item_2(Has::<ContextItem2>::get(&req.body().context));
 
@@ -779,7 +781,7 @@ mod context_tests {
         type ResBody = T::ResBody;
         type Error = T::Error;
         type Service = MiddleService<T::Service, RC>;
-        type Future = Box<Future<Item = Self::Service, Error = Self::MakeError>>;
+        type Future = Box<dyn Future<Item = Self::Service, Error = Self::MakeError>>;
         type MakeError = T::MakeError;
 
         fn make_service(&mut self, sc: SC) -> Self::Future {
@@ -868,7 +870,7 @@ mod context_tests {
         type ResBody = T::ResBody;
         type Error = T::Error;
         type Service = OuterService<T::Service, RC>;
-        type Future = Box<Future<Item = Self::Service, Error = Self::MakeError>>;
+        type Future = Box<dyn Future<Item = Self::Service, Error = Self::MakeError>>;
         type MakeError = T::MakeError;
 
         fn make_service(&mut self, sc: SC) -> Self::Future {
