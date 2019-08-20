@@ -8,8 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 ### Changed
+- Use hyper-openssl rather than hyper-tls
+- openssl 0.10
 
 ### Removed
+- Remove HTTPS methods for Mac OS X, iOS and Windows
 
 ## [3.1.0] - 2019-05-07
 ### Added
