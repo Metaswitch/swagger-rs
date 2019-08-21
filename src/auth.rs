@@ -143,7 +143,7 @@ where
     type Error = E;
     type MakeError = ME;
     type Service = AllowAllAuthenticator<S, RC>;
-    type Future = Box<Future<Item = Self::Service, Error = ME> + Send>;
+    type Future = Box<dyn Future<Item = Self::Service, Error = ME> + Send>;
 
     fn make_service(&mut self, service_ctx: &'a SC) -> Self::Future {
         let subject = self.subject.clone();
@@ -185,7 +185,7 @@ where
     type ReqBody = ContextualPayload<hyper::Body, RC>;
     type ResBody = T::ResBody;
     type Error = T::Error;
-    type Future = Box<Future<Item = Response<T::ResBody>, Error = T::Error> + Send>;
+    type Future = Box<dyn Future<Item = Response<T::ResBody>, Error = T::Error> + Send>;
 
     fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
         let (head, body) = req.into_parts();

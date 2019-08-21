@@ -25,10 +25,11 @@ impl NotFound<hyper::Body> for hyper::Body {
     }
 }
 
-type BoxedFuture<V, W> = Box<Future<Item = V, Error = W>>;
-type CompositeMakeServiceVec<C, U, V, W> = Vec<(&'static str, Box<BoxedMakeService<C, U, V, W>>)>;
+type BoxedFuture<V, W> = Box<dyn Future<Item = V, Error = W>>;
+type CompositeMakeServiceVec<C, U, V, W> =
+    Vec<(&'static str, Box<dyn BoxedMakeService<C, U, V, W>>)>;
 type BoxedService<U, V, W> =
-    Box<Service<ReqBody = U, ResBody = V, Error = W, Future = BoxedFuture<Response<V>, W>>>;
+    Box<dyn Service<ReqBody = U, ResBody = V, Error = W, Future = BoxedFuture<Response<V>, W>>>;
 
 /// Trait for wrapping hyper `MakeService`s to make the return type of `make_service` uniform.
 /// This is necessary in order for the `MakeService`s with different `Instance` types to
@@ -193,7 +194,7 @@ where
     type ReqBody = U;
     type ResBody = V;
     type Error = W;
-    type Future = Box<Future<Item = Response<V>, Error = W>>;
+    type Future = Box<dyn Future<Item = Response<V>, Error = W>>;
 
     fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
         let mut result = None;

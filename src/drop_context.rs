@@ -74,7 +74,7 @@ where
     type ResBody = hyper::Body;
     type Error = Error;
     type MakeError = io::Error;
-    type Future = Box<Future<Item = Self::Service, Error = io::Error>>;
+    type Future = Box<dyn Future<Item = Self::Service, Error = io::Error>>;
     type Service = DropContextService<S, RC>;
 
     fn make_service(&mut self, service_ctx: &'a SC) -> Self::Future {
