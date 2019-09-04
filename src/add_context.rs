@@ -66,7 +66,7 @@ where
     type Error = E;
     type Service = AddContextService<S, RC>;
     type MakeError = ME;
-    type Future = Box<Future<Item = Self::Service, Error = ME> + Send>;
+    type Future = Box<dyn Future<Item = Self::Service, Error = ME> + Send>;
 
     fn make_service(&mut self, service_ctx: &'a SC) -> Self::Future {
         Box::new(
