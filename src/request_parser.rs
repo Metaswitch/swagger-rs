@@ -13,8 +13,10 @@ macro_rules! request_parser_joiner {
     ($name:ident ,$($T:ty), *) => {
         struct $name;
 
-        impl RequestParser for $name {
-            fn parse_operation_id(request: &hyper::Request) -> Result<&'static str, ()> {
+        impl <B> RequestParser<B> for $name
+            where $($T: RequestParser<B>, )*
+        {
+            fn parse_operation_id(request: &hyper::Request<B>) -> Result<&'static str, ()> {
                 __impl_request_parser_joiner!(request, $($T), *)
             }
         }
@@ -25,9 +27,9 @@ macro_rules! request_parser_joiner {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __impl_request_parser_joiner {
-    ($argname:expr, $head:ty) => {<$head as RequestParser>::parse_operation_id(&$argname)};
+    ($argname:expr, $head:ty) => {<$head as RequestParser<B>>::parse_operation_id(&$argname)};
     ($argname:expr, $head:ty, $( $tail:ty), *) => {
-        match <$head as RequestParser>::parse_operation_id(&$argname) {
+        match <$head as RequestParser<B>>::parse_operation_id(&$argname) {
                 Ok(s) => Ok(s),
                 Err(_) => __impl_request_parser_joiner!($argname, $( $tail), *),
         }
@@ -51,13 +53,13 @@ pub trait RequestParser<B> {
 #[cfg(test)]
 mod context_tests {
     use super::*;
-    use hyper::{Method, Uri};
+    use hyper::{Body, Uri};
     use std::str::FromStr;
 
     struct TestParser1;
 
-    impl RequestParser for TestParser1 {
-        fn parse_operation_id(request: &hyper::Request) -> Result<&'static str, ()> {
+    impl RequestParser<Body> for TestParser1 {
+        fn parse_operation_id(request: &hyper::Request<Body>) -> Result<&'static str, ()> {
             match request.uri().path() {
                 "/test/t11" => Ok("t11"),
                 "/test/t12" => Ok("t12"),
@@ -68,8 +70,8 @@ mod context_tests {
 
     struct TestParser2;
 
-    impl RequestParser for TestParser2 {
-        fn parse_operation_id(request: &hyper::Request) -> Result<&'static str, ()> {
+    impl RequestParser<Body> for TestParser2 {
+        fn parse_operation_id(request: &hyper::Request<Body>) -> Result<&'static str, ()> {
             match request.uri().path() {
                 "/test/t21" => Ok("t21"),
                 "/test/t22" => Ok("t22"),
@@ -81,13 +83,13 @@ mod context_tests {
     #[test]
     fn test_macros() {
         let uri = Uri::from_str(&"https://www.rust-lang.org/test/t11").unwrap();
-        let req1: Request = Request::new(Method::Get, uri);
+        let req1: Request<Body> = Request::get(uri).body(Body::empty()).unwrap();
 
         let uri = Uri::from_str(&"https://www.rust-lang.org/test/t22").unwrap();
-        let req2: Request = Request::new(Method::Get, uri);
+        let req2: Request<Body> = Request::get(uri).body(Body::empty()).unwrap();
 
         let uri = Uri::from_str(&"https://www.rust-lang.org/test/t33").unwrap();
-        let req3: Request = Request::new(Method::Get, uri);
+        let req3: Request<Body> = Request::get(uri).body(Body::empty()).unwrap();
 
         request_parser_joiner!(JoinedReqParser, TestParser1, TestParser2);
 
