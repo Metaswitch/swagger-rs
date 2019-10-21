@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-
+- Added macro `request_parser_joiner` to easily create a composite RequestParser that will match a request against multiple RequestParsers
 ### Changed
 
 ### Removed
