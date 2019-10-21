@@ -65,9 +65,9 @@ pub use header::{IntoHeaderValue, XSpanIdString, X_SPAN_ID};
 pub mod multipart;
 
 /// Helper Bound for Errors for MakeService/Service wrappers
-pub trait ErrorBound: Into<Box<std::error::Error + Send + Sync>> {}
+pub trait ErrorBound: Into<Box<dyn std::error::Error + Send + Sync>> {}
 
-impl<T> ErrorBound for T where T: Into<Box<std::error::Error + Send + Sync>> {}
+impl<T> ErrorBound for T where T: Into<Box<dyn std::error::Error + Send + Sync>> {}
 
 /// Very simple error type - just holds a description of the error. This is useful for human
 /// diagnosis and troubleshooting, but not for applications to parse. The justification for this
@@ -79,7 +79,7 @@ pub struct ApiError(pub String);
 
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let debug: &fmt::Debug = self;
+        let debug: &dyn fmt::Debug = self;
         debug.fmt(f)
     }
 }
