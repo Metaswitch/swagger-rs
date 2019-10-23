@@ -640,6 +640,7 @@ where
 #[cfg(feature = "serdejson")]
 mod serde_tests {
     use super::*;
+    use serde::{Serialize, Deserialize};
 
     // Set up:
     #[derive(Clone, Debug, Deserialize, Serialize)]
