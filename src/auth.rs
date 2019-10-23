@@ -2,7 +2,7 @@
 
 use crate::context::ContextualPayload;
 use crate::{ErrorBound, Push};
-use futures::future::Future;
+use futures::FutureExt;
 use hyper;
 use hyper::body::Payload;
 use hyper::header::AUTHORIZATION;
@@ -13,8 +13,11 @@ use hyper_old_types::header::Header as HeaderTrait;
 pub use hyper_old_types::header::{Basic, Bearer};
 use hyper_old_types::header::{Raw, Scheme};
 use std::collections::BTreeSet;
+use std::future::Future;
 use std::marker::PhantomData;
+use std::pin::Pin;
 use std::string::ToString;
+use std::task::{Context, Poll};
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -117,41 +120,37 @@ where
     }
 }
 
-impl<'a, T, SC, RC, E, ME, S, OB, F> MakeService<&'a SC> for MakeAllowAllAuthenticator<T, RC>
+impl<'a, T, SC, RC, E, ME, S, OB> Service<&'a SC> for MakeAllowAllAuthenticator<T, RC>
 where
     RC: RcBound,
     RC::Result: Send + 'static,
-    T: MakeService<
+    T: Service<
         &'a SC,
-        Error = E,
-        MakeError = ME,
-        Service = S,
-        ReqBody = ContextualPayload<hyper::Body, RC::Result>,
-        ResBody = OB,
-        Future = F,
+        Error = ME,
+        ResBody = S,
+        Future = Pin<Box<dyn Future<Output=Result<S, ME>>>>,
     >,
-    S: Service<Error = E, ReqBody = ContextualPayload<hyper::Body, RC::Result>, ResBody = OB>
+    S: Service<ContextualPayload<hyper::Body, RC::Result>, Error = E, ResBody = OB>
         + 'static,
     ME: ErrorBound,
     E: ErrorBound,
-    F: Future<Item = S, Error = ME> + Send + 'static,
     S::Future: Send,
     OB: Payload,
 {
-    type ReqBody = ContextualPayload<hyper::Body, RC>;
-    type ResBody = OB;
-    type Error = E;
-    type MakeError = ME;
-    type Service = AllowAllAuthenticator<S, RC>;
-    type Future = Box<dyn Future<Item = Self::Service, Error = ME> + Send>;
+    type ResBody = AllowAllAuthenticator<T, RC>;
+    type Error = ME;
+    type Future = Pin<Box<dyn Future<Output = Result<AllowAllAuthenticator<T, RC>, ME>> + Send>>;
 
-    fn make_service(&mut self, service_ctx: &'a SC) -> Self::Future {
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, service_ctx: &'a SC) -> Self::Future {
         let subject = self.subject.clone();
-        Box::new(
-            self.inner
-                .make_service(service_ctx)
-                .map(|s| AllowAllAuthenticator::new(s, subject)),
-        )
+        self.inner
+            .call(service_ctx)
+            .map(|s| AllowAllAuthenticator::new(s, subject))
+            .boxed()
     }
 }
 
@@ -175,19 +174,22 @@ impl<T, RC> AllowAllAuthenticator<T, RC> {
     }
 }
 
-impl<T, RC> hyper::service::Service for AllowAllAuthenticator<T, RC>
+impl<T, RC> hyper::service::Service<ContextualPayload<hyper::Body, RC>> for AllowAllAuthenticator<T, RC>
 where
     RC: RcBound,
     RC::Result: Send + 'static,
-    T: Service<ReqBody = ContextualPayload<hyper::Body, RC::Result>>,
-    T::Future: Future<Item = Response<T::ResBody>, Error = T::Error> + Send + 'static,
+    T: Service<ContextualPayload<hyper::Body, RC::Result>>,
+    T::Future: Future<Output = Result<Response<T::ResBody>, T::Error>> + Send + 'static,
 {
-    type ReqBody = ContextualPayload<hyper::Body, RC>;
     type ResBody = T::ResBody;
     type Error = T::Error;
-    type Future = Box<dyn Future<Item = Response<T::ResBody>, Error = T::Error> + Send>;
+    type Future = Pin<Box<dyn Future<Output = Result<Response<T::ResBody>, T::Error>> + Send>>;
 
-    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, req: Request<ContextualPayload<hyper::Body, RC>>) -> Self::Future {
         let (head, body) = req.into_parts();
         let body = ContextualPayload {
             inner: body.inner,
@@ -198,7 +200,7 @@ where
             })),
         };
 
-        Box::new(self.inner.call(Request::from_parts(head, body)))
+        self.inner.call(Request::from_parts(head, body))
     }
 }
 
@@ -227,7 +229,6 @@ pub fn api_key_from_header(headers: &HeaderMap, header: &str) -> Option<String> 
 mod tests {
     use super::*;
     use crate::EmptyContext;
-    use futures::future;
     use hyper::server::conn::AddrStream;
     use hyper::service::{make_service_fn, MakeService, MakeServiceRef, Service};
     use hyper::{body::Payload, Body, Response};
@@ -238,17 +239,17 @@ mod tests {
     where
         T: MakeService<
             &'a SC,
+            IB,
             Error = E,
             MakeError = ME,
             Service = S,
             Future = F,
-            ReqBody = IB,
             ResBody = OB,
         >,
         E: ErrorBound,
         ME: ErrorBound,
-        S: Service<ReqBody = IB, ResBody = OB, Error = E>,
-        F: Future<Item = S, Error = ME>,
+        S: Service<IB, ResBody = OB, Error = E>,
+        F: Future<Output = Result<S, ME>>,
         IB: Payload,
         OB: Payload,
     {
@@ -257,7 +258,7 @@ mod tests {
 
     fn check_type<S, A, B, C>(_: &S)
     where
-        S: MakeServiceRef<A, ReqBody = B, ResBody = C>,
+        S: MakeServiceRef<A, B, ResBody = C>,
         S::Error: ErrorBound,
         S::Service: 'static,
         B: Payload,
@@ -268,23 +269,26 @@ mod tests {
 
     struct TestService<IB>(std::net::SocketAddr, PhantomData<IB>);
 
-    impl<IB: Debug + Payload> Service for TestService<IB> {
-        type ReqBody = IB;
+    impl<IB: Debug + Payload> Service<IB> for TestService<IB> {
         type ResBody = Body;
         type Error = std::io::Error;
-        type Future = future::FutureResult<Response<Self::ResBody>, Self::Error>;
+        type Future = Pin<Box<dyn Future<Output=Result<Response<Self::ResBody>, Self::Error>>>>;
 
-        fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
-            future::ok(Response::new(Body::from(format!("{:?} {}", req, self.0))))
+        fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn call(&mut self, req: Request<IB>) -> Self::Future {
+            futures::future::ok(
+                Response::new(Body::from(format!("{:?} {}", req, self.0)))
+            ).boxed()
         }
     }
 
     #[test]
     fn test_make_service() {
         let make_svc = make_service_fn(|socket: &AddrStream| {
-            let f: future::FutureResult<TestService<_>, io::Error> =
-                future::ok(TestService(socket.remote_addr(), PhantomData));
-            f
+            futures::future::ok(Ok(TestService(socket.remote_addr(), PhantomData)));
         });
 
         check_inner_type(&make_svc);

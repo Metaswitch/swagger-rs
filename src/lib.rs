@@ -2,24 +2,6 @@
 #![warn(missing_docs, missing_debug_implementations)]
 #![deny(unused_extern_crates)]
 
-#[cfg(feature = "serdejson")]
-extern crate serde;
-#[cfg(feature = "serdejson")]
-extern crate serde_json;
-#[cfg(feature = "serdejson")]
-#[cfg(test)]
-#[macro_use]
-extern crate serde_derive;
-
-extern crate base64;
-extern crate chrono;
-extern crate futures;
-extern crate hyper;
-extern crate hyper_old_types;
-#[cfg(feature = "multipart")]
-extern crate mime;
-extern crate uuid;
-
 use std::error;
 use std::fmt;
 

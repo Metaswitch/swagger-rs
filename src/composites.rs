@@ -2,10 +2,13 @@
 //!
 //! Use by passing `hyper::server::MakeService` instances to a `CompositeMakeService`
 //! together with the base path for requests that should be handled by that service.
-use futures::{future, Future};
+use futures::FutureExt;
 use hyper::service::{MakeService, Service};
 use hyper::{Request, Response, StatusCode};
+use std::future::Future;
 use std::ops::{Deref, DerefMut};
+use std::pin::Pin;
+use std::task::{Context, Poll};
 use std::{fmt, io};
 
 /// Trait for generating a default "not found" response. Must be implemented on
@@ -25,11 +28,11 @@ impl NotFound<hyper::Body> for hyper::Body {
     }
 }
 
-type BoxedFuture<V, W> = Box<dyn Future<Item = V, Error = W>>;
+type BoxedFuture<V, W> = Pin<Box<dyn Future<Output = Result<V, W>>>>;
 type CompositeMakeServiceVec<C, U, V, W> =
     Vec<(&'static str, Box<dyn BoxedMakeService<C, U, V, W>>)>;
 type BoxedService<U, V, W> =
-    Box<dyn Service<ReqBody = U, ResBody = V, Error = W, Future = BoxedFuture<Response<V>, W>>>;
+    Box<dyn Service<U, ResBody = V, Error = W, Future = BoxedFuture<Response<V>, W>>>;
 
 /// Trait for wrapping hyper `MakeService`s to make the return type of `make_service` uniform.
 /// This is necessary in order for the `MakeService`s with different `Instance` types to
@@ -41,14 +44,14 @@ pub trait BoxedMakeService<C, U, V, W> {
 
 impl<'a, SC, T, Rq, Rs, Er, S> BoxedMakeService<&'a SC, Rq, Rs, Er> for T
 where
-    S: Service<ReqBody = Rq, ResBody = Rs, Error = Er, Future = BoxedFuture<Response<Rs>, Er>>
+    S: Service<Rq, ResBody = Rs, Error = Er, Future = BoxedFuture<Response<Rs>, Er>>
         + 'static,
     T: MakeService<
         &'a SC,
-        ReqBody = Rq,
+        Rq,
         ResBody = Rs,
         Error = Er,
-        Future = futures::future::FutureResult<S, io::Error>,
+        Future = Pin<Box<dyn Future<Output=Result<S, io::Error>>>>,
         Service = S,
         MakeError = io::Error,
     >,
@@ -109,23 +112,24 @@ impl<C, U, V: NotFound<V>, W> CompositeMakeService<C, U, V, W> {
     }
 }
 
-impl<'a, C, U, V, W> MakeService<&'a C> for CompositeMakeService<&'a C, U, V, W>
+impl<'a, C, U, V, W> Service<&'a C> for CompositeMakeService<&'a C, U, V, W>
 where
     U: hyper::body::Payload,
     V: NotFound<V> + 'static + hyper::body::Payload,
     W: std::error::Error + Send + Sync + 'static,
 {
-    type ReqBody = U;
-    type ResBody = V;
-    type Error = W;
-    type Service = CompositeService<U, V, W>;
-    type MakeError = io::Error;
-    type Future = futures::future::FutureResult<Self::Service, io::Error>;
+    type ResBody = CompositeService<U, V, W>;
+    type Error = io::Error;
+    type Future = Pin<Box<dyn Future<Output=Result<CompositeService<U, V, W>, Self::Error>>>>;
 
-    fn make_service(
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(
         &mut self,
         _service_ctx: &'a C,
-    ) -> futures::future::FutureResult<Self::Service, io::Error> {
+    ) -> Self::Future {
         let mut vec = Vec::new();
 
         for &mut (base_path, ref mut make_service) in &mut self.0 {
@@ -137,7 +141,7 @@ where
             ))
         }
 
-        future::FutureResult::from(Ok(CompositeService(vec)))
+        futures::future::ok(Ok(CompositeService(vec))).boxed()
     }
 }
 
@@ -185,18 +189,21 @@ where
     V: NotFound<V> + 'static,
     W: 'static;
 
-impl<U, V, W> Service for CompositeService<U, V, W>
+impl<U, V, W> Service<U> for CompositeService<U, V, W>
 where
     U: hyper::body::Payload,
     V: NotFound<V> + 'static + hyper::body::Payload,
     W: 'static + std::error::Error + Send + Sync,
 {
-    type ReqBody = U;
     type ResBody = V;
     type Error = W;
-    type Future = Box<dyn Future<Item = Response<V>, Error = W>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Response<V>, W>>>>;
 
-    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, req: Request<U>) -> Self::Future {
         let mut result = None;
 
         for &mut (base_path, ref mut service) in &mut self.0 {
@@ -206,7 +213,7 @@ where
             }
         }
 
-        result.unwrap_or_else(|| Box::new(future::ok(V::not_found())))
+        result.unwrap_or_else(|| futures::future::ok(Ok(V::not_found()))).boxed()
     }
 }
 

@@ -12,7 +12,7 @@ use hyper;
 /// Returns a function which creates an http-connector. Used for instantiating
 /// clients with custom connectors
 pub fn http_connector() -> Box<dyn Fn() -> hyper::client::HttpConnector + Send + Sync> {
-    Box::new(move || hyper::client::HttpConnector::new(4))
+    Box::new(move || hyper::client::HttpConnector::new())
 }
 
 /// Returns a function which creates an https-connector
