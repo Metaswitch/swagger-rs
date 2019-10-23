@@ -8,6 +8,7 @@ homepage = "https://github.com/Metaswitch/swagger-rs"
 repository = "https://github.com/Metaswitch/swagger-rs"
 readme = "README.md"
 keywords = ["swagger"]
+edition = "2018"
 
 [badges.travis-ci]
 repository = "Metaswitch/swagger-rs"

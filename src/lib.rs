@@ -2,27 +2,6 @@
 #![warn(missing_docs, missing_debug_implementations)]
 #![deny(unused_extern_crates)]
 
-#[cfg(feature = "serdejson")]
-extern crate serde;
-#[cfg(feature = "serdejson")]
-extern crate serde_json;
-#[cfg(feature = "serdejson")]
-#[cfg(test)]
-#[macro_use]
-extern crate serde_derive;
-
-extern crate base64;
-extern crate chrono;
-extern crate futures;
-extern crate hyper;
-extern crate hyper_old_types;
-#[cfg(feature = "multipart")]
-extern crate mime;
-extern crate uuid;
-
-use std::error;
-use std::fmt;
-
 /// Module for encoding API properties in base64.
 pub mod base64_format;
 pub use base64_format::ByteArray;
@@ -77,6 +56,8 @@ impl<T> ErrorBound for T where T: Into<Box<dyn std::error::Error + Send + Sync>>
 #[derive(Clone, Debug)]
 pub struct ApiError(pub String);
 
+use std::fmt;
+
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let debug: &dyn fmt::Debug = self;
@@ -84,7 +65,7 @@ impl fmt::Display for ApiError {
     }
 }
 
-impl error::Error for ApiError {
+impl std::error::Error for ApiError {
     fn description(&self) -> &str {
         "Failed to produce a valid response."
     }
