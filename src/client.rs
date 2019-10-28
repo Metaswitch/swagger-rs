@@ -19,9 +19,12 @@ impl<C, B> Service<HyperResult> for hyper::Client<C, B>
 where
     B: hyper::body::Payload + Unpin + Send + 'static,
     B::Data: Send + Unpin,
-    C: hyper::client::connect::Connect + Sync + 'static,
-    C::Transport: 'static,
-    C::Future: 'static,
+    C: hyper::service::Service<hyper::client::connect::Destination, Response=(B, hyper::client::connect::Connected)>
+        + Clone + Send + Sync,
+    C::Future: Unpin,
+//    C: Service<B> + Sync + 'static,
+//    C::Transport: 'static,
+//    C::Future: 'static,
 {
     type ReqBody = B;
 

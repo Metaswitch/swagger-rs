@@ -24,7 +24,8 @@ base64 = "0.10"
 mime = { version = "0.3", optional = true }
 serde = { version = "1.0", optional = true, features = ["derive"] }
 serde_json = { version = "1.0", optional = true }
-hyper = "0.13.0-alpha.4"
+#hyper = "0.13.0-alpha.4"
+hyper = { git = "https://github.com/hyperium/hyper.git", branch = "master" }
 hyper-tls = "0.4.0-alpha.4"
 hyper-old-types = "0.11.0"
 native-tls = "0.2"

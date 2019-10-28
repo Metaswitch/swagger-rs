@@ -45,20 +45,20 @@ where
     RC::Result: Send + 'static,
     T: hyper::service::Service<
         &'a SC,
-        ResBody = S,
+        Response = S,
         Error = ME,
         Future = Pin<Box<dyn Future<Output=Result<S, ME>>>>,
     >,
     S: hyper::service::Service<
             ContextualPayload<hyper::Body, RC::Result>,
-            ResBody = hyper::Body,
+        Response = hyper::Body,
             Error = E,
         > + 'static,
     ME: ErrorBound,
     E: ErrorBound,
     S::Future: Send,
 {
-    type ResBody = T;
+    type Response = T;
     type Error = ME;
     type Future = Pin<Box<dyn Future<Output = Result<AddContextService<S, RC>, Self::Error>> + Send>>;
 
@@ -102,18 +102,18 @@ where
     }
 }
 
-impl<T, C, E> hyper::service::Service<ContextualPayload<hyper::Body, C::Result>> for AddContextService<T, C>
+impl<T, C, E> hyper::service::Service<hyper::Body> for AddContextService<T, C>
 where
     C: Default + Push<XSpanIdString>,
     C::Result: Send + 'static,
     T: hyper::service::Service<
         ContextualPayload<hyper::Body, C::Result>,
-        ResBody = hyper::Body,
+        Response = hyper::Body,
         Error = E,
     >,
     E: ErrorBound,
 {
-    type ResBody = hyper::Body;
+    type Response = hyper::Body;
     type Error = E;
     type Future = T::Future;
 
@@ -121,7 +121,7 @@ where
         Poll::Ready(Ok(()))
     }
 
-    fn call(&mut self, req: Request<ContextualPayload<hyper::Body, C::Result>>) -> Self::Future {
+    fn call(&mut self, req: Request<hyper::Body>) -> Self::Future {
         let x_span_id = XSpanIdString::get_or_generate(&req);
         let (head, body) = req.into_parts();
         let context = C::default().push(x_span_id);

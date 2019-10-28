@@ -61,16 +61,16 @@ where
     RC: Send + 'static,
     T: hyper::service::Service<
         &'a SC,
-        ResBody = S,
+        Response = S,
         Error = io::Error,
         Future = F,
     >,
     T::Future: 'static,
-    S: hyper::service::Service<hyper::Body, ResBody = hyper::Body, Error = Error>
+    S: hyper::service::Service<hyper::Body, Response = hyper::Body, Error = Error>
         + 'static,
     F: Future<Output = Result<S, io::Error>>,
 {
-    type ResBody = DropContextService<T, RC>;
+    type Response = DropContextService<T, RC>;
     type Error = Error;
     type Future = Pin<Box<dyn Future<Output = Result<S, io::Error>>>>;
 
@@ -93,7 +93,7 @@ where
 pub struct DropContextService<T, C>
 where
     C: Send + 'static,
-    T: hyper::service::Service<hyper::Body, ResBody = hyper::Body, Error = Error>,
+    T: hyper::service::Service<hyper::Body, Response = hyper::Body, Error = Error>,
 {
     inner: T,
     marker: PhantomData<C>,
@@ -102,7 +102,7 @@ where
 impl<T, C> DropContextService<T, C>
 where
     C: Send + 'static,
-    T: hyper::service::Service<hyper::Body, ResBody = hyper::Body, Error = Error>,
+    T: hyper::service::Service<hyper::Body, Response = hyper::Body, Error = Error>,
 {
     /// Create a new DropContextService struct wrapping a value
     pub fn new(inner: T) -> Self {
@@ -115,9 +115,9 @@ where
 impl<T, C> hyper::service::Service<hyper::Body> for DropContextService<T, C>
 where
     C: Send + 'static,
-    T: hyper::service::Service<hyper::Body, ResBody = hyper::Body, Error = Error>,
+    T: hyper::service::Service<hyper::Body, Response = hyper::Body, Error = Error>,
 {
-    type ResBody = hyper::Body;
+    type Response = hyper::Body;
     type Error = Error;
     type Future = T::Future;
 

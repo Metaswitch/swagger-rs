@@ -1,9 +1,9 @@
 //! Module for combining hyper services
 //!
-//! Use by passing `hyper::server::MakeService` instances to a `CompositeMakeService`
+//! Use by passing `hyper::server::Service` instances to a `CompositeMakeService`
 //! together with the base path for requests that should be handled by that service.
 use futures::FutureExt;
-use hyper::service::{MakeService, Service};
+use hyper::service::Service;
 use hyper::{Request, Response, StatusCode};
 use std::future::Future;
 use std::ops::{Deref, DerefMut};
@@ -32,7 +32,7 @@ type BoxedFuture<V, W> = Pin<Box<dyn Future<Output = Result<V, W>>>>;
 type CompositeMakeServiceVec<C, U, V, W> =
     Vec<(&'static str, Box<dyn BoxedMakeService<C, U, V, W>>)>;
 type BoxedService<U, V, W> =
-    Box<dyn Service<U, ResBody = V, Error = W, Future = BoxedFuture<Response<V>, W>>>;
+    Box<dyn Service<U, Response = V, Error = W, Future = BoxedFuture<Response<V>, W>>>;
 
 /// Trait for wrapping hyper `MakeService`s to make the return type of `make_service` uniform.
 /// This is necessary in order for the `MakeService`s with different `Instance` types to
@@ -44,16 +44,13 @@ pub trait BoxedMakeService<C, U, V, W> {
 
 impl<'a, SC, T, Rq, Rs, Er, S> BoxedMakeService<&'a SC, Rq, Rs, Er> for T
 where
-    S: Service<Rq, ResBody = Rs, Error = Er, Future = BoxedFuture<Response<Rs>, Er>>
+    S: Service<Rq, Response = Rs, Error = Er, Future = BoxedFuture<Response<Rs>, Er>>
         + 'static,
-    T: MakeService<
+    T: Service<
         &'a SC,
-        Rq,
-        ResBody = Rs,
-        Error = Er,
+        Response = S,
+        Error = io::Error,
         Future = Pin<Box<dyn Future<Output=Result<S, io::Error>>>>,
-        Service = S,
-        MakeError = io::Error,
     >,
     Rq: hyper::body::Payload,
     Rs: hyper::body::Payload,
@@ -64,7 +61,7 @@ where
         &mut self,
         context: &'a SC,
     ) -> Result<BoxedService<Rq, Rs, Er>, io::Error> {
-        let service = self.make_service(context).wait()?;
+        let service = self.call(context).wait()?;
         Ok(Box::new(service))
     }
 }
@@ -118,7 +115,7 @@ where
     V: NotFound<V> + 'static + hyper::body::Payload,
     W: std::error::Error + Send + Sync + 'static,
 {
-    type ResBody = CompositeService<U, V, W>;
+    type Response = CompositeService<U, V, W>;
     type Error = io::Error;
     type Future = Pin<Box<dyn Future<Output=Result<CompositeService<U, V, W>, Self::Error>>>>;
 
@@ -195,7 +192,7 @@ where
     V: NotFound<V> + 'static + hyper::body::Payload,
     W: 'static + std::error::Error + Send + Sync,
 {
-    type ResBody = V;
+    type Response = V;
     type Error = W;
     type Future = Pin<Box<dyn Future<Output = Result<Response<V>, W>>>>;
 

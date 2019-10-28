@@ -568,7 +568,7 @@ pub trait SwaggerService<C>:
     Clone
     + hyper::service::Service<
         ContextualPayload<hyper::Body, C>,
-        ResBody = hyper::Body,
+        Response = hyper::Body,
         Error = hyper::Error,
         Future = Pin<Box<dyn Future<Output = Result<hyper::Response<hyper::Body>, hyper::Error>> + Send>>,
     >
@@ -587,7 +587,7 @@ where
     T: Clone
         + hyper::service::Service<
             ContextualPayload<hyper::Body, C>,
-            ResBody = hyper::Body,
+            Response = hyper::Body,
             Error = hyper::Error,
             Future = Pin<Box<
                 dyn Future<Output = Result<hyper::Response<hyper::Body>, hyper::Error>> + Send,
@@ -632,7 +632,7 @@ where
 mod context_tests {
     use super::*;
     use futures::FutureExt;
-    use hyper::service::{MakeService, Service};
+    use hyper::service::Service;
     use hyper::{Body, Error, Method, Request, Response, Uri};
     use std::io;
     use std::future::Future;
@@ -664,7 +664,7 @@ mod context_tests {
     where
         C: Has<ContextItem2> + Pop<ContextItem3> + Send + 'static,
     {
-        type ResBody = Body;
+        type Response = Body;
         type Error = Error;
         type Future = Pin<Box<dyn Future<Output = Result<Response<Body>, Error>>>>;
 
@@ -702,21 +702,19 @@ mod context_tests {
         }
     }
 
-    impl<RC, SC> MakeService<SC, RC> for InnerMakeService<RC>
+    impl<RC, SC> Service<SC> for InnerMakeService<RC>
     where
         RC: Has<ContextItem2> + Pop<ContextItem3> + Send + 'static,
     {
-        type ResBody = Body;
-        type Error = Error;
-        type Service = InnerService<RC>;
-        type Future = Pin<Box<dyn Future<Output=Result<Self::Service, Self::MakeError>>>>;
-        type MakeError = io::Error;
+        type Response = InnerService<RC>;
+        type Error = io::Error;
+        type Future = Pin<Box<dyn Future<Output=Result<Self::Response, Self::Error>>>>;
 
-        fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::MakeError>> {
+        fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
 
-        fn make_service(&mut self, _: SC) -> Self::Future {
+        fn call(&mut self, _: SC) -> Self::Future {
             futures::future::ok(InnerService {
                 marker: PhantomData,
             })
@@ -753,7 +751,7 @@ mod context_tests {
         T: Service<ContextualPayload<Body, E::Result>>,
         E::Result: Send + 'static,
     {
-        type ResBody = T::ResBody;
+        type Response = T::Response;
         type Error = T::Error;
         type Future = T::Future;
 
@@ -783,9 +781,9 @@ mod context_tests {
         RC::Result: Push<ContextItem2>,
         <RC::Result as Push<ContextItem2>>::Result: Push<ContextItem3>,
         <<RC::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result: Send + 'static,
-        T: MakeService<
+        T: Service<
             SC,
-            ContextualPayload<
+            Response=ContextualPayload<
                 Body,
                 <<RC::Result as Push<ContextItem2>>::Result as Push<ContextItem3>>::Result,
             >,
@@ -796,27 +794,25 @@ mod context_tests {
         marker2: PhantomData<SC>,
     }
 
-    impl<T, SC, RC, D, E> MakeService<SC, ContextualPayload<Body, E::Result>> for MiddleMakeService<T, SC, RC>
+    impl<T, SC, RC, D, E> Service<SC> for MiddleMakeService<T, SC, RC>
     where
         RC: Pop<ContextItem1, Result = D> + Send + 'static,
         D: Push<ContextItem2, Result = E>,
         E: Push<ContextItem3>,
-        T: MakeService<SC, ContextualPayload<Body, E::Result>>,
+        T: Service<SC, Response=ContextualPayload<Body, E::Result>>,
         T::Future: 'static,
         E::Result: Send + 'static,
     {
-        type ResBody = T::ResBody;
-        type Error = T::Error;
-        type Service = MiddleService<T::Service, RC>;
-        type Future = Pin<Box<dyn Future<Output = Result<Self::Service, Self::MakeError>>>>;
-        type MakeError = T::MakeError;
+        type Response = MiddleService<T, RC>;
+        type Error = std::io::Error;
+        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
-        fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::MakeError>> {
+        fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
 
-        fn make_service(&mut self, sc: SC) -> Self::Future {
-            self.inner.make_service(sc).map(|s| MiddleService {
+        fn call(&mut self, sc: SC) -> Self::Future {
+            self.inner.call(sc).map(|s| MiddleService {
                 inner: s,
                 marker1: PhantomData,
             })
@@ -828,7 +824,7 @@ mod context_tests {
         RC: Pop<ContextItem1, Result = D>,
         D: Push<ContextItem2, Result = E>,
         E: Push<ContextItem3>,
-        T: MakeService<SC, ContextualPayload<Body, E::Result>>,
+        T: Service<SC, Response=ContextualPayload<Body, E::Result>>,
         E::Result: Send + 'static,
     {
         fn new(inner: T) -> Self {
@@ -861,7 +857,7 @@ mod context_tests {
         T: Service<ContextualPayload<Body, C::Result>>,
         C::Result: Send + 'static,
     {
-        type ResBody = T::ResBody;
+        type Response = T::Response;
         type Error = T::Error;
         type Future = T::Future;
 
@@ -886,7 +882,7 @@ mod context_tests {
     struct OuterMakeService<T, SC, RC>
     where
         RC: Default + Push<ContextItem1>,
-        T: MakeService<SC, ContextualPayload<Body, RC::Result>>,
+        T: Service<SC, Response=ContextualPayload<Body, RC::Result>>,
         RC::Result: Send + 'static,
     {
         inner: T,
@@ -894,25 +890,23 @@ mod context_tests {
         marker2: PhantomData<SC>,
     }
 
-    impl<T, SC, RC> MakeService<SC, ContextualPayload<Body, RC::Result>> for OuterMakeService<T, SC, RC>
+    impl<T, SC, RC> Service<SC> for OuterMakeService<T, SC, RC>
     where
         RC: Default + Push<ContextItem1>,
         RC::Result: Send + 'static,
-        T: MakeService<SC, ContextualPayload<Body, RC::Result>>,
+        T: Service<SC, Response=ContextualPayload<Body, RC::Result>>,
         T::Future: 'static,
     {
-        type ResBody = T::ResBody;
-        type Error = T::Error;
-        type Service = OuterService<T::Service, RC>;
-        type Future = Pin<Box<dyn Future<Output = Result<Self::Service, Self::MakeError>>>>;
-        type MakeError = T::MakeError;
+        type Response = OuterService<T::Response, RC>;
+        type Error = std::io::Error;
+        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
-        fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::MakeError>> {
+        fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
 
-        fn make_service(&mut self, sc: SC) -> Self::Future {
-            Box::new(self.inner.make_service(sc).map(|s| OuterService {
+        fn call(&mut self, sc: SC) -> Self::Future {
+            Box::new(self.inner.call(sc).map(|s| OuterService {
                 inner: s,
                 marker: PhantomData,
             }))
@@ -923,7 +917,7 @@ mod context_tests {
     where
         RC: Default + Push<ContextItem1>,
         RC::Result: Send + 'static,
-        T: MakeService<SC, ContextualPayload<Body, RC::Result>>,
+        T: Service<SC, Response=ContextualPayload<Body, RC::Result>>,
     {
         fn new(inner: T) -> Self {
             OuterMakeService {

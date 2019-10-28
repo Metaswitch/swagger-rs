@@ -6,7 +6,7 @@ use futures::FutureExt;
 use hyper;
 use hyper::body::Payload;
 use hyper::header::AUTHORIZATION;
-use hyper::service::{MakeService, Service};
+use hyper::service::Service;
 use hyper::{HeaderMap, Request, Response};
 pub use hyper_old_types::header::Authorization as Header;
 use hyper_old_types::header::Header as HeaderTrait;
@@ -127,17 +127,17 @@ where
     T: Service<
         &'a SC,
         Error = ME,
-        ResBody = S,
+        Response = S,
         Future = Pin<Box<dyn Future<Output=Result<S, ME>>>>,
     >,
-    S: Service<ContextualPayload<hyper::Body, RC::Result>, Error = E, ResBody = OB>
+    S: Service<ContextualPayload<hyper::Body, RC::Result>, Error = E, Response = OB>
         + 'static,
     ME: ErrorBound,
     E: ErrorBound,
     S::Future: Send,
     OB: Payload,
 {
-    type ResBody = AllowAllAuthenticator<T, RC>;
+    type Response = AllowAllAuthenticator<T, RC>;
     type Error = ME;
     type Future = Pin<Box<dyn Future<Output = Result<AllowAllAuthenticator<T, RC>, ME>> + Send>>;
 
@@ -179,11 +179,11 @@ where
     RC: RcBound,
     RC::Result: Send + 'static,
     T: Service<ContextualPayload<hyper::Body, RC::Result>>,
-    T::Future: Future<Output = Result<Response<T::ResBody>, T::Error>> + Send + 'static,
+    T::Future: Future<Output = Result<Response<T::Response>, T::Error>> + Send + 'static,
 {
-    type ResBody = T::ResBody;
+    type Response = T::Response;
     type Error = T::Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Response<T::ResBody>, T::Error>> + Send>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Response<T::Response>, T::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Poll::Ready(Ok(()))
@@ -230,25 +230,22 @@ mod tests {
     use super::*;
     use crate::EmptyContext;
     use hyper::server::conn::AddrStream;
-    use hyper::service::{make_service_fn, MakeService, MakeServiceRef, Service};
+    use hyper::service::{make_service_fn, Service};
     use hyper::{body::Payload, Body, Response};
     use std::fmt::Debug;
     use std::io;
 
     fn check_inner_type<'a, T, SC: 'a, E, ME, S, F, IB, OB>(_: &T)
     where
-        T: MakeService<
+        T: Service<
             &'a SC,
-            IB,
-            Error = E,
-            MakeError = ME,
-            Service = S,
+            Error = ME,
             Future = F,
-            ResBody = OB,
+            Response = S,
         >,
         E: ErrorBound,
         ME: ErrorBound,
-        S: Service<IB, ResBody = OB, Error = E>,
+        S: Service<IB, Response = OB, Error = E>,
         F: Future<Output = Result<S, ME>>,
         IB: Payload,
         OB: Payload,
@@ -256,13 +253,11 @@ mod tests {
         // This function is here merely to force a type check against the given bounds.
     }
 
-    fn check_type<S, A, B, C>(_: &S)
+    fn check_type<S, A, B>(_: &S)
     where
-        S: MakeServiceRef<A, B, ResBody = C>,
+        S: Service<A, Response = B>,
         S::Error: ErrorBound,
-        S::Service: 'static,
         B: Payload,
-        C: Payload,
     {
         // This function is here merely to force a type check against the given bounds.
     }
@@ -270,9 +265,9 @@ mod tests {
     struct TestService<IB>(std::net::SocketAddr, PhantomData<IB>);
 
     impl<IB: Debug + Payload> Service<IB> for TestService<IB> {
-        type ResBody = Body;
+        type Response = Body;
         type Error = std::io::Error;
-        type Future = Pin<Box<dyn Future<Output=Result<Response<Self::ResBody>, Self::Error>>>>;
+        type Future = Pin<Box<dyn Future<Output=Result<Response<Self::Response>, Self::Error>>>>;
 
         fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
