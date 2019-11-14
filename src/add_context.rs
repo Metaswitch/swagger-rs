@@ -4,6 +4,7 @@
 use super::{Push, XSpanIdString};
 use context::ContextualPayload;
 use futures::Future;
+use header::{IntoHeaderValue, X_SPAN_ID};
 use hyper;
 use hyper::Request;
 use std::marker::PhantomData;
@@ -116,21 +117,64 @@ where
         Error = E,
     >,
     E: ErrorBound,
+    T::Future: Send + 'static,
 {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
     type Error = E;
-    type Future = T::Future;
+    type Future =
+        Box<dyn Future<Item = hyper::Response<Self::ResBody>, Error = Self::Error> + Send>;
 
     fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
         let x_span_id = XSpanIdString::get_or_generate(&req);
         let (head, body) = req.into_parts();
-        let context = C::default().push(x_span_id);
+        let context = C::default().push(x_span_id.clone());
 
         let body = ContextualPayload {
             inner: body,
             context,
         };
-        self.inner.call(hyper::Request::from_parts(head, body))
+
+        Box::new(
+            self.inner
+                .call(hyper::Request::from_parts(head, body))
+                .map(move |mut rsp| {
+                    let headers = rsp.headers_mut();
+                    if !headers.contains_key(X_SPAN_ID) {
+                        headers.insert(X_SPAN_ID, IntoHeaderValue(x_span_id.to_string()).into());
+                    }
+                    rsp
+                }),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::new_context_type;
+    use hyper::service::{service_fn_ok, Service};
+    use hyper::{Body, Request, Response};
+
+    #[test]
+    fn check_headers() {
+        new_context_type!(TestContext, TestEmptyContext, XSpanIdString);
+
+        let inner = service_fn_ok(
+            |_: Request<ContextualPayload<Body, TestContext<XSpanIdString, TestEmptyContext>>>| {
+                Response::new(Body::from("Hello world".to_string()))
+            },
+        );
+
+        let mut full = AddContextService::<_, TestEmptyContext>::new(inner);
+
+        let req = Request::builder().body(Body::empty()).unwrap();
+
+        let rsp = full
+            .call(req)
+            .wait()
+            .expect("Service::call returned an error");
+
+        assert!(rsp.headers().contains_key(X_SPAN_ID));
     }
 }
