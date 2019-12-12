@@ -53,6 +53,8 @@ pub use drop_context::DropContext;
 pub mod request_parser;
 pub use request_parser::RequestParser;
 
+pub mod headers;
+
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
     (XSpanId, "X-Span-ID") => [String]
