@@ -24,7 +24,7 @@ impl SafeHeaders for Headers {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hyper::header::{Authorization, Bearer, Basic};
+    use hyper::header::{Authorization, Basic, Bearer};
 
     #[test]
     fn test() {
