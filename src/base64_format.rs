@@ -29,7 +29,7 @@ impl<'de> Deserialize<'de> for ByteArray {
     where
         D: Deserializer<'de>,
     {
-        let s = try!(String::deserialize(deserializer));
+        let s = String::deserialize(deserializer)?;
         match decode(&s) {
             Ok(bin) => Ok(ByteArray(bin)),
             _ => Err(D::Error::custom("invalid base64")),

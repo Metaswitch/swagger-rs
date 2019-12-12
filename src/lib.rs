@@ -53,6 +53,8 @@ pub use drop_context::DropContext;
 pub mod request_parser;
 pub use request_parser::RequestParser;
 
+pub mod headers;
+
 header! {
     /// `X-Span-ID` header, used to track a request through a chain of microservices.
     (XSpanId, "X-Span-ID") => [String]
@@ -91,7 +93,7 @@ pub struct ApiError(pub String);
 
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let debug: &fmt::Debug = self;
+        let debug: &dyn fmt::Debug = self;
         debug.fmt(f)
     }
 }

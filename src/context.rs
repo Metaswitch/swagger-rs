@@ -38,7 +38,7 @@ use std::marker::Sized;
 ///     type Request = (hyper::Request, C);
 ///     type Response = hyper::Response;
 ///     type Error = hyper::Error;
-///     type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
+///     type Future = Box<dyn Future<Item=Self::Response, Error=Self::Error>>;
 ///     fn call(&self, (req, context) : Self::Request) -> Self::Future {
 ///         do_something_with_my_item(Has::<MyItem>::get(&context));
 ///         Box::new(ok(hyper::Response::new()))
@@ -546,7 +546,7 @@ pub trait SwaggerService<C>:
         Request = (hyper::server::Request, C),
         Response = hyper::server::Response,
         Error = hyper::Error,
-        Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
+        Future = Box<dyn Future<Item = hyper::server::Response, Error = hyper::Error>>,
     >
 where
     C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static,
@@ -560,7 +560,7 @@ where
             Request = (hyper::server::Request, C),
             Response = hyper::server::Response,
             Error = hyper::Error,
-            Future = Box<Future<Item = hyper::server::Response, Error = hyper::Error>>,
+            Future = Box<dyn Future<Item = hyper::server::Response, Error = hyper::Error>>,
         >,
     C: Has<Option<AuthData>> + Has<Option<Authorization>> + Has<XSpanIdString> + Clone + 'static,
 {
@@ -603,7 +603,7 @@ mod context_tests {
         type Request = (Request, C);
         type Response = Response;
         type Error = Error;
-        type Future = Box<Future<Item = Response, Error = Error>>;
+        type Future = Box<dyn Future<Item = Response, Error = Error>>;
         fn call(&self, (_, context): Self::Request) -> Self::Future {
             use_item_2(Has::<ContextItem2>::get(&context));
 

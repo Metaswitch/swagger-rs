@@ -13,7 +13,7 @@ use hyper;
 
 /// Returns a function which creates an http-connector. Used for instantiating
 /// clients with custom connectors
-pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Send + Sync> {
+pub fn http_connector() -> Box<dyn Fn(&Handle) -> hyper::client::HttpConnector + Send + Sync> {
     Box::new(move |handle: &Handle| hyper::client::HttpConnector::new(4, handle))
 }
 
@@ -25,7 +25,7 @@ pub fn http_connector() -> Box<Fn(&Handle) -> hyper::client::HttpConnector + Sen
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 pub fn https_connector<CA>(
     ca_certificate: CA,
-) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+) -> Box<dyn Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
 where
     CA: AsRef<Path>,
 {
@@ -53,7 +53,7 @@ where
 #[cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))]
 pub fn https_connector<CA>(
     _ca_certificate: CA,
-) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+) -> Box<dyn Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
 where
     CA: AsRef<Path>,
 {
@@ -71,7 +71,7 @@ pub fn https_mutual_connector<CA, K, C>(
     ca_certificate: CA,
     client_key: K,
     client_certificate: C,
-) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+) -> Box<dyn Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
 where
     CA: AsRef<Path>,
     K: AsRef<Path>,
@@ -112,7 +112,7 @@ pub fn https_mutual_connector<CA, K, C>(
     _ca_certificate: CA,
     _client_key: K,
     _client_certificate: C,
-) -> Box<Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+) -> Box<dyn Fn(&Handle) -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
 where
     CA: AsRef<Path>,
     K: AsRef<Path>,
