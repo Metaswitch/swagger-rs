@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
+- Add `SafeHeaders` to work around Hyper 0.11 panic handling differently type headers with the same name - e.g. Authorization
+- Fix warnings present on Rust 1.39
 
 ### Changed
 
