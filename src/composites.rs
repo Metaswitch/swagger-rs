@@ -41,10 +41,10 @@ impl NotFound for Response {
     }
 }
 
-type BoxedFuture<V, W> = Box<Future<Item = V, Error = W>>;
-type CompositeNewServiceVec<U, V, W> = Vec<(&'static str, Box<BoxedNewService<U, V, W>>)>;
+type BoxedFuture<V, W> = Box<dyn Future<Item = V, Error = W>>;
+type CompositeNewServiceVec<U, V, W> = Vec<(&'static str, Box<dyn BoxedNewService<U, V, W>>)>;
 type BoxedService<U, V, W> =
-    Box<Service<Request = U, Response = V, Error = W, Future = BoxedFuture<V, W>>>;
+    Box<dyn Service<Request = U, Response = V, Error = W, Future = BoxedFuture<V, W>>>;
 
 /// Trait for wrapping hyper `NewService`s to make the return type of `new_service` uniform.
 /// This is necessary in order for the `NewService`s with different `Instance` types to
@@ -185,7 +185,7 @@ where
     type Request = U;
     type Response = V;
     type Error = W;
-    type Future = Box<Future<Item = V, Error = W>>;
+    type Future = Box<dyn Future<Item = V, Error = W>>;
 
     fn call(&self, req: Self::Request) -> Self::Future {
         let mut result = None;

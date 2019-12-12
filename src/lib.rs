@@ -93,7 +93,7 @@ pub struct ApiError(pub String);
 
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let debug: &fmt::Debug = self;
+        let debug: &dyn fmt::Debug = self;
         debug.fmt(f)
     }
 }
