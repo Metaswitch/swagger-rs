@@ -175,7 +175,7 @@ impl<T, RC> AllowAllAuthenticator<T, RC> {
     }
 }
 
-impl<T, RC> hyper::service::Service for AllowAllAuthenticator<T, RC>
+impl<T, RC> Service for AllowAllAuthenticator<T, RC>
 where
     RC: RcBound,
     RC::Result: Send + 'static,
