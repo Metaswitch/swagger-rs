@@ -13,11 +13,11 @@ use std::{fmt, io};
 /// `CompositeMakeService`.
 pub trait NotFound<V> {
     /// Return a "not found" response
-    fn not_found() -> hyper::Response<V>;
+    fn not_found() -> Response<V>;
 }
 
 impl NotFound<hyper::Body> for hyper::Body {
-    fn not_found() -> hyper::Response<hyper::Body> {
+    fn not_found() -> Response<hyper::Body> {
         Response::builder()
             .status(StatusCode::NOT_FOUND)
             .body(hyper::Body::empty())
