@@ -426,7 +426,7 @@ new_context_type!(
 #[macro_export]
 macro_rules! make_context_ty {
     ($context_name:ident, $empty_context_name:ident, $type:ty $(, $types:ty)* $(,)* ) => {
-        $context_name<$type, make_context_ty!($context_name, $empty_context_name, $($types),*)>
+        $context_name<$type, $crate::make_context_ty!($context_name, $empty_context_name, $($types),*)>
     };
     ($context_name:ident, $empty_context_name:ident $(,)* ) => {
         $empty_context_name
@@ -464,7 +464,7 @@ macro_rules! make_context_ty {
 #[macro_export]
 macro_rules! make_context {
     ($context_name:ident, $empty_context_name:ident, $value:expr $(, $values:expr)* $(,)*) => {
-        make_context!($context_name, $empty_context_name, $($values),*).push($value)
+        $crate::make_context!($context_name, $empty_context_name, $($values),*).push($value)
     };
     ($context_name:ident, $empty_context_name:ident $(,)* ) => {
         $empty_context_name::default()
