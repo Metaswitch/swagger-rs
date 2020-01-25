@@ -1,8 +1,8 @@
 //! Hyper service that adds a context to an incoming request and passes it on
 //! to a wrapped service.
 
-use crate::{ErrorBound, Push, XSpanIdString};
 use crate::context::ContextualPayload;
+use crate::{ErrorBound, Push, XSpanIdString};
 use futures::Future;
 use hyper;
 use hyper::Request;
