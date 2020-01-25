@@ -6,8 +6,8 @@
 //!
 //! See the `context_tests` module below for examples of how to use.
 
-use super::XSpanIdString;
-use auth::{AuthData, Authorization};
+use crate::XSpanIdString;
+use crate::auth::{AuthData, Authorization};
 use futures::future::Future;
 use hyper;
 use std::marker::Sized;
@@ -163,7 +163,7 @@ pub trait Push<T> {
     /// The type that results from adding an item.
     type Result;
     /// Inserts a value.
-    fn push(self, T) -> Self::Result;
+    fn push(self, value: T) -> Self::Result;
 }
 
 /// Defines a struct that can be used to build up contexts recursively by

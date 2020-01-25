@@ -1,10 +1,4 @@
 //! Utility methods for instantiating common connectors for clients.
-extern crate hyper_tls;
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-extern crate native_tls;
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-extern crate openssl;
-
 use std::path::Path;
 
 use hyper;

@@ -93,15 +93,6 @@ where
     V: NotFound<V> + 'static,
     W: 'static;
 
-// Workaround for https://github.com/rust-lang-nursery/rust-clippy/issues/2226
-#[cfg_attr(
-    feature = "cargo-clippy",
-    allow(
-        renamed_and_removed_lints,
-        new_without_default_derive,
-        clippy::new_without_default_derive
-    )
-)]
 impl<C, U, V: NotFound<V>, W> CompositeMakeService<C, U, V, W> {
     /// create an empty `CompositeMakeService`
     pub fn new() -> Self {
