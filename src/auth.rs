@@ -1,20 +1,22 @@
 //! Authentication and authorization data structures
 
-use crate::context::ContextualPayload;
-use crate::{ErrorBound, Push};
-use futures::future::Future;
+use crate::context::{ContextualPayload, Push};
+use futures::future::FutureExt;
 use hyper;
-use hyper::body::Payload;
 use hyper::header::AUTHORIZATION;
-use hyper::service::{MakeService, Service};
-use hyper::{HeaderMap, Request, Response};
+use hyper::service::Service;
+use hyper::{HeaderMap, Request};
 pub use hyper_old_types::header::Authorization as Header;
 use hyper_old_types::header::Header as HeaderTrait;
 pub use hyper_old_types::header::{Basic, Bearer};
 use hyper_old_types::header::{Raw, Scheme};
 use std::collections::BTreeSet;
+use std::future::Future;
 use std::marker::PhantomData;
+use std::pin::Pin;
 use std::string::ToString;
+use std::task::Context;
+use std::task::Poll;
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -117,40 +119,27 @@ where
     }
 }
 
-impl<'a, T, SC, RC, E, ME, S, OB, F> MakeService<&'a SC> for MakeAllowAllAuthenticator<T, RC>
+impl<Inner, RC, Target> Service<Target> for MakeAllowAllAuthenticator<Inner, RC>
 where
     RC: RcBound,
     RC::Result: Send + 'static,
-    T: MakeService<
-        &'a SC,
-        Error = E,
-        MakeError = ME,
-        Service = S,
-        ReqBody = ContextualPayload<hyper::Body, RC::Result>,
-        ResBody = OB,
-        Future = F,
-    >,
-    S: Service<Error = E, ReqBody = ContextualPayload<hyper::Body, RC::Result>, ResBody = OB>
-        + 'static,
-    ME: ErrorBound,
-    E: ErrorBound,
-    F: Future<Item = S, Error = ME> + Send + 'static,
-    S::Future: Send,
-    OB: Payload,
+    Inner: Service<Target>,
+    Inner::Future: 'static,
 {
-    type ReqBody = ContextualPayload<hyper::Body, RC>;
-    type ResBody = OB;
-    type Error = E;
-    type MakeError = ME;
-    type Service = AllowAllAuthenticator<S, RC>;
-    type Future = Box<dyn Future<Item = Self::Service, Error = ME> + Send>;
+    type Error = Inner::Error;
+    type Response = AllowAllAuthenticator<Inner::Response, RC>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
-    fn make_service(&mut self, service_ctx: &'a SC) -> Self::Future {
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, req: Target) -> Self::Future {
         let subject = self.subject.clone();
-        Box::new(
+        Box::pin(
             self.inner
-                .make_service(service_ctx)
-                .map(|s| AllowAllAuthenticator::new(s, subject)),
+                .call(req)
+                .map(|s| Ok(AllowAllAuthenticator::new(s?, subject))),
         )
     }
 }
@@ -175,19 +164,22 @@ impl<T, RC> AllowAllAuthenticator<T, RC> {
     }
 }
 
-impl<T, RC> hyper::service::Service for AllowAllAuthenticator<T, RC>
+impl<T, B, RC> hyper::service::Service<Request<ContextualPayload<B, RC>>>
+    for AllowAllAuthenticator<T, RC>
 where
     RC: RcBound,
     RC::Result: Send + 'static,
-    T: Service<ReqBody = ContextualPayload<hyper::Body, RC::Result>>,
-    T::Future: Future<Item = Response<T::ResBody>, Error = T::Error> + Send + 'static,
+    T: Service<Request<ContextualPayload<B, RC::Result>>>,
 {
-    type ReqBody = ContextualPayload<hyper::Body, RC>;
-    type ResBody = T::ResBody;
+    type Response = T::Response;
     type Error = T::Error;
-    type Future = Box<dyn Future<Item = Response<T::ResBody>, Error = T::Error> + Send>;
+    type Future = T::Future;
 
-    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, req: Request<ContextualPayload<B, RC>>) -> Self::Future {
         let (head, body) = req.into_parts();
         let body = ContextualPayload {
             inner: body.inner,
@@ -198,7 +190,7 @@ where
             })),
         };
 
-        Box::new(self.inner.call(Request::from_parts(head, body)))
+        self.inner.call(Request::from_parts(head, body))
     }
 }
 

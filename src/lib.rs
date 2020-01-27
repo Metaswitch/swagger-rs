@@ -20,9 +20,6 @@ pub use context::{
     ContextBuilder, ContextWrapper, ContextualPayload, EmptyContext, Has, Pop, Push,
 };
 
-/// Module to support client middleware
-pub mod client;
-
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
 pub use connector::Connector;

@@ -14,27 +14,18 @@ impl Connector {
     /// Alows building a HTTP(S) connector. Used for instantiating clients with custom
     /// connectors.
     pub fn builder() -> Builder {
-        Builder { dns_threads: 4 }
+        Builder {}
     }
 }
 
 /// Builder for HTTP(S) connectors
 #[derive(Debug)]
-pub struct Builder {
-    dns_threads: usize,
-}
+pub struct Builder {}
 
 impl Builder {
-    /// Configure the number of threads. Default is 4.
-    pub fn dns_threads(mut self, threads: usize) -> Self {
-        self.dns_threads = threads;
-        self
-    }
-
     /// Use HTTPS instead of HTTP
     pub fn https(self) -> HttpsBuilder {
         HttpsBuilder {
-            dns_threads: self.dns_threads,
             #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
             server_cert: None,
             #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
@@ -44,14 +35,13 @@ impl Builder {
 
     /// Build a HTTP connector
     pub fn build(self) -> hyper::client::HttpConnector {
-        hyper::client::HttpConnector::new(self.dns_threads)
+        hyper::client::HttpConnector::new()
     }
 }
 
 /// Builder for HTTPS connectors
 #[derive(Debug)]
 pub struct HttpsBuilder {
-    dns_threads: usize,
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
     server_cert: Option<PathBuf>,
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
@@ -59,12 +49,6 @@ pub struct HttpsBuilder {
 }
 
 impl HttpsBuilder {
-    /// Configure the number of threads. Default is 4.
-    pub fn dns_threads(mut self, threads: usize) -> Self {
-        self.dns_threads = threads;
-        self
-    }
-
     /// Pin the CA certificate for the server's certificate.
     ///
     /// # Arguments
@@ -122,7 +106,7 @@ impl HttpsBuilder {
             ssl.check_private_key()?;
         }
 
-        let mut connector = hyper::client::HttpConnector::new(self.dns_threads);
+        let mut connector = hyper::client::HttpConnector::new();
         connector.enforce_http(false);
         hyper_openssl::HttpsConnector::<hyper::client::HttpConnector>::with_connector(
             connector, ssl,
@@ -135,7 +119,7 @@ impl HttpsBuilder {
         self,
     ) -> Result<hyper_tls::HttpsConnector<hyper::client::HttpConnector>, native_tls::Error> {
         let tls = native_tls::TlsConnector::new()?.into();
-        let mut connector = hyper::client::HttpConnector::new(self.dns_threads);
+        let mut connector = hyper::client::HttpConnector::new();
         connector.enforce_http(false);
         let mut connector = hyper_tls::HttpsConnector::from((connector, tls));
         connector.https_only(true);

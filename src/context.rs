@@ -8,9 +8,10 @@
 
 use crate::auth::{AuthData, Authorization};
 use crate::XSpanIdString;
-use futures::future::Future;
-use hyper;
+use hyper::{service::Service, Request, Response};
+use std::future::Future;
 use std::marker::Sized;
+use std::pin::Pin;
 
 /// Defines methods for accessing, modifying, adding and removing the data stored
 /// in a context. Used to specify the requirements that a hyper service makes on
@@ -538,16 +539,16 @@ where
 ///     }
 /// }
 /// ```
-pub trait SwaggerService<C>:
+pub trait SwaggerService<RequestBody, ResponseBody, Context>:
     Clone
-    + hyper::service::Service<
-        ReqBody = ContextualPayload<hyper::Body, C>,
-        ResBody = hyper::Body,
+    + Service<
+        Request<ContextualPayload<RequestBody, Context>>,
+        Response = Response<ResponseBody>,
         Error = hyper::Error,
-        Future = Box<dyn Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error> + Send>,
+        Future = Pin<Box<dyn Future<Output = Result<Response<ResponseBody>, hyper::Error>>>>,
     >
 where
-    C: Has<Option<AuthData>>
+    Context: Has<Option<AuthData>>
         + Has<Option<Authorization>>
         + Has<XSpanIdString>
         + Clone
@@ -556,18 +557,16 @@ where
 {
 }
 
-impl<T, C> SwaggerService<C> for T
+impl<ReqB, ResB, Context, T> SwaggerService<ReqB, ResB, Context> for T
 where
     T: Clone
         + hyper::service::Service<
-            ReqBody = ContextualPayload<hyper::Body, C>,
-            ResBody = hyper::Body,
+            Request<ContextualPayload<ReqB, Context>>,
+            Response = Response<ResB>,
             Error = hyper::Error,
-            Future = Box<
-                dyn Future<Item = hyper::Response<hyper::Body>, Error = hyper::Error> + Send,
-            >,
+            Future = Pin<Box<dyn Future<Output = Result<Response<ResB>, hyper::Error>>>>,
         >,
-    C: Has<Option<AuthData>>
+    Context: Has<Option<AuthData>>
         + Has<Option<Authorization>>
         + Has<XSpanIdString>
         + Clone
@@ -580,26 +579,12 @@ where
 #[derive(Clone, Debug)]
 pub struct ContextualPayload<P, Ctx>
 where
-    P: hyper::body::Payload,
     Ctx: Send + 'static,
 {
     /// The inner payload for this request/response
     pub inner: P,
     /// Request or Response Context
     pub context: Ctx,
-}
-
-impl<P, Ctx> hyper::body::Payload for ContextualPayload<P, Ctx>
-where
-    P: hyper::body::Payload,
-    Ctx: Send + 'static,
-{
-    type Data = P::Data;
-    type Error = P::Error;
-
-    fn poll_data(&mut self) -> futures::Poll<Option<Self::Data>, Self::Error> {
-        self.inner.poll_data()
-    }
 }
 
 #[cfg(test)]

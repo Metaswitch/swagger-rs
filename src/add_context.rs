@@ -2,11 +2,14 @@
 //! to a wrapped service.
 
 use crate::context::ContextualPayload;
-use crate::{ErrorBound, Push, XSpanIdString};
-use futures::Future;
+use crate::{Push, XSpanIdString};
+use futures::future::FutureExt;
 use hyper;
 use hyper::Request;
+use std::future::Future;
 use std::marker::PhantomData;
+use std::pin::Pin;
+use std::task::Poll;
 
 /// Middleware wrapper service, that should be used as the outermost layer in a
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
@@ -35,42 +38,27 @@ where
     }
 }
 
-impl<'a, T, SC, RC, E, ME, S, F> hyper::service::MakeService<&'a SC>
-    for AddContextMakeService<T, RC>
+impl<Inner, Context, Target> hyper::service::Service<Target>
+    for AddContextMakeService<Inner, Context>
 where
-    RC: Default + Push<XSpanIdString> + 'static + Send,
-    RC::Result: Send + 'static,
-    T: hyper::service::MakeService<
-        &'a SC,
-        Service = S,
-        ReqBody = ContextualPayload<hyper::Body, RC::Result>,
-        ResBody = hyper::Body,
-        Error = E,
-        MakeError = ME,
-        Future = F,
-    >,
-    S: hyper::service::Service<
-            ReqBody = ContextualPayload<hyper::Body, RC::Result>,
-            ResBody = hyper::Body,
-            Error = E,
-        > + 'static,
-    ME: ErrorBound,
-    E: ErrorBound,
-    F: Future<Item = S, Error = ME> + Send + 'static,
-    S::Future: Send,
+    Context: Default + Push<XSpanIdString> + 'static + Send,
+    Context::Result: Send + 'static,
+    Inner: hyper::service::Service<Target>,
+    Inner::Future: 'static,
 {
-    type ReqBody = hyper::Body;
-    type ResBody = hyper::Body;
-    type Error = E;
-    type Service = AddContextService<S, RC>;
-    type MakeError = ME;
-    type Future = Box<dyn Future<Item = Self::Service, Error = ME> + Send>;
+    type Error = Inner::Error;
+    type Response = AddContextService<Inner::Response, Context>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
-    fn make_service(&mut self, service_ctx: &'a SC) -> Self::Future {
-        Box::new(
+    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, target: Target) -> Self::Future {
+        Box::pin(
             self.inner
-                .make_service(service_ctx)
-                .map(AddContextService::new),
+                .call(target)
+                .map(|s| Ok(AddContextService::new(s?))),
         )
     }
 }
@@ -104,26 +92,28 @@ where
     }
 }
 
-impl<T, C, E> hyper::service::Service for AddContextService<T, C>
+impl<Inner, Context, Body> hyper::service::Service<Request<Body>>
+    for AddContextService<Inner, Context>
 where
-    C: Default + Push<XSpanIdString>,
-    C::Result: Send + 'static,
-    T: hyper::service::Service<
-        ReqBody = ContextualPayload<hyper::Body, C::Result>,
-        ResBody = hyper::Body,
-        Error = E,
-    >,
-    E: ErrorBound,
+    Context: Default + Push<XSpanIdString> + Send + 'static,
+    Context::Result: Send + 'static,
+    Inner: hyper::service::Service<Request<ContextualPayload<Body, Context::Result>>>,
 {
-    type ReqBody = hyper::Body;
-    type ResBody = hyper::Body;
-    type Error = E;
-    type Future = T::Future;
+    type Response = Inner::Response;
+    type Error = Inner::Error;
+    type Future = Inner::Future;
 
-    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
+    fn poll_ready(
+        &mut self,
+        context: &mut std::task::Context<'_>,
+    ) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(context)
+    }
+
+    fn call(&mut self, req: Request<Body>) -> Self::Future {
         let x_span_id = XSpanIdString::get_or_generate(&req);
         let (head, body) = req.into_parts();
-        let context = C::default().push(x_span_id);
+        let context = Context::default().push(x_span_id);
 
         let body = ContextualPayload {
             inner: body,
