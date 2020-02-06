@@ -59,7 +59,7 @@ impl<T> ErrorBound for T where T: Into<Box<dyn std::error::Error + Send + Sync>>
 pub struct ApiError(pub String);
 
 impl fmt::Display for ApiError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let debug: &dyn fmt::Debug = self;
         debug.fmt(f)
     }
