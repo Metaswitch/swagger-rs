@@ -59,7 +59,7 @@ pub struct ApiError(pub String);
 use std::fmt;
 
 impl fmt::Display for ApiError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let debug: &dyn fmt::Debug = self;
         debug.fmt(f)
     }

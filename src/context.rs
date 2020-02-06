@@ -473,7 +473,7 @@ macro_rules! make_context {
 
 /// Context wrapper, to bind an API with a context.
 #[derive(Debug)]
-pub struct ContextWrapper<'a, T: 'a, C> {
+pub struct ContextWrapper<'a, T, C> {
     api: &'a T,
     context: C,
 }
