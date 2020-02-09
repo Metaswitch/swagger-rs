@@ -1,4 +1,6 @@
-//! Implementations of OpenAPI `oneOf` and `anyOf` types, assuming
+//! Implementations of OpenAPI `oneOf` and `anyOf` types, assuming rules are just types
+use std::str::FromStr;
+use std::string::ToString;
 use serde::{
     de::Error,
     private::de::{Content, ContentRefDeserializer},
@@ -13,7 +15,7 @@ macro_rules! common_one_any_of {
         $($i:ident),*
     ) => {
         /// $t
-        #[derive(Debug, PartialEq)]
+        #[derive(Debug, PartialEq, Clone)]
         pub enum $t<$($i),*> where
             $($i: PartialEq,)*
         {
@@ -29,6 +31,16 @@ macro_rules! common_one_any_of {
             fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                 match self {
                     $(Self::$i(inner) => inner.serialize(serializer)),*
+                }
+            }
+        }
+
+        impl<$($i),*> ToString for $t<$($i),*> where
+            $($i: PartialEq + ToString,)*
+        {
+            fn to_string(&self) -> String {
+                match self {
+                    $(Self::$i(inner) => inner.to_string()),*
                 }
             }
         }
@@ -61,6 +73,25 @@ macro_rules! one_of {
                 result
             }
         }
+
+        impl<$($i),*> FromStr for $t<$($i),*> where
+            $($i: PartialEq + FromStr,)*
+        {
+            type Err = &'static str;
+            fn from_str(x: &str) -> Result<Self, Self::Err> {
+                let mut result = Err("data did not match any within oneOf");
+                $(
+                    if let Ok(inner) = $i::from_str(x) {
+                        if result.is_err() {
+                            result = Ok(Self::$i(inner));
+                        } else {
+                            return Err("data matched multiple within oneOf")
+                        }
+                    }
+                )*
+                result
+            }
+        }
     }
 }
 
@@ -82,7 +113,7 @@ one_of!(OneOf15, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
 one_of!(OneOf16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
 
 // Define a macro to define the `AnyOf` enum for a specific number of inner types.
-macro_rules! one_of {
+macro_rules! any_of {
     (
         $t:ident,
         $($i:ident),*
@@ -102,22 +133,36 @@ macro_rules! one_of {
                 Err(De::Error::custom("data did not match any within anyOf"))
             }
         }
+
+        impl<$($i),*> FromStr for $t<$($i),*> where
+            $($i: PartialEq + FromStr,)*
+        {
+            type Err = &'static str;
+            fn from_str(x: &str) -> Result<Self, Self::Err> {
+                $(
+                    if let Ok(inner) = $i::from_str(x) {
+                        return Ok(Self::$i(inner));
+                    }
+                )*
+                Err("data did not match any within anyOf")
+            }
+        }
     }
 }
 
 // Use the `any_of!` macro to define the `AnyOf` enum for 1-16 inner types.
-one_of!(AnyOf1, A);
-one_of!(AnyOf2, A, B);
-one_of!(AnyOf3, A, B, C);
-one_of!(AnyOf4, A, B, C, D);
-one_of!(AnyOf5, A, B, C, D, E);
-one_of!(AnyOf6, A, B, C, D, E, F);
-one_of!(AnyOf7, A, B, C, D, E, F, G);
-one_of!(AnyOf8, A, B, C, D, E, F, G, H);
-one_of!(AnyOf9, A, B, C, D, E, F, G, H, I);
-one_of!(AnyOf10, A, B, C, D, E, F, G, H, I, J);
-one_of!(AnyOf12, A, B, C, D, E, F, G, H, I, J, K);
-one_of!(AnyOf13, A, B, C, D, E, F, G, H, I, J, K, L);
-one_of!(AnyOf14, A, B, C, D, E, F, G, H, I, J, K, L, M);
-one_of!(AnyOf15, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-one_of!(AnyOf16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+any_of!(AnyOf1, A);
+any_of!(AnyOf2, A, B);
+any_of!(AnyOf3, A, B, C);
+any_of!(AnyOf4, A, B, C, D);
+any_of!(AnyOf5, A, B, C, D, E);
+any_of!(AnyOf6, A, B, C, D, E, F);
+any_of!(AnyOf7, A, B, C, D, E, F, G);
+any_of!(AnyOf8, A, B, C, D, E, F, G, H);
+any_of!(AnyOf9, A, B, C, D, E, F, G, H, I);
+any_of!(AnyOf10, A, B, C, D, E, F, G, H, I, J);
+any_of!(AnyOf12, A, B, C, D, E, F, G, H, I, J, K);
+any_of!(AnyOf13, A, B, C, D, E, F, G, H, I, J, K, L);
+any_of!(AnyOf14, A, B, C, D, E, F, G, H, I, J, K, L, M);
+any_of!(AnyOf15, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+any_of!(AnyOf16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
