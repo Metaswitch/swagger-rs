@@ -1,14 +1,12 @@
 //! Hyper service that adds a context to an incoming request and passes it on
 //! to a wrapped service.
 
-use super::{Push, XSpanIdString};
-use context::ContextualPayload;
+use crate::context::ContextualPayload;
+use crate::{ErrorBound, Push, XSpanIdString};
 use futures::Future;
 use hyper;
 use hyper::Request;
 use std::marker::PhantomData;
-
-use ErrorBound;
 
 /// Middleware wrapper service, that should be used as the outermost layer in a
 /// stack of hyper services. Adds a context to a plain `hyper::Request` that can be

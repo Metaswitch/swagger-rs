@@ -93,15 +93,6 @@ where
     V: NotFound<V> + 'static,
     W: 'static;
 
-// Workaround for https://github.com/rust-lang-nursery/rust-clippy/issues/2226
-#[cfg_attr(
-    feature = "cargo-clippy",
-    allow(
-        renamed_and_removed_lints,
-        new_without_default_derive,
-        clippy::new_without_default_derive
-    )
-)]
 impl<C, U, V: NotFound<V>, W> CompositeMakeService<C, U, V, W> {
     /// create an empty `CompositeMakeService`
     pub fn new() -> Self {
@@ -146,7 +137,7 @@ where
     V: NotFound<V> + 'static,
     W: 'static,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         // Get vector of base paths
         let str_vec: Vec<&'static str> = self.0.iter().map(|&(base_path, _)| base_path).collect();
         write!(
@@ -215,7 +206,7 @@ where
     V: NotFound<V> + 'static,
     W: 'static,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         // Get vector of base paths
         let str_vec: Vec<&'static str> = self.0.iter().map(|&(base_path, _)| base_path).collect();
         write!(f, "CompositeService accepting base paths: {:?}", str_vec,)

@@ -1,6 +1,5 @@
 // These functions are only used if the API uses Nullable properties, so allow them to be
 // dead code.
-#![allow(dead_code)]
 #[cfg(feature = "serdejson")]
 use serde::de::Error as SerdeError;
 #[cfg(feature = "serdejson")]
@@ -640,6 +639,7 @@ where
 #[cfg(feature = "serdejson")]
 mod serde_tests {
     use super::*;
+    use serde::{Deserialize, Serialize};
 
     // Set up:
     #[derive(Clone, Debug, Deserialize, Serialize)]

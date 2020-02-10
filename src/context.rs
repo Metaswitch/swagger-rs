@@ -6,8 +6,8 @@
 //!
 //! See the `context_tests` module below for examples of how to use.
 
-use super::XSpanIdString;
-use auth::{AuthData, Authorization};
+use crate::auth::{AuthData, Authorization};
+use crate::XSpanIdString;
 use futures::future::Future;
 use hyper;
 use std::marker::Sized;
@@ -45,8 +45,6 @@ use std::marker::Sized;
 ///         Box::new(ok(hyper::Response::new(hyper::Body::empty())))
 ///     }
 /// }
-///
-/// # fn main() {}
 /// ```
 pub trait Has<T> {
     /// Get an immutable reference to the value.
@@ -104,8 +102,6 @@ pub trait Has<T> {
 ///         self.inner.call(req)
 ///     }
 /// }
-///
-/// # fn main() {}
 pub trait Pop<T> {
     /// The type that remains after the value has been popped.
     type Result;
@@ -157,13 +153,11 @@ pub trait Pop<T> {
 ///         self.inner.call(req)
 ///     }
 /// }
-///
-/// # fn main() {}
 pub trait Push<T> {
     /// The type that results from adding an item.
     type Result;
     /// Inserts a value.
-    fn push(self, T) -> Self::Result;
+    fn push(self, value: T) -> Self::Result;
 }
 
 /// Defines a struct that can be used to build up contexts recursively by
@@ -420,13 +414,11 @@ new_context_type!(
 /// fn do_nothing(input: ExampleContext1) -> ExampleContext2 {
 ///     input
 /// }
-///
-/// # fn main() {}
 /// ```
 #[macro_export]
 macro_rules! make_context_ty {
     ($context_name:ident, $empty_context_name:ident, $type:ty $(, $types:ty)* $(,)* ) => {
-        $context_name<$type, make_context_ty!($context_name, $empty_context_name, $($types),*)>
+        $context_name<$type, $crate::make_context_ty!($context_name, $empty_context_name, $($types),*)>
     };
     ($context_name:ident, $empty_context_name:ident $(,)* ) => {
         $empty_context_name
@@ -464,7 +456,7 @@ macro_rules! make_context_ty {
 #[macro_export]
 macro_rules! make_context {
     ($context_name:ident, $empty_context_name:ident, $value:expr $(, $values:expr)* $(,)*) => {
-        make_context!($context_name, $empty_context_name, $($values),*).push($value)
+        $crate::make_context!($context_name, $empty_context_name, $($values),*).push($value)
     };
     ($context_name:ident, $empty_context_name:ident $(,)* ) => {
         $empty_context_name::default()
@@ -473,7 +465,7 @@ macro_rules! make_context {
 
 /// Context wrapper, to bind an API with a context.
 #[derive(Debug)]
-pub struct ContextWrapper<'a, T: 'a, C> {
+pub struct ContextWrapper<'a, T, C> {
     api: &'a T,
     context: C,
 }

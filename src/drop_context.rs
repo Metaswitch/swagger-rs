@@ -1,7 +1,7 @@
 //! Hyper service that drops a context to an incoming request and passes it on
 //! to a wrapped service.
 
-use context::ContextualPayload;
+use crate::context::ContextualPayload;
 use futures::Future;
 use hyper;
 use hyper::{Error, Request};
