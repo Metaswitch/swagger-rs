@@ -177,10 +177,7 @@ pub trait Push<T> {
 ///
 /// E.g.
 ///
-/// ```rust
-/// # #[macro_use] extern crate swagger;
-/// # use swagger::{Has, Pop, Push};
-///
+/// ```rust2018
 /// #[derive(Default)]
 /// struct MyType1;
 /// #[derive(Default)]
@@ -197,7 +194,7 @@ pub trait Push<T> {
 /// fn use_has_my_type_3<T: Has<MyType3>> (_: &T) {}
 /// fn use_has_my_type_4<T: Has<MyType4>> (_: &T) {}
 ///
-/// // will implement `Has<MyType1>` and `Has<MyType2>` because these appear
+/// // Will implement `Has<MyType1>` and `Has<MyType2>` because these appear
 /// // in the type, and were passed to `new_context_type!`. Will not implement
 /// // `Has<MyType3>` even though it was passed to `new_context_type!`, because
 /// // it is not included in the type.
@@ -246,7 +243,7 @@ macro_rules! new_context_type {
         // implement `Push<T>` on the empty context type for each type `T` that
         // was passed to the macro
         $(
-        impl Push<$types> for $empty_context_name {
+        impl $crate::Push<$types> for $empty_context_name {
             type Result = $context_name<$types, Self>;
             fn push(self, item: $types) -> Self::Result {
                 $context_name{head: item, tail: Self::default()}
@@ -278,7 +275,7 @@ macro_rules! new_context_type {
 
         // implement `Push<U>` for non-empty lists, for each type `U` that was passed
         // to the macro
-        impl<C, T> Push<$types> for $context_name<T, C> {
+        impl<C, T> $crate::Push<$types> for $context_name<T, C> {
             type Result = $context_name<$types, Self>;
             fn push(self, item: $types) -> Self::Result {
                 $context_name{head: item, tail: self}
@@ -288,7 +285,7 @@ macro_rules! new_context_type {
 
         // Add implementations of `Has<T>` and `Pop<T>` when `T` is any type stored in
         // the list, not just the head.
-        new_context_type!(impl extend_has $context_name, $empty_context_name, $($types),+);
+        $crate::new_context_type!(impl extend_has $context_name, $empty_context_name, $($types),+);
     };
 
     // "HELPER" MACRO CASE - NOT FOR EXTERNAL USE
@@ -311,7 +308,7 @@ macro_rules! new_context_type {
             $head,
             $($tail),+
         );
-        new_context_type!(impl extend_has $context_name, $empty_context_name, $($tail),+);
+        $crate::new_context_type!(impl extend_has $context_name, $empty_context_name, $($tail),+);
     };
 
     // "HELPER" MACRO CASE - NOT FOR EXTERNAL USE
