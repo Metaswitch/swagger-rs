@@ -177,7 +177,7 @@ pub trait Push<T> {
 ///
 /// E.g.
 ///
-/// ```rust2018
+/// ```edition2018
 /// #[derive(Default)]
 /// struct MyType1;
 /// #[derive(Default)]
@@ -187,12 +187,12 @@ pub trait Push<T> {
 /// #[derive(Default)]
 /// struct MyType4;
 ///
-/// new_context_type!(MyContext, MyEmpContext, MyType1, MyType2, MyType3);
+/// swagger::new_context_type!(MyContext, MyEmpContext, MyType1, MyType2, MyType3);
 ///
-/// fn use_has_my_type_1<T: Has<MyType1>> (_: &T) {}
-/// fn use_has_my_type_2<T: Has<MyType2>> (_: &T) {}
-/// fn use_has_my_type_3<T: Has<MyType3>> (_: &T) {}
-/// fn use_has_my_type_4<T: Has<MyType4>> (_: &T) {}
+/// fn use_has_my_type_1<T: swagger::Has<MyType1>> (_: &T) {}
+/// fn use_has_my_type_2<T: swagger::Has<MyType2>> (_: &T) {}
+/// fn use_has_my_type_3<T: swagger::Has<MyType3>> (_: &T) {}
+/// fn use_has_my_type_4<T: swagger::Has<MyType4>> (_: &T) {}
 ///
 /// // Will implement `Has<MyType1>` and `Has<MyType2>` because these appear
 /// // in the type, and were passed to `new_context_type!`. Will not implement
@@ -205,10 +205,11 @@ pub trait Push<T> {
 /// type BadContext = MyContext<MyType1, MyContext<MyType4, MyEmpContext>>;
 ///
 /// fn main() {
+///     # use swagger::Push as _;
 ///     let context : ExampleContext =
 ///         MyEmpContext::default()
-///         .push(MyType2{})
-///         .push(MyType1{});
+///             .push(MyType2{})
+///             .push(MyType1{});
 ///
 ///     use_has_my_type_1(&context);
 ///     use_has_my_type_2(&context);
@@ -219,7 +220,6 @@ pub trait Push<T> {
 ///
 ///     let bad_context: BadContext = BadContext::default();
 ///     // use_has_my_type_4(&bad_context);  // will fail
-///
 /// }
 /// ```
 ///
@@ -301,7 +301,7 @@ macro_rules! new_context_type {
     // impls for all distinct pairs of types in the original list.
     (impl extend_has $context_name:ident, $empty_context_name:ident, $head:ty, $($tail:ty),+ ) => {
 
-        new_context_type!(
+        $crate::new_context_type!(
             impl extend_has_helper
             $context_name,
             $empty_context_name,
@@ -361,7 +361,7 @@ macro_rules! new_context_type {
                 }
             }
 
-            impl<C> $crate::Pop<$type> for $context_name<$types, C> where C: Pop<$type> {
+            impl<C> $crate::Pop<$type> for $context_name<$types, C> where C: $crate::Pop<$type> {
                 type Result = $context_name<$types, C::Result>;
                 fn pop(self) -> ($type, Self::Result) {
                     let (value, tail) = self.tail.pop();
@@ -369,7 +369,7 @@ macro_rules! new_context_type {
                 }
             }
 
-            impl<C> $crate::Pop<$types> for $context_name<$type, C> where C: Pop<$types> {
+            impl<C> $crate::Pop<$types> for $context_name<$type, C> where C: $crate::Pop<$types> {
                 type Result = $context_name<$type, C::Result>;
                 fn pop(self) -> ($types, Self::Result) {
                     let (value, tail) = self.tail.pop();
