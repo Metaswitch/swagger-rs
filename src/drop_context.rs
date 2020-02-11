@@ -85,9 +85,24 @@ where
     }
 }
 
-/// Swagger Middleware that wraps a `hyper::service::Service`, and drops any contextual information
-/// on the request. Services will normally want to use `DropContextMakeService`, which will create
-/// a `DropContextService` to handle each connection.
+/// Swagger Middleware that wraps a `hyper::service::Service` or a `swagger::client::Service`, and
+/// drops any contextual information on the request. Servers will normally want to use
+/// `DropContextMakeService`, which will create a `DropContextService` to handle each connection,
+/// while clients can simply wrap a `hyper::Client` in the middleware.
+///
+/// ## Client Usage
+///
+/// ```edition2018
+/// # use swagger::{DropContextService, ContextualPayload};
+/// # use swagger::client::Service as _;
+///
+/// let client = hyper::Client::new();
+/// let client = DropContextService::new(client);
+/// let body = ContextualPayload { inner: hyper::Body::empty(), context: "Some Context".to_string() };
+/// let request = hyper::Request::get("http://www.google.com").body(body).unwrap();
+///
+/// let response = client.request(request);
+/// ```
 #[derive(Debug, Clone)]
 pub struct DropContextService<T, C>
 where
