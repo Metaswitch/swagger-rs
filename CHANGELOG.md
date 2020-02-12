@@ -6,10 +6,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- Added macro `request_parser_joiner` to easily create a composite RequestParser that will match a request against multiple RequestParsers
+
 ### Changed
 
 ### Removed
+
+## [3.2.0] - 2020-02-12
+### Added
+- Added macro `request_parser_joiner` to easily create a composite RequestParser that will match a request against multiple RequestParsersa
+- Add DropContextService as a client middleware too
+### Changed
+- Make context macros self-contained
+- Update swagger-rs to Rust 2018 Edition
 
 ## [3.1.0] - 2019-05-07
 ### Added
@@ -110,7 +118,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/3.1.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/3.2.0...HEAD
+[3.2.0]: https://github.com/Metaswitch/swagger-rs/compare/3.1.0...3.2.0
 [3.1.0]: https://github.com/Metaswitch/swagger-rs/compare/3.0.0...3.1.0
 [3.0.0]: https://github.com/Metaswitch/swagger-rs/compare/2.0.2...3.0.0
 [2.0.2]: https://github.com/Metaswitch/swagger-rs/compare/2.0.1...2.0.2
