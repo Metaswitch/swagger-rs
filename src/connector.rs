@@ -9,6 +9,16 @@ pub fn http_connector() -> Box<dyn Fn() -> hyper::client::HttpConnector + Send +
     Box::new(move || hyper::client::HttpConnector::new(4))
 }
 
+/// Returns a function which creates an https-connector. Used for instantiating
+/// clients with customer connectors.
+pub fn https_connector_any_ca() -> Box<dyn Fn() -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync> {
+    Box::new(move || {
+      let mut connector = hyper_tls::HttpsConnector::<hyper::client::HttpConnector>::new(4).unwrap();
+      connector.force_https(true);
+      connector
+    })
+}
+
 /// Returns a function which creates an https-connector
 ///
 /// # Arguments
