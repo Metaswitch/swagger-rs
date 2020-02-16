@@ -34,8 +34,9 @@ where
             native_tls::backend::openssl::TlsConnectorBuilderExt::from_openssl(ssl);
         let mut connector = hyper::client::HttpConnector::new(4);
         connector.enforce_http(false);
-        let connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
+        let mut connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
             (connector, builder.build().unwrap()).into();
+        connector.force_https(true);
         connector
     })
 }
@@ -91,8 +92,9 @@ where
             native_tls::backend::openssl::TlsConnectorBuilderExt::from_openssl(ssl);
         let mut connector = hyper::client::HttpConnector::new(4);
         connector.enforce_http(false);
-        let connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
+        let mut connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
             (connector, builder.build().unwrap()).into();
+        connector.force_https(true);
         connector
     })
 }
