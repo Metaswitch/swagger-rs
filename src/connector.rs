@@ -1,5 +1,4 @@
 //! Utility methods for instantiating common connectors for clients.
-
 use std::path::Path;
 
 use hyper;

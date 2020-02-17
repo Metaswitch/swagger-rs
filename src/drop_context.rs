@@ -1,9 +1,8 @@
 //! Hyper service that drops a context to an incoming request and passes it on
 //! to a wrapped service.
 
-use context::ContextualPayload;
+use crate::context::ContextualPayload;
 use futures::Future;
-use hyper;
 use hyper::{Error, Request};
 use std::io;
 use std::marker::PhantomData;
@@ -86,14 +85,28 @@ where
     }
 }
 
-/// Swagger Middleware that wraps a `hyper::service::Service`, and drops any contextual information
-/// on the request. Services will normally want to use `DropContextMakeService`, which will create
-/// a `DropContextService` to handle each connection.
-#[derive(Debug)]
+/// Swagger Middleware that wraps a `hyper::service::Service` or a `swagger::client::Service`, and
+/// drops any contextual information on the request. Servers will normally want to use
+/// `DropContextMakeService`, which will create a `DropContextService` to handle each connection,
+/// while clients can simply wrap a `hyper::Client` in the middleware.
+///
+/// ## Client Usage
+///
+/// ```edition2018
+/// # use swagger::{DropContextService, ContextualPayload};
+/// # use swagger::client::Service as _;
+///
+/// let client = hyper::Client::new();
+/// let client = DropContextService::new(client);
+/// let body = ContextualPayload { inner: hyper::Body::empty(), context: "Some Context".to_string() };
+/// let request = hyper::Request::get("http://www.google.com").body(body).unwrap();
+///
+/// let response = client.request(request);
+/// ```
+#[derive(Debug, Clone)]
 pub struct DropContextService<T, C>
 where
     C: Send + 'static,
-    T: hyper::service::Service<ReqBody = hyper::Body, ResBody = hyper::Body, Error = Error>,
 {
     inner: T,
     marker: PhantomData<C>,
@@ -102,7 +115,6 @@ where
 impl<T, C> DropContextService<T, C>
 where
     C: Send + 'static,
-    T: hyper::service::Service<ReqBody = hyper::Body, ResBody = hyper::Body, Error = Error>,
 {
     /// Create a new DropContextService struct wrapping a value
     pub fn new(inner: T) -> Self {
@@ -112,6 +124,7 @@ where
         }
     }
 }
+
 impl<T, C> hyper::service::Service for DropContextService<T, C>
 where
     C: Send + 'static,
@@ -126,5 +139,19 @@ where
         let (head, body) = req.into_parts();
         let body = body.inner;
         self.inner.call(Request::from_parts(head, body))
+    }
+}
+
+impl<T, C> crate::client::Service for DropContextService<T, C>
+where
+    C: Send + 'static,
+    T: crate::client::Service<ReqBody = hyper::Body>,
+{
+    type ReqBody = ContextualPayload<hyper::Body, C>;
+    type Future = T::Future;
+
+    fn request(&self, request: Request<Self::ReqBody>) -> Self::Future {
+        let (head, body) = request.into_parts();
+        self.inner.request(Request::from_parts(head, body.inner))
     }
 }

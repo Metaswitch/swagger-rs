@@ -6,8 +6,8 @@
 //!
 //! See the `context_tests` module below for examples of how to use.
 
-use super::XSpanIdString;
-use auth::{AuthData, Authorization};
+use crate::auth::{AuthData, Authorization};
+use crate::XSpanIdString;
 use futures::future::Future;
 use hyper;
 use std::marker::Sized;
@@ -45,8 +45,6 @@ use std::marker::Sized;
 ///         Box::new(ok(hyper::Response::new(hyper::Body::empty())))
 ///     }
 /// }
-///
-/// # fn main() {}
 /// ```
 pub trait Has<T> {
     /// Get an immutable reference to the value.
@@ -104,8 +102,6 @@ pub trait Has<T> {
 ///         self.inner.call(req)
 ///     }
 /// }
-///
-/// # fn main() {}
 pub trait Pop<T> {
     /// The type that remains after the value has been popped.
     type Result;
@@ -157,13 +153,11 @@ pub trait Pop<T> {
 ///         self.inner.call(req)
 ///     }
 /// }
-///
-/// # fn main() {}
 pub trait Push<T> {
     /// The type that results from adding an item.
     type Result;
     /// Inserts a value.
-    fn push(self, T) -> Self::Result;
+    fn push(self, value: T) -> Self::Result;
 }
 
 /// Defines a struct that can be used to build up contexts recursively by
@@ -183,10 +177,7 @@ pub trait Push<T> {
 ///
 /// E.g.
 ///
-/// ```rust
-/// # #[macro_use] extern crate swagger;
-/// # use swagger::{Has, Pop, Push};
-///
+/// ```edition2018
 /// #[derive(Default)]
 /// struct MyType1;
 /// #[derive(Default)]
@@ -196,14 +187,14 @@ pub trait Push<T> {
 /// #[derive(Default)]
 /// struct MyType4;
 ///
-/// new_context_type!(MyContext, MyEmpContext, MyType1, MyType2, MyType3);
+/// swagger::new_context_type!(MyContext, MyEmpContext, MyType1, MyType2, MyType3);
 ///
-/// fn use_has_my_type_1<T: Has<MyType1>> (_: &T) {}
-/// fn use_has_my_type_2<T: Has<MyType2>> (_: &T) {}
-/// fn use_has_my_type_3<T: Has<MyType3>> (_: &T) {}
-/// fn use_has_my_type_4<T: Has<MyType4>> (_: &T) {}
+/// fn use_has_my_type_1<T: swagger::Has<MyType1>> (_: &T) {}
+/// fn use_has_my_type_2<T: swagger::Has<MyType2>> (_: &T) {}
+/// fn use_has_my_type_3<T: swagger::Has<MyType3>> (_: &T) {}
+/// fn use_has_my_type_4<T: swagger::Has<MyType4>> (_: &T) {}
 ///
-/// // will implement `Has<MyType1>` and `Has<MyType2>` because these appear
+/// // Will implement `Has<MyType1>` and `Has<MyType2>` because these appear
 /// // in the type, and were passed to `new_context_type!`. Will not implement
 /// // `Has<MyType3>` even though it was passed to `new_context_type!`, because
 /// // it is not included in the type.
@@ -214,10 +205,11 @@ pub trait Push<T> {
 /// type BadContext = MyContext<MyType1, MyContext<MyType4, MyEmpContext>>;
 ///
 /// fn main() {
+///     # use swagger::Push as _;
 ///     let context : ExampleContext =
 ///         MyEmpContext::default()
-///         .push(MyType2{})
-///         .push(MyType1{});
+///             .push(MyType2{})
+///             .push(MyType1{});
 ///
 ///     use_has_my_type_1(&context);
 ///     use_has_my_type_2(&context);
@@ -228,7 +220,6 @@ pub trait Push<T> {
 ///
 ///     let bad_context: BadContext = BadContext::default();
 ///     // use_has_my_type_4(&bad_context);  // will fail
-///
 /// }
 /// ```
 ///
@@ -252,7 +243,7 @@ macro_rules! new_context_type {
         // implement `Push<T>` on the empty context type for each type `T` that
         // was passed to the macro
         $(
-        impl Push<$types> for $empty_context_name {
+        impl $crate::Push<$types> for $empty_context_name {
             type Result = $context_name<$types, Self>;
             fn push(self, item: $types) -> Self::Result {
                 $context_name{head: item, tail: Self::default()}
@@ -284,7 +275,7 @@ macro_rules! new_context_type {
 
         // implement `Push<U>` for non-empty lists, for each type `U` that was passed
         // to the macro
-        impl<C, T> Push<$types> for $context_name<T, C> {
+        impl<C, T> $crate::Push<$types> for $context_name<T, C> {
             type Result = $context_name<$types, Self>;
             fn push(self, item: $types) -> Self::Result {
                 $context_name{head: item, tail: self}
@@ -294,7 +285,7 @@ macro_rules! new_context_type {
 
         // Add implementations of `Has<T>` and `Pop<T>` when `T` is any type stored in
         // the list, not just the head.
-        new_context_type!(impl extend_has $context_name, $empty_context_name, $($types),+);
+        $crate::new_context_type!(impl extend_has $context_name, $empty_context_name, $($types),+);
     };
 
     // "HELPER" MACRO CASE - NOT FOR EXTERNAL USE
@@ -310,14 +301,14 @@ macro_rules! new_context_type {
     // impls for all distinct pairs of types in the original list.
     (impl extend_has $context_name:ident, $empty_context_name:ident, $head:ty, $($tail:ty),+ ) => {
 
-        new_context_type!(
+        $crate::new_context_type!(
             impl extend_has_helper
             $context_name,
             $empty_context_name,
             $head,
             $($tail),+
         );
-        new_context_type!(impl extend_has $context_name, $empty_context_name, $($tail),+);
+        $crate::new_context_type!(impl extend_has $context_name, $empty_context_name, $($tail),+);
     };
 
     // "HELPER" MACRO CASE - NOT FOR EXTERNAL USE
@@ -370,7 +361,7 @@ macro_rules! new_context_type {
                 }
             }
 
-            impl<C> $crate::Pop<$type> for $context_name<$types, C> where C: Pop<$type> {
+            impl<C> $crate::Pop<$type> for $context_name<$types, C> where C: $crate::Pop<$type> {
                 type Result = $context_name<$types, C::Result>;
                 fn pop(self) -> ($type, Self::Result) {
                     let (value, tail) = self.tail.pop();
@@ -378,7 +369,7 @@ macro_rules! new_context_type {
                 }
             }
 
-            impl<C> $crate::Pop<$types> for $context_name<$type, C> where C: Pop<$types> {
+            impl<C> $crate::Pop<$types> for $context_name<$type, C> where C: $crate::Pop<$types> {
                 type Result = $context_name<$type, C::Result>;
                 fn pop(self) -> ($types, Self::Result) {
                     let (value, tail) = self.tail.pop();
@@ -420,13 +411,11 @@ new_context_type!(
 /// fn do_nothing(input: ExampleContext1) -> ExampleContext2 {
 ///     input
 /// }
-///
-/// # fn main() {}
 /// ```
 #[macro_export]
 macro_rules! make_context_ty {
     ($context_name:ident, $empty_context_name:ident, $type:ty $(, $types:ty)* $(,)* ) => {
-        $context_name<$type, make_context_ty!($context_name, $empty_context_name, $($types),*)>
+        $context_name<$type, $crate::make_context_ty!($context_name, $empty_context_name, $($types),*)>
     };
     ($context_name:ident, $empty_context_name:ident $(,)* ) => {
         $empty_context_name
@@ -464,7 +453,7 @@ macro_rules! make_context_ty {
 #[macro_export]
 macro_rules! make_context {
     ($context_name:ident, $empty_context_name:ident, $value:expr $(, $values:expr)* $(,)*) => {
-        make_context!($context_name, $empty_context_name, $($values),*).push($value)
+        $crate::make_context!($context_name, $empty_context_name, $($values),*).push($value)
     };
     ($context_name:ident, $empty_context_name:ident $(,)* ) => {
         $empty_context_name::default()
@@ -473,7 +462,7 @@ macro_rules! make_context {
 
 /// Context wrapper, to bind an API with a context.
 #[derive(Debug)]
-pub struct ContextWrapper<'a, T: 'a, C> {
+pub struct ContextWrapper<'a, T, C> {
     api: &'a T,
     context: C,
 }
