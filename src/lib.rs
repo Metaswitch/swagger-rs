@@ -25,7 +25,7 @@ pub mod client;
 
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
-pub use connector::{http_connector, https_connector, https_mutual_connector};
+pub use connector::{http_connector, https_mutual_connector, https_pinned_connector};
 
 pub mod composites;
 pub use composites::{CompositeMakeService, CompositeService, NotFound};

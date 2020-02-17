@@ -5,37 +5,35 @@ use hyper;
 
 /// Returns a function which creates an http-connector. Used for instantiating
 /// clients with custom connectors
-pub fn http_connector() -> Box<dyn Fn() -> hyper::client::HttpConnector + Send + Sync> {
-    Box::new(move || hyper::client::HttpConnector::new(4))
+pub fn http_connector() -> hyper::client::HttpConnector {
+    hyper::client::HttpConnector::new(4)
 }
 
-/// Returns a function which creates an https-connector
+/// Returns a function which creates an https-connector which is pinned to a specific
+/// CA certificate
 ///
 /// # Arguments
 ///
 /// * `ca_certificate` - Path to CA certificate used to authenticate the server
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-pub fn https_connector<CA>(
+pub fn https_pinned_connector<CA>(
     ca_certificate: CA,
-) -> Box<dyn Fn() -> hyper_openssl::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+) -> Result<hyper_openssl::HttpsConnector<hyper::client::HttpConnector>, openssl::error::ErrorStack>
 where
     CA: AsRef<Path>,
 {
+    // SSL implementation
+    let mut ssl = openssl::ssl::SslConnector::builder(openssl::ssl::SslMethod::tls())?;
+
     let ca_certificate = ca_certificate.as_ref().to_owned();
-    Box::new(move || {
-        // SSL implementation
-        let mut ssl = openssl::ssl::SslConnector::builder(openssl::ssl::SslMethod::tls()).unwrap();
 
-        // Server authentication
-        ssl.set_ca_file(ca_certificate.clone()).unwrap();
+    // Server authentication
+    ssl.set_ca_file(ca_certificate)?;
 
-        let mut connector = hyper::client::HttpConnector::new(4);
-        connector.enforce_http(false);
-        hyper_openssl::HttpsConnector::<hyper::client::HttpConnector>::with_connector(
-            connector, ssl,
-        )
-        .expect("Failed to create HTTP connector")
-    })
+    let mut connector = hyper::client::HttpConnector::new(4);
+    connector.enforce_http(false);
+
+    hyper_openssl::HttpsConnector::<hyper::client::HttpConnector>::with_connector(connector, ssl)
 }
 
 /// Returns a function which creates https-connectors for mutually authenticated connections.
@@ -49,34 +47,24 @@ pub fn https_mutual_connector<CA, K, C>(
     ca_certificate: CA,
     client_key: K,
     client_certificate: C,
-) -> Box<dyn Fn() -> hyper_openssl::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
+) -> Result<hyper_openssl::HttpsConnector<hyper::client::HttpConnector>, openssl::error::ErrorStack>
 where
     CA: AsRef<Path>,
     K: AsRef<Path>,
     C: AsRef<Path>,
 {
-    let ca_certificate = ca_certificate.as_ref().to_owned();
-    let client_key = client_key.as_ref().to_owned();
-    let client_certificate = client_certificate.as_ref().to_owned();
-    Box::new(move || {
-        // SSL implementation
-        let mut ssl = openssl::ssl::SslConnector::builder(openssl::ssl::SslMethod::tls()).unwrap();
+    // SSL implementation
+    let mut ssl = openssl::ssl::SslConnector::builder(openssl::ssl::SslMethod::tls())?;
 
-        // Server authentication
-        ssl.set_ca_file(ca_certificate.clone()).unwrap();
+    // Server authentication
+    ssl.set_ca_file(ca_certificate)?;
 
-        // Client authentication
-        ssl.set_private_key_file(client_key.clone(), openssl::ssl::SslFiletype::PEM)
-            .unwrap();
-        ssl.set_certificate_chain_file(client_certificate.clone())
-            .unwrap();
-        ssl.check_private_key().unwrap();
+    // Client authentication
+    ssl.set_private_key_file(client_key, openssl::ssl::SslFiletype::PEM)?;
+    ssl.set_certificate_chain_file(client_certificate)?;
+    ssl.check_private_key()?;
 
-        let mut connector = hyper::client::HttpConnector::new(4);
-        connector.enforce_http(false);
-        hyper_openssl::HttpsConnector::<hyper::client::HttpConnector>::with_connector(
-            connector, ssl,
-        )
-        .expect("Failed to create Mutual HTTPS connector")
-    })
+    let mut connector = hyper::client::HttpConnector::new(4);
+    connector.enforce_http(false);
+    hyper_openssl::HttpsConnector::<hyper::client::HttpConnector>::with_connector(connector, ssl)
 }

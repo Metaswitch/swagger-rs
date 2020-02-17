@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - Use hyper-openssl rather than hyper-tls
+- `https_connector` renamed `https_pinned_connector`
+- Return Results, rather than unwrapping errors on client creation
 - openssl 0.10
 
 ### Removed
