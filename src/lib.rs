@@ -25,7 +25,9 @@ pub mod client;
 
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
-pub use connector::{http_connector, https_mutual_connector, https_pinned_connector};
+pub use connector::http_connector;
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+pub use connector::{https_mutual_connector, https_pinned_connector};
 
 pub mod composites;
 pub use composites::{CompositeMakeService, CompositeService, NotFound};
