@@ -1,114 +1,144 @@
 //! Utility methods for instantiating common connectors for clients.
-use std::path::Path;
+#[cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))]
+use std::convert::From as _;
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+use std::path::{Path, PathBuf};
 
 use hyper;
 
-/// Returns a function which creates an http-connector. Used for instantiating
-/// clients with custom connectors
-pub fn http_connector() -> Box<dyn Fn() -> hyper::client::HttpConnector + Send + Sync> {
-    Box::new(move || hyper::client::HttpConnector::new(4))
+/// HTTP Connector construction
+#[derive(Debug)]
+pub struct Connector;
+
+impl Connector {
+    /// Alows building a HTTP(S) connector. Used for instantiating clients with custom
+    /// connectors.
+    pub fn builder() -> Builder {
+        Builder { dns_threads: 4 }
+    }
 }
 
-/// Returns a function which creates an https-connector
-///
-/// # Arguments
-///
-/// * `ca_certificate` - Path to CA certificate used to authenticate the server
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-pub fn https_connector<CA>(
-    ca_certificate: CA,
-) -> Box<dyn Fn() -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
-where
-    CA: AsRef<Path>,
-{
-    let ca_certificate = ca_certificate.as_ref().to_owned();
-    Box::new(move || {
+/// Builder for HTTP(S) connectors
+#[derive(Debug)]
+pub struct Builder {
+    dns_threads: usize,
+}
+
+impl Builder {
+    /// Configure the number of threads. Default is 4.
+    pub fn dns_threads(mut self, threads: usize) -> Self {
+        self.dns_threads = threads;
+        self
+    }
+
+    /// Use HTTPS instead of HTTP
+    pub fn https(self) -> HttpsBuilder {
+        HttpsBuilder {
+            dns_threads: self.dns_threads,
+            #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+            server_cert: None,
+            #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+            client_cert: None,
+        }
+    }
+
+    /// Build a HTTP connector
+    pub fn build(self) -> hyper::client::HttpConnector {
+        hyper::client::HttpConnector::new(self.dns_threads)
+    }
+}
+
+/// Builder for HTTPS connectors
+#[derive(Debug)]
+pub struct HttpsBuilder {
+    dns_threads: usize,
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+    server_cert: Option<PathBuf>,
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+    client_cert: Option<(PathBuf, PathBuf)>,
+}
+
+impl HttpsBuilder {
+    /// Configure the number of threads. Default is 4.
+    pub fn dns_threads(mut self, threads: usize) -> Self {
+        self.dns_threads = threads;
+        self
+    }
+
+    /// Pin the CA certificate for the server's certificate.
+    ///
+    /// # Arguments
+    ///
+    /// * `ca_certificate` - Path to CA certificate used to authenticate the server
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+    pub fn pin_server_certificate<CA>(mut self, ca_certificate: CA) -> Self
+    where
+        CA: AsRef<Path>,
+    {
+        self.server_cert = Some(ca_certificate.as_ref().to_owned());
+        self
+    }
+
+    /// Provide the Client Certificate and Key for the connection for Mutual TLS
+    ///
+    /// # Arguments
+    ///
+    /// * `client_key` - Path to the client private key
+    /// * `client_certificate` - Path to the client's public certificate associated with the private key
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+    pub fn client_authentication<K, C>(mut self, client_key: K, client_certificate: C) -> Self
+    where
+        K: AsRef<Path>,
+        C: AsRef<Path>,
+    {
+        self.client_cert = Some((
+            client_key.as_ref().to_owned(),
+            client_certificate.as_ref().to_owned(),
+        ));
+        self
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+    /// Build the HTTPS connector. Will fail if the provided certificates/keys can't be loaded
+    /// or the SSL connector can't be created
+    pub fn build(
+        self,
+    ) -> Result<
+        hyper_openssl::HttpsConnector<hyper::client::HttpConnector>,
+        openssl::error::ErrorStack,
+    > {
         // SSL implementation
-        let mut ssl =
-            openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();
+        let mut ssl = openssl::ssl::SslConnector::builder(openssl::ssl::SslMethod::tls())?;
 
-        // Server authentication
-        ssl.set_ca_file(ca_certificate.clone()).unwrap();
+        if let Some(ca_certificate) = self.server_cert {
+            // Server authentication
+            ssl.set_ca_file(ca_certificate)?;
+        }
 
-        let builder: native_tls::TlsConnectorBuilder =
-            native_tls::backend::openssl::TlsConnectorBuilderExt::from_openssl(ssl);
-        let mut connector = hyper::client::HttpConnector::new(4);
+        if let Some((client_key, client_certificate)) = self.client_cert {
+            // Client authentication
+            ssl.set_private_key_file(client_key, openssl::ssl::SslFiletype::PEM)?;
+            ssl.set_certificate_chain_file(client_certificate)?;
+            ssl.check_private_key()?;
+        }
+
+        let mut connector = hyper::client::HttpConnector::new(self.dns_threads);
         connector.enforce_http(false);
-        let connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
-            (connector, builder.build().unwrap()).into();
-        connector
-    })
-}
+        hyper_openssl::HttpsConnector::<hyper::client::HttpConnector>::with_connector(
+            connector, ssl,
+        )
+    }
 
-/// Not currently implemented on Mac OS X, iOS and Windows.
-/// This function will panic when called.
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))]
-pub fn https_connector<CA>(
-    _ca_certificate: CA,
-) -> Box<dyn Fn() -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
-where
-    CA: AsRef<Path>,
-{
-    unimplemented!("See issue #43 (https://github.com/Metaswitch/swagger-rs/issues/43)")
-}
-
-/// Returns a function which creates https-connectors for mutually authenticated connections.
-/// # Arguments
-///
-/// * `ca_certificate` - Path to CA certificate used to authenticate the server
-/// * `client_key` - Path to the client private key
-/// * `client_certificate` - Path to the client's public certificate associated with the private key
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-pub fn https_mutual_connector<CA, K, C>(
-    ca_certificate: CA,
-    client_key: K,
-    client_certificate: C,
-) -> Box<dyn Fn() -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
-where
-    CA: AsRef<Path>,
-    K: AsRef<Path>,
-    C: AsRef<Path>,
-{
-    let ca_certificate = ca_certificate.as_ref().to_owned();
-    let client_key = client_key.as_ref().to_owned();
-    let client_certificate = client_certificate.as_ref().to_owned();
-    Box::new(move || {
-        // SSL implementation
-        let mut ssl =
-            openssl::ssl::SslConnectorBuilder::new(openssl::ssl::SslMethod::tls()).unwrap();
-
-        // Server authentication
-        ssl.set_ca_file(ca_certificate.clone()).unwrap();
-
-        // Client authentication
-        ssl.set_private_key_file(client_key.clone(), openssl::x509::X509_FILETYPE_PEM)
-            .unwrap();
-        ssl.set_certificate_chain_file(client_certificate.clone())
-            .unwrap();
-        ssl.check_private_key().unwrap();
-
-        let builder: native_tls::TlsConnectorBuilder =
-            native_tls::backend::openssl::TlsConnectorBuilderExt::from_openssl(ssl);
-        let mut connector = hyper::client::HttpConnector::new(4);
+    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))]
+    /// Build the HTTPS connector. Will fail if the SSL connector can't be created.
+    pub fn build(
+        self,
+    ) -> Result<hyper_tls::HttpsConnector<hyper::client::HttpConnector>, native_tls::Error> {
+        let tls = native_tls::TlsConnector::new()?.into();
+        let mut connector = hyper::client::HttpConnector::new(self.dns_threads);
         connector.enforce_http(false);
-        let connector: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
-            (connector, builder.build().unwrap()).into();
-        connector
-    })
-}
-
-/// Not currently implemented on Mac OS X, iOS and Windows.
-/// This function will panic when called.
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))]
-pub fn https_mutual_connector<CA, K, C>(
-    _ca_certificate: CA,
-    _client_key: K,
-    _client_certificate: C,
-) -> Box<dyn Fn() -> hyper_tls::HttpsConnector<hyper::client::HttpConnector> + Send + Sync>
-where
-    CA: AsRef<Path>,
-    K: AsRef<Path>,
-    C: AsRef<Path>,
-{
-    unimplemented!("See issue #43 (https://github.com/Metaswitch/swagger-rs/issues/43)")
+        let mut connector = hyper_tls::HttpsConnector::from((connector, tls));
+        connector.https_only(true);
+        Ok(connector)
+    }
 }

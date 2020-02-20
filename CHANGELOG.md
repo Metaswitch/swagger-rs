@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 ### Changed
+- Use hyper-openssl on Linux, instead of hyper-tls
+- Use a builder pattern to created client connectors
+- Allow HTTPS connectors to be built which don't pin the server CA certificate
+- Allow HTTPS to work on Mac/Windows/iOS
+- Enforce that HTTPS is used if we are using a HTTPS connector.
+- Return Results, rather than unwrapping errors on connector creation
+- openssl 0.10
 
 ### Removed
 
