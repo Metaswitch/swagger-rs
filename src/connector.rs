@@ -71,7 +71,7 @@ impl HttpsBuilder {
     ///
     /// * `ca_certificate` - Path to CA certificate used to authenticate the server
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-    pub fn pin_server<CA>(mut self, ca_certificate: CA) -> Self
+    pub fn pin_server_certificate<CA>(mut self, ca_certificate: CA) -> Self
     where
         CA: AsRef<Path>,
     {
@@ -86,7 +86,7 @@ impl HttpsBuilder {
     /// * `client_key` - Path to the client private key
     /// * `client_certificate` - Path to the client's public certificate associated with the private key
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-    pub fn client<K, C>(mut self, client_key: K, client_certificate: C) -> Self
+    pub fn client_authentication<K, C>(mut self, client_key: K, client_certificate: C) -> Self
     where
         K: AsRef<Path>,
         C: AsRef<Path>,
@@ -130,7 +130,7 @@ impl HttpsBuilder {
     }
 
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))]
-    /// Build the HTTPS connector. Will if the SSL connector can't be created.
+    /// Build the HTTPS connector. Will fail if the SSL connector can't be created.
     pub fn build(
         self,
     ) -> Result<hyper_tls::HttpsConnector<hyper::client::HttpConnector>, native_tls::Error> {

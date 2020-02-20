@@ -13,11 +13,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Allow HTTPS connectors to be built which don't pin the server CA certificate
 - Allow HTTPS to work on Mac/Windows/iOS
 - Enforce that HTTPS is used if we are using a HTTPS connector.
-- Return Results, rather than unwrapping errors on client creation
+- Return Results, rather than unwrapping errors on connector creation
 - openssl 0.10
 
 ### Removed
-- Remove HTTPS methods for Mac OS X, iOS and Windows
 
 ## [3.2.0] - 2020-02-12
 ### Added
