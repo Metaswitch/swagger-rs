@@ -1,7 +1,6 @@
 //! Hyper service that drops a context to an incoming request and passes it on
 //! to a wrapped service.
 
-use crate::context::ContextualPayload;
 use futures::future::FutureExt;
 use hyper;
 use hyper::Request;
@@ -87,15 +86,15 @@ where
 /// ## Client Usage
 ///
 /// ```edition2018
-/// # use swagger::{DropContextService, ContextualPayload};
+/// # use swagger::DropContextService;
 /// # use hyper::service::Service as _;
 ///
 /// let client = hyper::Client::new();
-/// let client = DropContextService::new(client);
-/// let body = ContextualPayload { inner: hyper::Body::empty(), context: "Some Context".to_string() };
-/// let request = hyper::Request::get("http://www.google.com").body(body).unwrap();
+/// let mut client = DropContextService::new(client);
+/// let request = (hyper::Request::get("http://www.google.com").body(hyper::Body::empty()).unwrap());
+/// let context = "Some Context".to_string();
 ///
-/// let response = client.call(request);
+/// let response = client.call((request, context));
 /// ```
 #[derive(Debug, Clone)]
 pub struct DropContextService<T, C>
@@ -119,7 +118,7 @@ where
     }
 }
 
-impl<Inner, Body, Context> hyper::service::Service<Request<ContextualPayload<Body, Context>>>
+impl<Inner, Body, Context> hyper::service::Service<(Request<Body>, Context)>
     for DropContextService<Inner, Context>
 where
     Context: Send + 'static,
@@ -133,9 +132,8 @@ where
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, req: Request<ContextualPayload<Body, Context>>) -> Self::Future {
-        let (head, body) = req.into_parts();
-        let body = body.inner;
-        self.inner.call(Request::from_parts(head, body))
+    fn call(&mut self, req: (Request<Body>, Context)) -> Self::Future {
+        let (req, _) = req;
+        self.inner.call(req)
     }
 }

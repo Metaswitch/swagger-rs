@@ -1,6 +1,6 @@
 //! Authentication and authorization data structures
 
-use crate::context::{ContextualPayload, Push};
+use crate::context::Push;
 use futures::future::FutureExt;
 use hyper;
 use hyper::header::AUTHORIZATION;
@@ -147,13 +147,21 @@ where
 /// Dummy Authenticator, that blindly inserts authorization data, allowing all
 /// access to an endpoint with the specified subject.
 #[derive(Debug)]
-pub struct AllowAllAuthenticator<T, RC> {
+pub struct AllowAllAuthenticator<T, RC>
+where
+    RC: RcBound,
+    RC::Result: Send + 'static,
+{
     inner: T,
     subject: String,
     marker: PhantomData<RC>,
 }
 
-impl<T, RC> AllowAllAuthenticator<T, RC> {
+impl<T, RC> AllowAllAuthenticator<T, RC>
+where
+    RC: RcBound,
+    RC::Result: Send + 'static,
+{
     /// Create a middleware that authorizes with the configured subject.
     pub fn new<U: Into<String>>(inner: T, subject: U) -> Self {
         AllowAllAuthenticator {
@@ -164,12 +172,11 @@ impl<T, RC> AllowAllAuthenticator<T, RC> {
     }
 }
 
-impl<T, B, RC> hyper::service::Service<Request<ContextualPayload<B, RC>>>
-    for AllowAllAuthenticator<T, RC>
+impl<T, B, RC> hyper::service::Service<(Request<B>, RC)> for AllowAllAuthenticator<T, RC>
 where
     RC: RcBound,
     RC::Result: Send + 'static,
-    T: Service<Request<ContextualPayload<B, RC::Result>>>,
+    T: Service<(Request<B>, RC::Result)>,
 {
     type Response = T::Response;
     type Error = T::Error;
@@ -179,18 +186,15 @@ where
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, req: Request<ContextualPayload<B, RC>>) -> Self::Future {
-        let (head, body) = req.into_parts();
-        let body = ContextualPayload {
-            inner: body.inner,
-            context: body.context.push(Some(Authorization {
-                subject: self.subject.clone(),
-                scopes: Scopes::All,
-                issuer: None,
-            })),
-        };
+    fn call(&mut self, req: (Request<B>, RC)) -> Self::Future {
+        let (request, context) = req;
+        let context = context.push(Some(Authorization {
+            subject: self.subject.clone(),
+            scopes: Scopes::All,
+            issuer: None,
+        }));
 
-        self.inner.call(Request::from_parts(head, body))
+        self.inner.call((request, context))
     }
 }
 
@@ -218,73 +222,79 @@ pub fn api_key_from_header(headers: &HeaderMap, header: &str) -> Option<String> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::context::{ContextBuilder, Has};
     use crate::EmptyContext;
-    use futures::future;
-    use hyper::server::conn::AddrStream;
-    use hyper::service::{make_service_fn, MakeService, MakeServiceRef, Service};
-    use hyper::{body::Payload, Body, Response};
-    use std::fmt::Debug;
-    use std::io;
+    use hyper::service::Service;
+    use hyper::{Body, Response};
 
-    fn check_inner_type<'a, T, SC: 'a, E, ME, S, F, IB, OB>(_: &T)
-    where
-        T: MakeService<
-            &'a SC,
-            Error = E,
-            MakeError = ME,
-            Service = S,
-            Future = F,
-            ReqBody = IB,
-            ResBody = OB,
-        >,
-        E: ErrorBound,
-        ME: ErrorBound,
-        S: Service<ReqBody = IB, ResBody = OB, Error = E>,
-        F: Future<Item = S, Error = ME>,
-        IB: Payload,
-        OB: Payload,
-    {
-        // This function is here merely to force a type check against the given bounds.
-    }
+    struct MakeTestService;
 
-    fn check_type<S, A, B, C>(_: &S)
-    where
-        S: MakeServiceRef<A, ReqBody = B, ResBody = C>,
-        S::Error: ErrorBound,
-        S::Service: 'static,
-        B: Payload,
-        C: Payload,
-    {
-        // This function is here merely to force a type check against the given bounds.
-    }
+    type ReqWithAuth = (
+        Request<Body>,
+        ContextBuilder<Option<Authorization>, EmptyContext>,
+    );
 
-    struct TestService<IB>(std::net::SocketAddr, PhantomData<IB>);
+    impl<Target> Service<Target> for MakeTestService {
+        type Response = TestService;
+        type Error = ();
+        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
-    impl<IB: Debug + Payload> Service for TestService<IB> {
-        type ReqBody = IB;
-        type ResBody = Body;
-        type Error = std::io::Error;
-        type Future = future::FutureResult<Response<Self::ResBody>, Self::Error>;
+        fn poll_ready(&mut self, _cx: &mut Context) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
 
-        fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
-            future::ok(Response::new(Body::from(format!("{:?} {}", req, self.0))))
+        fn call(&mut self, _target: Target) -> Self::Future {
+            Box::pin(futures::future::ok(TestService))
         }
     }
 
-    #[test]
-    fn test_make_service() {
-        let make_svc = make_service_fn(|socket: &AddrStream| {
-            let f: future::FutureResult<TestService<_>, io::Error> =
-                future::ok(TestService(socket.remote_addr(), PhantomData));
-            f
-        });
+    struct TestService;
 
-        check_inner_type(&make_svc);
+    impl Service<ReqWithAuth> for TestService {
+        type Response = Response<Body>;
+        type Error = String;
+        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
-        let a: MakeAllowAllAuthenticator<_, EmptyContext> =
+        fn poll_ready(&mut self, _cx: &mut Context) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn call(&mut self, req: ReqWithAuth) -> Self::Future {
+            Box::pin(async move {
+                let auth: &Option<Authorization> = req.1.get();
+                let expected = Some(Authorization {
+                    subject: "foo".to_string(),
+                    scopes: Scopes::All,
+                    issuer: None,
+                });
+
+                if *auth == expected {
+                    Ok(Response::new(Body::empty()))
+                } else {
+                    Err(format!("{:?} != {:?}", auth, expected))
+                }
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_make_service() {
+        let make_svc = MakeTestService;
+
+        let mut a: MakeAllowAllAuthenticator<_, EmptyContext> =
             MakeAllowAllAuthenticator::new(make_svc, "foo");
 
-        check_inner_type(&a);
-        check_type(&a);
+        let mut service = a.call(&()).await.unwrap();
+
+        let response = service
+            .call((
+                Request::get("http://localhost")
+                    .body(Body::empty())
+                    .unwrap(),
+                EmptyContext::default(),
+            ))
+            .await;
+
+        response.unwrap();
     }
 }

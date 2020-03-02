@@ -1,7 +1,6 @@
 //! Hyper service that adds a context to an incoming request and passes it on
 //! to a wrapped service.
 
-use crate::context::ContextualPayload;
 use crate::{Push, XSpanIdString};
 use futures::future::FutureExt;
 use hyper;
@@ -97,7 +96,7 @@ impl<Inner, Context, Body> hyper::service::Service<Request<Body>>
 where
     Context: Default + Push<XSpanIdString> + Send + 'static,
     Context::Result: Send + 'static,
-    Inner: hyper::service::Service<Request<ContextualPayload<Body, Context::Result>>>,
+    Inner: hyper::service::Service<(Request<Body>, Context::Result)>,
 {
     type Response = Inner::Response;
     type Error = Inner::Error;
@@ -112,13 +111,8 @@ where
 
     fn call(&mut self, req: Request<Body>) -> Self::Future {
         let x_span_id = XSpanIdString::get_or_generate(&req);
-        let (head, body) = req.into_parts();
         let context = Context::default().push(x_span_id);
 
-        let body = ContextualPayload {
-            inner: body,
-            context,
-        };
-        self.inner.call(hyper::Request::from_parts(head, body))
+        self.inner.call((req, context))
     }
 }
