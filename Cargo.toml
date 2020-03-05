@@ -35,5 +35,5 @@ hyper-openssl = "0.7.1"
 openssl = "0.10.28"
 
 [target.'cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))'.dependencies]
-hyper-tls = "0.4.1"
+hyper-tls = "0.3"
 native-tls = "0.2"
