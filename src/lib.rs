@@ -12,6 +12,9 @@ pub use base64_format::ByteArray;
 pub mod nullable_format;
 pub use nullable_format::Nullable;
 
+mod body;
+pub use body::BodyExt;
+
 pub mod auth;
 pub use auth::{AuthData, Authorization};
 
