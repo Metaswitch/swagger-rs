@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+## [4.0.1] - 2020-03-06
+### Changed
+- Use hyper-tls 3 on Mac/Windows/iOS which is compatible with Hyper 0.12, instead of version 4, which isn't.
+
 ## [4.0.0] - 2020-02-20
 ### Changed
 - Use hyper-openssl on Linux, instead of hyper-tls
@@ -128,7 +132,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/4.0.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/4.0.1...HEAD
+[4.0.1]: https://github.com/Metaswitch/swagger-rs/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/Metaswitch/swagger-rs/compare/3.2.0...4.0.0
 [3.2.0]: https://github.com/Metaswitch/swagger-rs/compare/3.1.0...3.2.0
 [3.1.0]: https://github.com/Metaswitch/swagger-rs/compare/3.0.0...3.1.0
