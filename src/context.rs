@@ -464,15 +464,15 @@ macro_rules! make_context {
 
 /// Context wrapper, to bind an API with a context.
 #[derive(Debug)]
-pub struct ContextWrapper<'a, T, C> {
+pub struct ContextWrapper<'a, T: ?Sized, C> {
     api: &'a T,
     context: C,
 }
 
-impl<'a, T, C> ContextWrapper<'a, T, C> {
+impl<'a, T: ?Sized, C> ContextWrapper<'a, T, C> {
     /// Create a new ContextWrapper, binding the API and context.
-    pub fn new(api: &'a T, context: C) -> ContextWrapper<'a, T, C> {
-        ContextWrapper { api, context }
+    pub fn new(api: &'a T, context: C) -> Self {
+        Self { api, context }
     }
 
     /// Borrows the API.
@@ -486,7 +486,7 @@ impl<'a, T, C> ContextWrapper<'a, T, C> {
     }
 }
 
-impl<'a, T, C: Clone> Clone for ContextWrapper<'a, T, C> {
+impl<'a, T: ?Sized, C: Clone> Clone for ContextWrapper<'a, T, C> {
     fn clone(&self) -> Self {
         ContextWrapper {
             api: self.api,
@@ -495,14 +495,32 @@ impl<'a, T, C: Clone> Clone for ContextWrapper<'a, T, C> {
     }
 }
 
-/// Trait to extend an API to make it easy to bind it to a context.
-pub trait ContextWrapperExt<'a, C>
-where
-    Self: Sized,
-{
-    /// Binds this API to a context.
-    fn with_context(self: &'a Self, context: C) -> ContextWrapper<'a, Self, C> {
-        ContextWrapper::<Self, C>::new(self, context)
+/// Context wrapper, to bind an API with a context.
+#[derive(Debug, Clone)]
+pub struct ContextWrapperOwned<T, C> {
+    api: T,
+    context: C,
+}
+
+impl<T, C> ContextWrapperOwned<T, C> {
+    /// Create a new ContextWrapper, binding the API and context.
+    pub fn new(api: T, context: C) -> Self {
+        Self { api, context }
+    }
+
+    /// Borrows the API.
+    pub fn api(&self) -> &T {
+        &self.api
+    }
+
+    /// Mutably borrows the API
+    pub fn api_mut(&mut self) -> &mut T {
+        &mut self.api
+    }
+
+    /// Borrows the context.
+    pub fn context(&self) -> &C {
+        &self.context
     }
 }
 

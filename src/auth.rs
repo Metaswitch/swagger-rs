@@ -124,11 +124,11 @@ where
     RC: RcBound,
     RC::Result: Send + 'static,
     Inner: Service<Target>,
-    Inner::Future: 'static,
+    Inner::Future: Send + 'static,
 {
     type Error = Inner::Error;
     type Response = AllowAllAuthenticator<Inner::Response, RC>;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
