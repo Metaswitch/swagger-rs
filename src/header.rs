@@ -17,10 +17,11 @@ impl XSpanIdString {
     pub fn get_or_generate<T>(req: &hyper::Request<T>) -> Self {
         let x_span_id = req.headers().get(X_SPAN_ID);
 
-        match x_span_id {
-            Some(x) => XSpanIdString(x.to_str().unwrap().to_string()),
-            None => Self::default(),
-        }
+        x_span_id
+            .map(|x| x.to_str().ok())
+            .flatten()
+            .map(|x| XSpanIdString(x.to_string()))
+            .unwrap_or_default()
     }
 }
 
