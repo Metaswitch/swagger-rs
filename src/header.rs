@@ -131,3 +131,26 @@ impl From<IntoHeaderValue<DateTime<Utc>>> for HeaderValue {
         HeaderValue::from_str(hdr_value.0.to_rfc3339().as_str()).unwrap()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::XSpanIdString;
+    use hyper::Request;
+
+    /// Create a request with the given X-Span-ID.
+    fn create_xspan_id_req(id: &'static str) -> Request<()> {
+        Request::builder().header("X-Span-ID", id).body(()).unwrap()
+    }
+
+    #[test]
+    fn xspanid_test() {
+        XSpanIdString::get_or_generate(&create_xspan_id_req("£"));
+
+        let valid_uuid = "123e4567-e89b-12d3-a456-426655440000";
+
+        assert_eq!(
+            valid_uuid,
+            &XSpanIdString::get_or_generate(&create_xspan_id_req(valid_uuid)).0
+        );
+    }
+}
