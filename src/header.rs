@@ -17,10 +17,11 @@ impl XSpanIdString {
     pub fn get_or_generate<T>(req: &hyper::Request<T>) -> Self {
         let x_span_id = req.headers().get(X_SPAN_ID);
 
-        match x_span_id {
-            Some(x) => XSpanIdString(x.to_str().unwrap().to_string()),
-            None => Self::default(),
-        }
+        x_span_id
+            .map(|x| x.to_str().ok())
+            .flatten()
+            .map(|x| XSpanIdString(x.to_string()))
+            .unwrap_or_default()
     }
 }
 
@@ -128,5 +129,28 @@ impl From<HeaderValue> for IntoHeaderValue<DateTime<Utc>> {
 impl From<IntoHeaderValue<DateTime<Utc>>> for HeaderValue {
     fn from(hdr_value: IntoHeaderValue<DateTime<Utc>>) -> Self {
         HeaderValue::from_str(hdr_value.0.to_rfc3339().as_str()).unwrap()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::XSpanIdString;
+    use hyper::Request;
+
+    /// Create a request with the given X-Span-ID.
+    fn create_xspan_id_req(id: &'static str) -> Request<()> {
+        Request::builder().header("X-Span-ID", id).body(()).unwrap()
+    }
+
+    #[test]
+    fn xspanid_test() {
+        XSpanIdString::get_or_generate(&create_xspan_id_req("£"));
+
+        let valid_uuid = "123e4567-e89b-12d3-a456-426655440000";
+
+        assert_eq!(
+            valid_uuid,
+            &XSpanIdString::get_or_generate(&create_xspan_id_req(valid_uuid)).0
+        );
     }
 }

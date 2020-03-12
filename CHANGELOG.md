@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 ### Changed
+- Fixed panic where X-Span-ID headers contained non-ASCII characters.
 
 ### Removed
 
