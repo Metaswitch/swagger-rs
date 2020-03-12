@@ -8,9 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 ### Changed
-- Fixed panic where X-Span-ID headers contained non-ASCII characters.
 
 ### Removed
+
+## [4.0.2] - 2020-03-12
+### Changed
+- Fixed panic where X-Span-ID headers contained non-ASCII characters.
 
 ## [4.0.1] - 2020-03-06
 ### Changed
@@ -133,7 +136,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/4.0.1...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/4.0.2...HEAD
+[4.0.2]: https://github.com/Metaswitch/swagger-rs/compare/4.0.1...4.0.2
 [4.0.1]: https://github.com/Metaswitch/swagger-rs/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/Metaswitch/swagger-rs/compare/3.2.0...4.0.0
 [3.2.0]: https://github.com/Metaswitch/swagger-rs/compare/3.1.0...3.2.0
