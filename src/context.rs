@@ -10,7 +10,6 @@ use crate::auth::{AuthData, Authorization};
 use crate::XSpanIdString;
 use hyper::{service::Service, Request, Response};
 use std::future::Future;
-use std::marker::Sized;
 use std::pin::Pin;
 
 /// Defines methods for accessing, modifying, adding and removing the data stored
@@ -464,57 +463,19 @@ macro_rules! make_context {
 
 /// Context wrapper, to bind an API with a context.
 #[derive(Debug)]
-pub struct ContextWrapper<'a, T: ?Sized, C> {
-    api: &'a T,
-    context: C,
-}
-
-impl<'a, T: ?Sized, C> ContextWrapper<'a, T, C> {
-    /// Create a new ContextWrapper, binding the API and context.
-    pub fn new(api: &'a T, context: C) -> Self {
-        Self { api, context }
-    }
-
-    /// Borrows the API.
-    pub fn api(&self) -> &T {
-        self.api
-    }
-
-    /// Borrows the context.
-    pub fn context(&self) -> &C {
-        &self.context
-    }
-}
-
-impl<'a, T: ?Sized, C: Clone> Clone for ContextWrapper<'a, T, C> {
-    fn clone(&self) -> Self {
-        ContextWrapper {
-            api: self.api,
-            context: self.context.clone(),
-        }
-    }
-}
-
-/// Context wrapper, to bind an API with a context.
-#[derive(Debug, Clone)]
-pub struct ContextWrapperOwned<T, C> {
+pub struct ContextWrapper<T, C> {
     api: T,
     context: C,
 }
 
-impl<T, C> ContextWrapperOwned<T, C> {
+impl<T, C> ContextWrapper<T, C> {
     /// Create a new ContextWrapper, binding the API and context.
     pub fn new(api: T, context: C) -> Self {
         Self { api, context }
     }
 
     /// Borrows the API.
-    pub fn api(&self) -> &T {
-        &self.api
-    }
-
-    /// Mutably borrows the API
-    pub fn api_mut(&mut self) -> &mut T {
+    pub fn api(&mut self) -> &mut T {
         &mut self.api
     }
 
@@ -523,6 +484,16 @@ impl<T, C> ContextWrapperOwned<T, C> {
         &self.context
     }
 }
+
+impl<T: Clone, C: Clone> Clone for ContextWrapper<T, C> {
+    fn clone(&self) -> Self {
+        ContextWrapper {
+            api: self.api.clone(),
+            context: self.context.clone(),
+        }
+    }
+}
+
 
 /// Trait designed to ensure consistency in context used by swagger middlewares
 ///
