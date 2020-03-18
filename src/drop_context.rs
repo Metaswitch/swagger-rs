@@ -1,13 +1,11 @@
 //! Hyper service that drops a context to an incoming request and passes it on
 //! to a wrapped service.
 
-use futures::future::FutureExt;
-use hyper;
 use hyper::Request;
-use std::future::Future;
 use std::marker::PhantomData;
-use std::pin::Pin;
 use std::task::Poll;
+
+use futures::future::FutureExt as _;
 
 /// Middleware wrapper service that drops the context from the incoming request
 /// and passes the plain `hyper::Request` to the wrapped service.
@@ -59,11 +57,11 @@ impl<Inner, Context, Target> hyper::service::Service<Target>
 where
     Context: Send + 'static,
     Inner: hyper::service::Service<Target>,
-    Inner::Future: 'static,
+    Inner::Future: Send + 'static,
 {
     type Response = DropContextService<Inner::Response, Context>;
     type Error = Inner::Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+    type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
@@ -132,8 +130,7 @@ where
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, req: (Request<Body>, Context)) -> Self::Future {
-        let (req, _) = req;
+    fn call(&mut self, (req, _): (Request<Body>, Context)) -> Self::Future {
         self.inner.call(req)
     }
 }

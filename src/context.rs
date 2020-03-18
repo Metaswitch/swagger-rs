@@ -494,7 +494,6 @@ impl<T: Clone, C: Clone> Clone for ContextWrapper<T, C> {
     }
 }
 
-
 /// Trait designed to ensure consistency in context used by swagger middlewares
 ///
 /// ```rust
