@@ -2,14 +2,11 @@
 //!
 //! Use by passing `hyper::server::MakeService` instances to a `CompositeMakeService`
 //! together with the base path for requests that should be handled by that service.
-use futures::future;
 use futures::future::FutureExt;
 use hyper::service::Service;
 use hyper::{Request, Response, StatusCode};
 use std::fmt;
-use std::future::Future;
 use std::ops::{Deref, DerefMut};
-use std::pin::Pin;
 use std::task::{Context, Poll};
 
 /// Trait for generating a default "not found" response. Must be implemented on
@@ -31,19 +28,20 @@ impl<B: Default> NotFound<B> for B {
 
 type CompositedService<ReqBody, ResBody, Error> = Box<
     dyn Service<
-        Request<ReqBody>,
-        Response = Response<ResBody>,
-        Error = Error,
-        Future = Pin<Box<dyn Future<Output = Result<Response<ResBody>, Error>>>>,
-    >,
+            Request<ReqBody>,
+            Response = Response<ResBody>,
+            Error = Error,
+            Future = futures::future::BoxFuture<'static, Result<Response<ResBody>, Error>>,
+        > + Send,
 >;
 
 type CompositedMakeService<Target, ReqBody, ResBody, Error, MakeError> = Box<
     dyn Service<
         Target,
         Error = MakeError,
-        Future = Pin<
-            Box<dyn Future<Output = Result<CompositedService<ReqBody, ResBody, Error>, MakeError>>>,
+        Future = futures::future::BoxFuture<
+            'static,
+            Result<CompositedService<ReqBody, ResBody, Error>, MakeError>,
         >,
         Response = CompositedService<ReqBody, ResBody, Error>,
     >,
@@ -98,13 +96,13 @@ impl<Target, ReqBody, ResBody, Error, MakeError> Service<Target>
 where
     ReqBody: 'static,
     ResBody: NotFound<ResBody> + 'static,
-    MakeError: 'static,
+    MakeError: Send + 'static,
     Error: 'static,
     Target: Clone,
 {
     type Error = MakeError;
     type Response = CompositeService<ReqBody, ResBody, Error>;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+    type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         for service in &mut self.0 {
@@ -185,12 +183,12 @@ where
 impl<ReqBody, ResBody, Error> Service<Request<ReqBody>>
     for CompositeService<ReqBody, ResBody, Error>
 where
-    Error: 'static,
-    ResBody: NotFound<ResBody> + 'static,
+    Error: Send + 'static,
+    ResBody: NotFound<ResBody> + Send + 'static,
 {
     type Error = Error;
     type Response = Response<ResBody>;
-    type Future = Pin<Box<dyn Future<Output = Result<Response<ResBody>, Error>>>>;
+    type Future = futures::future::BoxFuture<'static, Result<Response<ResBody>, Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         for service in &mut self.0 {
@@ -210,7 +208,7 @@ where
             }
         }
 
-        Box::pin(future::ok(ResBody::not_found()))
+        Box::pin(futures::future::ok(ResBody::not_found()))
     }
 }
 

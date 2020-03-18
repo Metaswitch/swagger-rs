@@ -5,9 +5,7 @@ use crate::{Push, XSpanIdString};
 use futures::future::FutureExt;
 use hyper;
 use hyper::Request;
-use std::future::Future;
 use std::marker::PhantomData;
-use std::pin::Pin;
 use std::task::Poll;
 
 /// Middleware wrapper service, that should be used as the outermost layer in a
@@ -43,11 +41,11 @@ where
     Context: Default + Push<XSpanIdString> + 'static + Send,
     Context::Result: Send + 'static,
     Inner: hyper::service::Service<Target>,
-    Inner::Future: 'static,
+    Inner::Future: Send + 'static,
 {
     type Error = Inner::Error;
     type Response = AddContextService<Inner::Response, Context>;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+    type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)

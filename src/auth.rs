@@ -11,9 +11,7 @@ use hyper_old_types::header::Header as HeaderTrait;
 pub use hyper_old_types::header::{Basic, Bearer};
 use hyper_old_types::header::{Raw, Scheme};
 use std::collections::BTreeSet;
-use std::future::Future;
 use std::marker::PhantomData;
-use std::pin::Pin;
 use std::string::ToString;
 use std::task::Context;
 use std::task::Poll;
@@ -128,17 +126,17 @@ where
 {
     type Error = Inner::Error;
     type Response = AllowAllAuthenticator<Inner::Response, RC>;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+    type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, req: Target) -> Self::Future {
+    fn call(&mut self, target: Target) -> Self::Future {
         let subject = self.subject.clone();
         Box::pin(
             self.inner
-                .call(req)
+                .call(target)
                 .map(|s| Ok(AllowAllAuthenticator::new(s?, subject))),
         )
     }
@@ -237,14 +235,14 @@ mod tests {
     impl<Target> Service<Target> for MakeTestService {
         type Response = TestService;
         type Error = ();
-        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+        type Future = futures::future::Ready<Result<Self::Response, Self::Error>>;
 
         fn poll_ready(&mut self, _cx: &mut Context) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
 
         fn call(&mut self, _target: Target) -> Self::Future {
-            Box::pin(futures::future::ok(TestService))
+            futures::future::ok(TestService)
         }
     }
 
@@ -253,7 +251,7 @@ mod tests {
     impl Service<ReqWithAuth> for TestService {
         type Response = Response<Body>;
         type Error = String;
-        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+        type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
         fn poll_ready(&mut self, _cx: &mut Context) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
