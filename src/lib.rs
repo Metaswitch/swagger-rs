@@ -64,7 +64,7 @@ pub use header::{IntoHeaderValue, XSpanIdString, X_SPAN_ID};
 #[cfg(feature = "multipart")]
 pub mod multipart;
 
-pub mod one_any_of;
+mod one_any_of;
 pub use one_any_of::*;
 
 /// Helper Bound for Errors for MakeService/Service wrappers

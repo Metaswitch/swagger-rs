@@ -112,6 +112,69 @@ one_of!(OneOf14, A, B, C, D, E, F, G, H, I, J, K, L, M);
 one_of!(OneOf15, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
 one_of!(OneOf16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
 
+#[cfg(test)]
+mod one_of_tests {
+    use super::OneOf2;
+    type TestOneOf = OneOf2::<u32, String>;
+
+    #[test]
+    fn serialize_one_of_a() {
+        assert_eq!(serde_json::to_string(&TestOneOf::A(123)).unwrap(), "123");
+    }
+    #[test]
+    fn serialize_one_of_b() {
+        assert_eq!(serde_json::to_string(&TestOneOf::B("hello".to_string())).unwrap(), "\"hello\"");
+    }
+
+    #[test]
+    fn to_string_one_of_a() {
+        assert_eq!(TestOneOf::A(123).to_string(), "123");
+    }
+    #[test]
+    fn to_string_one_of_b() {
+        assert_eq!(TestOneOf::B("hello".to_string()).to_string(), "hello");
+    }
+
+    #[test]
+    fn deserialize_one_of_a() {
+        assert_eq!(serde_json::from_str::<TestOneOf>("123").unwrap(), TestOneOf::A(123));
+    }
+    #[test]
+    fn deserialize_one_of_b() {
+        assert_eq!(serde_json::from_str::<TestOneOf>("\"hello\"").unwrap(), TestOneOf::B("hello".to_string()));
+    }
+    #[test]
+    fn deserialize_one_of_fails_multiple_matches() {
+        // Fails because 123 can be parsed as either u32 or u16.
+        assert!(serde_json::from_str::<OneOf2<u32, u16>>("123").is_err());
+    }
+    #[test]
+    fn deserialize_one_of_fails_no_match() {
+        // Fails because can't parse an object.
+        assert!(serde_json::from_str::<TestOneOf>("{}").is_err());
+    }
+
+    #[test]
+    fn from_str_one_of_fails_multiple_matches() {
+        // Fails because 123 can be parsed as either u32 or String.
+        assert!("123".parse::<TestOneOf>().is_err());
+    }
+    #[test]
+    fn from_str_one_of_b() {
+        assert_eq!("hello".parse::<TestOneOf>().unwrap(), TestOneOf::B("hello".to_string()));
+    }
+    #[test]
+    fn from_str_one_of_a() {
+        // Swap the order of values so that we can check an A match works.
+        assert_eq!("hello".parse::<OneOf2<String, u32>>().unwrap(), OneOf2::<String, u32>::A("hello".to_string()));
+    }
+    #[test]
+    fn from_str_one_of_fails_no_match() {
+        // Fails because can't parse a string as a number.
+        assert!("hello".parse::<OneOf2<u32, u16>>().is_err());
+    }
+}
+
 // Define a macro to define the `AnyOf` enum for a specific number of inner types.
 macro_rules! any_of {
     (
@@ -166,3 +229,61 @@ any_of!(AnyOf13, A, B, C, D, E, F, G, H, I, J, K, L);
 any_of!(AnyOf14, A, B, C, D, E, F, G, H, I, J, K, L, M);
 any_of!(AnyOf15, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
 any_of!(AnyOf16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+
+#[cfg(test)]
+mod any_of_tests {
+    use super::AnyOf2;
+    type TestAnyOf = AnyOf2::<u32, String>;
+
+    #[test]
+    fn serialize_any_of_a() {
+        assert_eq!(serde_json::to_string(&TestAnyOf::A(123)).unwrap(), "123");
+    }
+    #[test]
+    fn serialize_any_of_b() {
+        assert_eq!(serde_json::to_string(&TestAnyOf::B("hello".to_string())).unwrap(), "\"hello\"");
+    }
+
+    #[test]
+    fn to_string_any_of_a() {
+        assert_eq!(TestAnyOf::A(123).to_string(), "123");
+    }
+    #[test]
+    fn to_string_any_of_b() {
+        assert_eq!(TestAnyOf::B("hello".to_string()).to_string(), "hello");
+    }
+
+    #[test]
+    fn deserialize_any_of_a() {
+        assert_eq!(serde_json::from_str::<TestAnyOf>("123").unwrap(), TestAnyOf::A(123));
+    }
+    #[test]
+    fn deserialize_any_of_b() {
+        assert_eq!(serde_json::from_str::<TestAnyOf>("\"hello\"").unwrap(), TestAnyOf::B("hello".to_string()));
+    }
+    #[test]
+    fn deserialize_any_of_multiple_matches() {
+        // 123 can be parsed as either u32 or u16, so we parse it as the first.
+        assert_eq!(serde_json::from_str::<AnyOf2<u32, u16>>("123").unwrap(), AnyOf2::<u32, u16>::A(123));
+    }
+    #[test]
+    fn deserialize_any_of_fails_no_match() {
+        // Fails because can't parse an object.
+        assert!(serde_json::from_str::<TestAnyOf>("{}").is_err());
+    }
+
+    #[test]
+    fn from_str_any_of_a() {
+        assert_eq!("123".parse::<TestAnyOf>().unwrap(), TestAnyOf::A(123));
+    }
+    #[test]
+    fn from_str_any_of_b() {
+        assert_eq!("hello".parse::<TestAnyOf>().unwrap(), TestAnyOf::B("hello".to_string()));
+    }
+    #[test]
+    fn from_str_any_of_fails_no_match() {
+        // Fails because can't parse a string as a number.
+        assert!("hello".parse::<AnyOf2<u32, u16>>().is_err());
+    }
+}
+
