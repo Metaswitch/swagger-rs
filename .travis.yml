@@ -32,6 +32,7 @@ branches:
   - staging
   - trying
   - master
+  - v3
 deploy:
 - provider: script
   script: bash deploy.sh
