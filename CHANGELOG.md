@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+## [3.3.0] - 2020-04-02
+### Added
+- Add OneOf and AnyOf types
+
 ## [3.2.1] - 2020-03-12
 ### Changed
 - Fixed panic where X-Span-ID headers contained non-ASCII characters.
@@ -122,7 +126,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/3.2.1...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/3.3.0...HEAD
+[3.3.0]: https://github.com/Metaswitch/swagger-rs/compare/3.2.1...3.3.0
 [3.2.1]: https://github.com/Metaswitch/swagger-rs/compare/3.2.0...3.2.1
 [3.2.0]: https://github.com/Metaswitch/swagger-rs/compare/3.1.0...3.2.0
 [3.1.0]: https://github.com/Metaswitch/swagger-rs/compare/3.0.0...3.1.0
