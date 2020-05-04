@@ -15,6 +15,7 @@ use std::mem;
 ///
 /// Nullable implements many of the same methods as the Option type (map, unwrap, etc).
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "conversion", derive(frunk_enum_derive::LabelledGenericEnum))]
 pub enum Nullable<T> {
     /// Null value
     Null,
