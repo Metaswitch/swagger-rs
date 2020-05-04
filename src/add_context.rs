@@ -4,7 +4,6 @@
 use crate::context::ContextualPayload;
 use crate::{ErrorBound, Push, XSpanIdString};
 use futures::Future;
-use hyper;
 use hyper::Request;
 use std::marker::PhantomData;
 
