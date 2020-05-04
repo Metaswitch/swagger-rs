@@ -9,7 +9,6 @@
 use crate::auth::{AuthData, Authorization};
 use crate::XSpanIdString;
 use futures::future::Future;
-use hyper;
 use std::marker::Sized;
 
 /// Defines methods for accessing, modifying, adding and removing the data stored
