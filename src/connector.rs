@@ -4,8 +4,6 @@ use std::convert::From as _;
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
 use std::path::{Path, PathBuf};
 
-use hyper;
-
 /// HTTP Connector construction
 #[derive(Debug)]
 pub struct Connector;

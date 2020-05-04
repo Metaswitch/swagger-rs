@@ -3,7 +3,6 @@
 use crate::context::ContextualPayload;
 use crate::{ErrorBound, Push};
 use futures::future::Future;
-use hyper;
 use hyper::body::Payload;
 use hyper::header::AUTHORIZATION;
 use hyper::service::{MakeService, Service};
