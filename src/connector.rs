@@ -1,8 +1,6 @@
 //! Utility methods for instantiating common connectors for clients.
 use std::path::Path;
 
-use hyper;
-
 /// Returns a function which creates an http-connector. Used for instantiating
 /// clients with custom connectors
 pub fn http_connector() -> Box<dyn Fn() -> hyper::client::HttpConnector + Send + Sync> {

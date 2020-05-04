@@ -16,6 +16,7 @@ repository = "Metaswitch/swagger-rs"
 [features]
 default = ["serdejson"]
 multipart = ["mime"]
+conversion = ["frunk", "frunk_core", "frunk-enum-core", "frunk-enum-derive"]
 serdejson = ["serde", "serde_json"]
 
 [dependencies]
@@ -33,3 +34,8 @@ uuid = {version = "0.7", features = ["serde", "v4"]}
 hyper-old-types = "0.11.0"
 chrono = "0.4.6"
 
+# Conversion
+frunk = { version = "0.3.0", optional = true }
+frunk_core = { version = "0.3.0", optional = true }
+frunk-enum-core = { version = "0.2.0", optional = true }
+frunk-enum-derive = { version = "0.2.0", optional = true }
