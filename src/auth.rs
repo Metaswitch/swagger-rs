@@ -169,7 +169,7 @@ where
     }
 }
 
-impl<T, B, RC> hyper::service::Service<(Request<B>, RC)> for AllowAllAuthenticator<T, RC>
+impl<T, B, RC> Service<(Request<B>, RC)> for AllowAllAuthenticator<T, RC>
 where
     RC: RcBound,
     RC::Result: Send + 'static,

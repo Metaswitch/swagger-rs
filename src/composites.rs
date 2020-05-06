@@ -14,11 +14,11 @@ use std::task::{Context, Poll};
 /// `CompositeMakeService`.
 pub trait NotFound<V> {
     /// Return a "not found" response
-    fn not_found() -> hyper::Response<V>;
+    fn not_found() -> Response<V>;
 }
 
 impl<B: Default> NotFound<B> for B {
-    fn not_found() -> hyper::Response<B> {
+    fn not_found() -> Response<B> {
         Response::builder()
             .status(StatusCode::NOT_FOUND)
             .body(B::default())
