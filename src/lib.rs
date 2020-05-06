@@ -12,16 +12,14 @@ pub use base64_format::ByteArray;
 pub mod nullable_format;
 pub use nullable_format::Nullable;
 
+mod body;
+pub use body::BodyExt;
+
 pub mod auth;
 pub use auth::{AuthData, Authorization};
 
 pub mod context;
-pub use context::{
-    ContextBuilder, ContextWrapper, ContextualPayload, EmptyContext, Has, Pop, Push,
-};
-
-/// Module to support client middleware
-pub mod client;
+pub use context::{ContextBuilder, ContextWrapper, EmptyContext, Has, Pop, Push};
 
 /// Module with utilities for creating connectors with hyper.
 pub mod connector;
@@ -40,7 +38,7 @@ pub mod request_parser;
 pub use request_parser::RequestParser;
 
 mod header;
-pub use header::{IntoHeaderValue, XSpanIdString, X_SPAN_ID};
+pub use header::{XSpanIdString, X_SPAN_ID};
 
 #[cfg(feature = "multipart")]
 pub mod multipart;
