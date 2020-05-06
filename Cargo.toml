@@ -31,7 +31,7 @@ hyper-old-types = "0.11.0"
 chrono = "0.4.6"
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))'.dependencies]
-hyper-openssl = "0.7.1"
+hyper-openssl = "0.8.0"
 openssl = "0.10.28"
 
 [target.'cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))'.dependencies]
