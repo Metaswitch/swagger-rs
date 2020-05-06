@@ -1,11 +1,11 @@
 //! Implementations of OpenAPI `oneOf` and `anyOf` types, assuming rules are just types
-use std::str::FromStr;
-use std::string::ToString;
 use serde::{
     de::Error,
     private::de::{Content, ContentRefDeserializer},
     Deserialize, Deserializer, Serialize, Serializer,
 };
+use std::str::FromStr;
+use std::string::ToString;
 
 // Define a macro to define the common parts between `OneOf` and `AnyOf` enums for a specific
 // number of inner types.
