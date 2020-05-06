@@ -2,7 +2,6 @@
 
 use crate::context::Push;
 use futures::future::FutureExt;
-use hyper;
 use hyper::header::AUTHORIZATION;
 use hyper::service::Service;
 use hyper::{HeaderMap, Request};

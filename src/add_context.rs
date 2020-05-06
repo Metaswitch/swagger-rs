@@ -3,7 +3,6 @@
 
 use crate::{Push, XSpanIdString};
 use futures::future::FutureExt;
-use hyper;
 use hyper::Request;
 use std::marker::PhantomData;
 use std::task::Poll;
