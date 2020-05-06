@@ -6,11 +6,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- Add frunk support for swagger::Nullable
 
 ### Changed
 
 ### Removed
+
+## [5.0.0-alpha-1] - 2020-05-06
+### Added
+- Add support for OneOf/AnyOf
+- Support Hyper 0.13
+
+### Removed
+- Remove headers module
 
 ## [4.0.2] - 2020-03-12
 ### Changed
@@ -137,7 +144,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/4.0.2...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/5.0.0-alpha-1...HEAD
+[5.0.0-alpha-1]: https://github.com/Metaswitch/swagger-rs/compare/4.0.2...5.0.0-alpha-1
 [4.0.2]: https://github.com/Metaswitch/swagger-rs/compare/4.0.1...4.0.2
 [4.0.1]: https://github.com/Metaswitch/swagger-rs/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/Metaswitch/swagger-rs/compare/3.2.0...4.0.0
