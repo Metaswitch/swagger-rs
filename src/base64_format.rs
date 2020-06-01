@@ -1,7 +1,7 @@
 // These functions are only used if the API uses base64-encoded properties, so allow them to be
 // dead code.
 #[cfg(feature = "serdejson")]
-use base64::{decode, encode};
+use base64::{decode, encode, DecodeError};
 #[cfg(feature = "serdejson")]
 use serde::de::{Deserialize, Deserializer, Error};
 #[cfg(feature = "serdejson")]
@@ -33,6 +33,20 @@ impl<'de> Deserialize<'de> for ByteArray {
             Ok(bin) => Ok(ByteArray(bin)),
             _ => Err(D::Error::custom("invalid base64")),
         }
+    }
+}
+
+impl std::str::FromStr for ByteArray {
+    type Err = DecodeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+       Ok(Self(decode(s)?))
+    }
+}
+
+impl std::string::ToString for ByteArray {
+    fn to_string(&self) -> String {
+       encode(&self.0)
     }
 }
 
