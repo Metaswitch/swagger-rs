@@ -40,13 +40,13 @@ impl std::str::FromStr for ByteArray {
     type Err = DecodeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-       Ok(Self(decode(s)?))
+        Ok(Self(decode(s)?))
     }
 }
 
 impl ToString for ByteArray {
     fn to_string(&self) -> String {
-       encode(&self.0)
+        encode(&self.0)
     }
 }
 
