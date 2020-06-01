@@ -1,5 +1,10 @@
 //! Support crate for Swagger codegen.
-#![deny(missing_docs, missing_debug_implementations, unused_extern_crates)]
+#![deny(
+    missing_docs,
+    missing_debug_implementations,
+    unused_extern_crates,
+    unused_qualifications
+)]
 
 use std::error;
 use std::fmt;

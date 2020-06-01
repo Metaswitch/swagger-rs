@@ -552,7 +552,7 @@ where
 impl<ReqB, ResB, Context, T> SwaggerService<ReqB, ResB, Context> for T
 where
     T: Clone
-        + hyper::service::Service<
+        + Service<
             (Request<ReqB>, Context),
             Response = Response<ResB>,
             Error = hyper::Error,
