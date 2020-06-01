@@ -16,7 +16,7 @@ macro_rules! request_parser_joiner {
         impl <B> RequestParser<B> for $name
             where $($T: RequestParser<B>, )*
         {
-            fn parse_operation_id(request: &hyper::Request<B>) -> Result<&'static str, ()> {
+            fn parse_operation_id(request: &Request<B>) -> Result<&'static str, ()> {
                 __impl_request_parser_joiner!(request, $($T), *)
             }
         }
@@ -59,7 +59,7 @@ mod context_tests {
     struct TestParser1;
 
     impl RequestParser<Body> for TestParser1 {
-        fn parse_operation_id(request: &hyper::Request<Body>) -> Result<&'static str, ()> {
+        fn parse_operation_id(request: &Request<Body>) -> Result<&'static str, ()> {
             match request.uri().path() {
                 "/test/t11" => Ok("t11"),
                 "/test/t12" => Ok("t12"),
@@ -71,7 +71,7 @@ mod context_tests {
     struct TestParser2;
 
     impl RequestParser<Body> for TestParser2 {
-        fn parse_operation_id(request: &hyper::Request<Body>) -> Result<&'static str, ()> {
+        fn parse_operation_id(request: &Request<Body>) -> Result<&'static str, ()> {
             match request.uri().path() {
                 "/test/t21" => Ok("t21"),
                 "/test/t22" => Ok("t22"),
