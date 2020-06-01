@@ -44,7 +44,7 @@ impl std::str::FromStr for ByteArray {
     }
 }
 
-impl std::string::ToString for ByteArray {
+impl ToString for ByteArray {
     fn to_string(&self) -> String {
        encode(&self.0)
     }
