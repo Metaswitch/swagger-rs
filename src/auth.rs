@@ -169,6 +169,21 @@ where
     }
 }
 
+impl<T, RC> Clone for AllowAllAuthenticator<T, RC>
+where
+    T: Clone,
+    RC: RcBound,
+    RC::Result: Send + 'static,
+{
+    fn clone(&self) -> Self {
+        Self {
+           inner: self.inner.clone(),
+           subject: self.subject.clone(),
+           marker: PhantomData,
+        }
+    }
+}
+
 impl<T, B, RC> Service<(Request<B>, RC)> for AllowAllAuthenticator<T, RC>
 where
     RC: RcBound,
