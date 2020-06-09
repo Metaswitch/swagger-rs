@@ -1,4 +1,4 @@
-//! Helper functions for multipart support
+//! Helper functions for multipart/form-data support
 
 use hyper::header::{HeaderMap, CONTENT_TYPE};
 

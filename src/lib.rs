@@ -45,7 +45,6 @@ pub use request_parser::RequestParser;
 mod header;
 pub use header::{XSpanIdString, X_SPAN_ID};
 
-#[cfg(feature = "multipart")]
 pub mod multipart;
 
 mod one_any_of;
