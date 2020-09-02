@@ -2,10 +2,11 @@
 //!
 //! Use by passing `hyper::server::MakeService` instances to a `CompositeMakeService`
 //! together with the base path for requests that should be handled by that service.
-use futures::future::FutureExt;
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use hyper::service::Service;
 use hyper::{Request, Response, StatusCode};
 use std::fmt;
+use std::future::Future;
 use std::ops::{Deref, DerefMut};
 use std::task::{Context, Poll};
 
@@ -26,30 +27,70 @@ impl<B: Default> NotFound<B> for B {
     }
 }
 
-type CompositedService<ReqBody, ResBody, Error> = Box<
-    dyn Service<
-            Request<ReqBody>,
-            Response = Response<ResBody>,
-            Error = Error,
-            Future = futures::future::BoxFuture<'static, Result<Response<ResBody>, Error>>,
-        > + Send,
->;
+/// Trait implemented by services which can be composited.
+///
+/// Wraps tower_service::Service
+pub trait CompositedService<ReqBody, ResBody, Error> {
+    /// See tower_service::Service::poll_ready
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Error>>;
+    /// See tower_service::Service::call
+    fn call(&mut self, req: Request<ReqBody>) -> BoxFuture<'static, Result<Response<ResBody>, Error>>;
+}
 
-type CompositedMakeService<Target, ReqBody, ResBody, Error, MakeError> = Box<
-    dyn Service<
-        Target,
-        Error = MakeError,
-        Future = futures::future::BoxFuture<
-            'static,
-            Result<CompositedService<ReqBody, ResBody, Error>, MakeError>,
-        >,
-        Response = CompositedService<ReqBody, ResBody, Error>,
-    >,
->;
+impl<T, ReqBody, ResBody, Error> CompositedService<ReqBody, ResBody, Error> for T where
+    T: Service<Request<ReqBody>, Response=Response<ResBody>, Error=Error>,
+    T::Future: Send + 'static,
+{
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+        Service::poll_ready(self, cx)
+    }
+
+    fn call(&mut self, req: Request<ReqBody>) -> BoxFuture<'static, Result<Response<ResBody>, Error>> {
+        Box::pin(Service::call(self, req))
+    }
+}
+
+/// Trait implemented by make services which can be composited.
+///
+/// Wraps tower_service::Service
+pub trait CompositedMakeService<Target, ReqBody, ResBody, Error, MakeError> {
+    /// See tower_service::Service::poll_ready
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), MakeError>>;
+    /// See tower_service::Service::call
+    fn call(&mut self, target: Target) -> BoxFuture<'static, Result<Box<dyn CompositedService<ReqBody, ResBody, Error> + Send>, MakeError>>;
+}
+
+impl<T, S, F, Target, ReqBody, ResBody, Error, MakeError> CompositedMakeService<Target, ReqBody, ResBody, Error, MakeError> for T where
+    Target: Send,
+    T: Service<Target, Response=S, Future=F, Error=MakeError> + Send,
+    F: Future<Output=Result<S, MakeError>> + Send + 'static,
+    S: CompositedService<ReqBody, ResBody, Error> + Send + 'static,
+{
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), MakeError>> {
+        Service::poll_ready(self, cx)
+    }
+
+    fn call(&mut self, target: Target) -> BoxFuture<'static, Result<Box<dyn CompositedService<ReqBody, ResBody, Error> + Send>, MakeError>> {
+        Box::pin(Service::call(self, target).map(|r| {
+            match r {
+                Ok(s) => {
+                    let s : Box<dyn CompositedService<ReqBody, ResBody, Error> + Send> = Box::new(s);
+                    Ok(s)
+                },
+                Err(e) => Err(e),
+            }
+        }))
+    }
+}
+
+type CompositeServiceVec<ReqBody, ResBody, Error> = Vec<(
+    &'static str,
+    Box<dyn CompositedService<ReqBody, ResBody, Error> + Send>,
+)>;
 
 type CompositeMakeServiceVec<Target, ReqBody, ResBody, Error, MakeError> = Vec<(
     &'static str,
-    CompositedMakeService<Target, ReqBody, ResBody, Error, MakeError>,
+    Box<dyn CompositedMakeService<Target, ReqBody, ResBody, Error, MakeError> + Send>,
 )>;
 
 /// Wraps a vector of pairs, each consisting of a base path as a `&'static str`
@@ -91,18 +132,19 @@ where
     }
 }
 
-impl<Target, ReqBody, ResBody, Error, MakeError> Service<Target>
-    for CompositeMakeService<Target, ReqBody, ResBody, Error, MakeError>
+use std::net::SocketAddr;
+
+impl<'a, ReqBody, ResBody, Error, MakeError> Service<&'a hyper::server::conn::AddrStream>
+    for CompositeMakeService<Option<SocketAddr>, ReqBody, ResBody, Error, MakeError>
 where
     ReqBody: 'static,
     ResBody: NotFound<ResBody> + 'static,
     MakeError: Send + 'static,
     Error: 'static,
-    Target: Clone,
 {
     type Error = MakeError;
     type Response = CompositeService<ReqBody, ResBody, Error>;
-    type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         for service in &mut self.0 {
@@ -119,13 +161,12 @@ where
         Poll::Ready(Ok(()))
     }
 
-    fn call(&mut self, target: Target) -> Self::Future {
-        let services = self.0.iter_mut().map(|(path, service)| {
-            let path: &'static str = path;
-            service
-                .call(target.clone())
-                .map(move |res| res.map(move |service| (path, service)))
-        });
+    fn call(&mut self, target: &'a hyper::server::conn::AddrStream) -> Self::Future {
+        let mut services = Vec::with_capacity(self.0.len());
+        for (path, service) in &mut self.0 {
+            let path : &'static str = path;
+            services.push(service.call(Some(target.remote_addr())).map_ok(move |s| (path, s)));
+        }
         Box::pin(futures::future::join_all(services).map(|results| {
             let services: Result<Vec<_>, MakeError> = results.into_iter().collect();
 
@@ -175,7 +216,7 @@ where
 /// Wraps a vector of pairs, each consisting of a base path as a `&'static str`
 /// and a `Service` instance.
 pub struct CompositeService<ReqBody, ResBody, Error>(
-    Vec<(&'static str, CompositedService<ReqBody, ResBody, Error>)>,
+    CompositeServiceVec<ReqBody, ResBody, Error>,
 )
 where
     ResBody: NotFound<ResBody>;
@@ -188,7 +229,7 @@ where
 {
     type Error = Error;
     type Response = Response<ResBody>;
-    type Future = futures::future::BoxFuture<'static, Result<Response<ResBody>, Error>>;
+    type Future = BoxFuture<'static, Result<Response<ResBody>, Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         for service in &mut self.0 {
@@ -228,7 +269,7 @@ where
     ResBody: NotFound<ResBody> + 'static,
     Error: 'static,
 {
-    type Target = Vec<(&'static str, CompositedService<ReqBody, ResBody, Error>)>;
+    type Target = CompositeServiceVec<ReqBody, ResBody, Error>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
