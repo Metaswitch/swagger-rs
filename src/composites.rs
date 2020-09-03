@@ -57,6 +57,11 @@ where
     }
 }
 
+type FutureService<ReqBody, ResBody, Error, MakeError> = BoxFuture<
+    'static,
+    Result<Box<dyn CompositedService<ReqBody, ResBody, Error> + Send>, MakeError>,
+>;
+
 /// Trait implemented by make services which can be composited.
 ///
 /// Wraps tower_service::Service
@@ -64,13 +69,7 @@ pub trait CompositedMakeService<Target, ReqBody, ResBody, Error, MakeError> {
     /// See tower_service::Service::poll_ready
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), MakeError>>;
     /// See tower_service::Service::call
-    fn call(
-        &mut self,
-        target: Target,
-    ) -> BoxFuture<
-        'static,
-        Result<Box<dyn CompositedService<ReqBody, ResBody, Error> + Send>, MakeError>,
-    >;
+    fn call(&mut self, target: Target) -> FutureService<ReqBody, ResBody, Error, MakeError>;
 }
 
 impl<T, S, F, Target, ReqBody, ResBody, Error, MakeError>
@@ -85,13 +84,7 @@ where
         Service::poll_ready(self, cx)
     }
 
-    fn call(
-        &mut self,
-        target: Target,
-    ) -> BoxFuture<
-        'static,
-        Result<Box<dyn CompositedService<ReqBody, ResBody, Error> + Send>, MakeError>,
-    > {
+    fn call(&mut self, target: Target) -> FutureService<ReqBody, ResBody, Error, MakeError> {
         Box::pin(Service::call(self, target).map(|r| match r {
             Ok(s) => {
                 let s: Box<dyn CompositedService<ReqBody, ResBody, Error> + Send> = Box::new(s);
