@@ -8,26 +8,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 ### Changed
-- Fix Composite support
 
 ### Removed
 
-## [5.0.0-beta.1] - 2020-06-09
+## [5.0.0] - 2020-10-06
+
+## Breaking Changes
+- Support Hyper 0.13
+- Remove headers module
+
 ### Added
 - Add Clone implementation for AllowAllAuthenticator
 - Add support functions for multipart/related
-
-## [5.0.0-alpha-2] - 2020-06-02
-### Added
 - Add ToString/FromStr implementations for ByteArray
-
-## [5.0.0-alpha-1] - 2020-05-06
-### Added
 - Add support for OneOf/AnyOf
-- Support Hyper 0.13
 
-### Removed
-- Remove headers module
+### Fixed
+- Fix Composite support
 
 ## [4.0.2] - 2020-03-12
 ### Changed
@@ -154,10 +151,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/5.0.0-beta.1...HEAD
-[5.0.0-beta.1]: https://github.com/Metaswitch/swagger-rs/compare/5.0.0-alpha-2...5.0.0-beta.1
-[5.0.0-alpha-2]: https://github.com/Metaswitch/swagger-rs/compare/5.0.0-alpha-1...5.0.0-alpha-2
-[5.0.0-alpha-1]: https://github.com/Metaswitch/swagger-rs/compare/4.0.2...5.0.0-alpha-1
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/5.0.0...HEAD
+[5.0.0]: https://github.com/Metaswitch/swagger-rs/compare/4.0.2...5.0.0
 [4.0.2]: https://github.com/Metaswitch/swagger-rs/compare/4.0.1...4.0.2
 [4.0.1]: https://github.com/Metaswitch/swagger-rs/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/Metaswitch/swagger-rs/compare/3.2.0...4.0.0
