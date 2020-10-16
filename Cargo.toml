@@ -47,5 +47,5 @@ hyper-tls = "0.4"
 native-tls = "0.2"
 
 [dev-dependencies]
-tokio = {version = "0.2", features = ["macros"]}
+tokio = {version = "0.3", features = ["macros"]}
 bytes = "0.5"
