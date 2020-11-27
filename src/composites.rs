@@ -100,10 +100,12 @@ type CompositeServiceVec<ReqBody, ResBody, Error> = Vec<(
     Box<dyn CompositedService<ReqBody, ResBody, Error> + Send>,
 )>;
 
-type CompositeMakeServiceVec<Target, ReqBody, ResBody, Error, MakeError> = Vec<(
+type CompositeMakeServiceVec<Target, ReqBody, ResBody, Error, MakeError> = Vec<CompositeMakeServiceEntry<Target, ReqBody, ResBody, Error, MakeError>>;
+
+pub type CompositeMakeServiceEntry<Target, ReqBody, ResBody, Error, MakeError> = (
     &'static str,
     Box<dyn CompositedMakeService<Target, ReqBody, ResBody, Error, MakeError> + Send>,
-)>;
+);
 
 /// Wraps a vector of pairs, each consisting of a base path as a `&'static str`
 /// and a `MakeService` instance. Implements `Deref<Vec>` and `DerefMut<Vec>` so
