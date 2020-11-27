@@ -6,6 +6,8 @@ use serde::{
 };
 use std::str::FromStr;
 use std::string::ToString;
+use frunk_enum_derive::LabelledGenericEnum;
+use frunk::LabelledGeneric;
 
 // Define a macro to define the common parts between `OneOf` and `AnyOf` enums for a specific
 // number of inner types.
@@ -15,7 +17,7 @@ macro_rules! common_one_any_of {
         $($i:ident),*
     ) => {
         /// $t
-        #[derive(Debug, PartialEq, Clone)]
+        #[derive(Debug, PartialEq, Clone, LabelledGenericEnum)]
         pub enum $t<$($i),*> where
             $($i: PartialEq,)*
         {
