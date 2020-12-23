@@ -48,4 +48,4 @@ native-tls = "0.2"
 
 [dev-dependencies]
 tokio = {version = "0.2", features = ["macros"]}
-bytes = "0.5"
+bytes = "1.0"
