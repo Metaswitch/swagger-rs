@@ -1,7 +1,7 @@
 //! Utility methods for instantiating common connectors for clients.
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))]
+#[cfg(all(any(target_os = "macos", target_os = "windows", target_os = "ios"), feature="tls"))]
 use std::convert::From as _;
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+#[cfg(all(not(any(target_os = "macos", target_os = "windows", target_os = "ios")), feature="tls"))]
 use std::path::{Path, PathBuf};
 
 /// HTTP Connector construction
@@ -22,6 +22,7 @@ pub struct Builder {}
 
 impl Builder {
     /// Use HTTPS instead of HTTP
+    #[cfg(feature="tls")]
     pub fn https(self) -> HttpsBuilder {
         HttpsBuilder {
             #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
@@ -32,12 +33,14 @@ impl Builder {
     }
 
     /// Build a HTTP connector
-    pub fn build(self) -> hyper::client::HttpConnector {
-        hyper::client::HttpConnector::new()
+    #[cfg(feature="tcp")]
+    pub fn build(self) -> hyper::client::connect::HttpConnector {
+        hyper::client::connect::HttpConnector::new()
     }
 }
 
 /// Builder for HTTPS connectors
+#[cfg(feature="tls")]
 #[derive(Debug)]
 pub struct HttpsBuilder {
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
@@ -46,6 +49,7 @@ pub struct HttpsBuilder {
     client_cert: Option<(PathBuf, PathBuf)>,
 }
 
+#[cfg(feature="tls")]
 impl HttpsBuilder {
     /// Pin the CA certificate for the server's certificate.
     ///

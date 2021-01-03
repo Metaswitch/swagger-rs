@@ -27,10 +27,14 @@ pub mod context;
 pub use context::{ContextBuilder, ContextWrapper, EmptyContext, Has, Pop, Push};
 
 /// Module with utilities for creating connectors with hyper.
+#[cfg(feature="client")]
 pub mod connector;
+#[cfg(feature="client")]
 pub use connector::Connector;
 
+#[cfg(all(feature="server", any(feature="http1", feature="http2")))]
 pub mod composites;
+#[cfg(all(feature="server", any(feature="http1", feature="http2")))]
 pub use composites::{CompositeMakeService, CompositeService, NotFound};
 
 pub mod add_context;

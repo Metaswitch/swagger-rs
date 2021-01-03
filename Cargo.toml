@@ -18,14 +18,20 @@ default = ["serdejson"]
 multipart_form = ["mime"]
 multipart_related = ["mime_multipart", "hyper_0_10", "mime_0_2"]
 serdejson = ["serde", "serde_json"]
+server = ["hyper/server"]
+http1 = ["hyper/http1"]
+http2 = ["hyper/http2"]
+client = ["hyper/client"]
+tcp = ["hyper/tcp"]
+tls = ["native-tls", "openssl", "hyper-openssl", "hyper-tls"]
 
 [dependencies]
 base64 = "0.12"
 serde = { version = "1.0.119", optional = true, features = ["derive"] }
 serde_json = { version = "1.0", optional = true }
-hyper = "0.13.1"
+hyper = "0.14"
 slog = { version = "2", features = [ "max_level_trace", "release_max_level_debug"] }
-uuid = {version = "0.8", features = ["serde", "v4"]}
+uuid = { version = "0.8", features = ["serde", "v4"] }
 hyper-old-types = "0.11.0"
 chrono = "0.4.6"
 futures = "0.3"
@@ -39,12 +45,12 @@ mime_multipart = {version = "0.5", optional = true}
 mime_0_2 = { package = "mime", version = "0.2.6", optional = true }
 
 [target.'cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))'.dependencies]
-hyper-openssl = "0.8.0"
-openssl = "0.10.28"
+hyper-openssl = { version = "0.9.0", optional = true }
+openssl = { version = "0.10.28", optional = true }
 
 [target.'cfg(any(target_os = "macos", target_os = "windows", target_os = "ios"))'.dependencies]
-hyper-tls = "0.4"
-native-tls = "0.2"
+hyper-tls = { version = "0.5", optional = true }
+native-tls = { version = "0.2", optional = true }
 
 [dev-dependencies]
 tokio = {version = "0.2", features = ["macros"]}
