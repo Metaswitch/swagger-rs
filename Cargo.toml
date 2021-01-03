@@ -26,8 +26,8 @@ tcp = ["hyper/tcp"]
 tls = ["native-tls", "openssl", "hyper-openssl", "hyper-tls"]
 
 [dependencies]
-base64 = "0.12"
-serde = { version = "1.0.119", optional = true, features = ["derive"] }
+base64 = "0.13"
+serde = { version = "1.0", optional = true, features = ["derive"] }
 serde_json = { version = "1.0", optional = true }
 hyper = "0.14"
 slog = { version = "2", features = [ "max_level_trace", "release_max_level_debug"] }
