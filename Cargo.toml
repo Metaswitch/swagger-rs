@@ -55,3 +55,4 @@ native-tls = { version = "0.2", optional = true }
 [dev-dependencies]
 tokio = {version = "1.0", features = ["macros", "rt"]}
 bytes = "1.0"
+hyper = { version = "0.14", features = ["client", "http1", "tcp"] }
