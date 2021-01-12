@@ -47,6 +47,8 @@ pub trait RequestParser<B> {
     /// Retrieve the Swagger operation identifier that matches this request.
     ///
     /// Returns `Err(())` if this request does not match any known operation on this API.
+    // Allow this lint, as changing the signature is a breaking change.
+    #[allow(clippy::result_unit_err)]
     fn parse_operation_id(req: &Request<B>) -> Result<&'static str, ()>;
 }
 

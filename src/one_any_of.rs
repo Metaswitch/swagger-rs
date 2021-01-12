@@ -1,8 +1,8 @@
 //! Implementations of OpenAPI `oneOf` and `anyOf` types, assuming rules are just types
 use serde::{
     de::Error,
-    private::de::{Content, ContentRefDeserializer},
     Deserialize, Deserializer, Serialize, Serializer,
+    __private::de::{Content, ContentRefDeserializer},
 };
 use std::str::FromStr;
 use std::string::ToString;
