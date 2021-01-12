@@ -16,7 +16,7 @@ matrix:
   - rust: nightly
   include:
   - rust: stable
-    env: CLIPPY=1
+    env: CHECK_CLIPPY=1
     before_script:
     - rustup component add clippy-preview
     script:
@@ -25,10 +25,11 @@ matrix:
     script:
     - cargo build --all-features
   - rust: stable
-    env: RUSTFMT=1
+    env: CHECK_RUSTFMT=1
     before_script:
     - rustup component add rustfmt
     script:
+    - rustup component list --installed
     - cargo fmt -- --check
 branches:
   only:
