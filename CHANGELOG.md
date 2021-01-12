@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+### Fixed
+- Fix off by one error declaring OneOf and AnyOf with more than 10 arguments
+
 ## [5.0.1] - 2021-01-12
 ### Fixed
 - Fix interop with serde 1.0.119
