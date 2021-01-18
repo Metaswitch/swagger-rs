@@ -498,7 +498,7 @@ where
     Self: Sized,
 {
     /// Binds this API to a context.
-    fn with_context(self: &'a Self, context: C) -> ContextWrapper<'a, Self, C> {
+    fn with_context(&'a self, context: C) -> ContextWrapper<'a, Self, C> {
         ContextWrapper::<Self, C>::new(self, context)
     }
 }
