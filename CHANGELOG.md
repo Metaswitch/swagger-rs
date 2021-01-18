@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 ### Fixed
+- Fix off by one error in AnyOf/OneOf
 - Fix interop with serde 1.0.119
 
 ## [3.4.0] - 2020-05-04
