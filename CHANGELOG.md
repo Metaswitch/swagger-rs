@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+### Removed
+
+## [3.4.1] - 2021-01-18
 ### Fixed
 - Fix off by one error in AnyOf/OneOf
 - Fix interop with serde 1.0.119
@@ -132,7 +135,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/3.4.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/3.4.1...HEAD
+[3.4.1]: https://github.com/Metaswitch/swagger-rs/compare/3.4.0...3.4.1
 [3.4.0]: https://github.com/Metaswitch/swagger-rs/compare/3.3.0...3.4.0
 [3.3.0]: https://github.com/Metaswitch/swagger-rs/compare/3.2.1...3.3.0
 [3.2.1]: https://github.com/Metaswitch/swagger-rs/compare/3.2.0...3.2.1
