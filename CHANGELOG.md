@@ -5,14 +5,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+
+### Changed
+
+### Removed
+
+## [6.0.0-alpha.1] - 2021-01-21
 ### Breaking Changes
 - Support Hyper 0.14 and match features
   - Add new feature `tcp` to signal HTTP support
   - Add new feature `tls` to signal HTTP(S) support
   - Add new feature `client` to signal Client support
   - Add new feature `server` to signal Server support
-
-### Added
 
 ### Fixes
 - Upgrade base64 to 0.13
@@ -167,7 +172,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/5.0.2...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.0.0-alpha.1...HEAD
+[6.0.0-alpha.1]: https://github.com/Metaswitch/swagger-rs/compare/5.0.2...6.0.0-alpha.1
 [5.0.2]: https://github.com/Metaswitch/swagger-rs/compare/5.0.1...5.0.2
 [5.0.1]: https://github.com/Metaswitch/swagger-rs/compare/5.0.0...5.0.1
 [5.0.0]: https://github.com/Metaswitch/swagger-rs/compare/4.0.2...5.0.0
