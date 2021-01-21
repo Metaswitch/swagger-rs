@@ -1,5 +1,3 @@
-// These functions are only used if the API uses base64-encoded properties, so allow them to be
-// dead code.
 #[cfg(feature = "serdejson")]
 use base64::{decode, encode, DecodeError};
 #[cfg(feature = "serdejson")]

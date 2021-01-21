@@ -3,14 +3,9 @@ rust:
 - stable
 - beta
 - nightly
-before_script:
-- |
-  ROOT_PACKAGE=swagger;
-  RUST_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -er "[.packages[] | select(.name == \"$ROOT_PACKAGE\") | .version][0]");
-  (grep -q "## \[$RUST_VERSION\] -" CHANGELOG.md || (echo "Missing CHANGELOG entry for version $RUST_VERSION"; /bin/false)) &&
-  (grep -q "\[Unreleased\]: .*/$RUST_VERSION\.\.\.HEAD$" CHANGELOG.md || (echo "Unreleased tag in CHANGELOG footer not updated for version $RUST_VERSION"; /bin/false)) &&
-  (grep -q "\[$RUST_VERSION\]: .*\.\.\.$RUST_VERSION$" CHANGELOG.md || (echo "Missing tag for version $RUST_VERSION in CHANGELOG footer"; /bin/false)) &&
-  echo "CHANGELOG is up-to-date for version $RUST_VERSION."
+os:
+- linux
+- osx
 matrix:
   allow_failures:
   - rust: nightly
@@ -31,6 +26,17 @@ matrix:
     script:
     - rustup component list --installed
     - cargo fmt -- --check
+  - rust: stable
+    os: linux
+    env: CHECK_CHANGELOG=1
+    script:
+    - |
+      ROOT_PACKAGE=swagger;
+      RUST_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -er "[.packages[] | select(.name == \"$ROOT_PACKAGE\") | .version][0]");
+      (grep -q "## \[$RUST_VERSION\] -" CHANGELOG.md || (echo "Missing CHANGELOG entry for version $RUST_VERSION"; /bin/false)) &&
+      (grep -q "\[Unreleased\]: .*/$RUST_VERSION\.\.\.HEAD$" CHANGELOG.md || (echo "Unreleased tag in CHANGELOG footer not updated for version $RUST_VERSION"; /bin/false)) &&
+      (grep -q "\[$RUST_VERSION\]: .*\.\.\.$RUST_VERSION$" CHANGELOG.md || (echo "Missing tag for version $RUST_VERSION in CHANGELOG footer"; /bin/false)) &&
+      echo "CHANGELOG is up-to-date for version $RUST_VERSION."
 branches:
   only:
   - staging

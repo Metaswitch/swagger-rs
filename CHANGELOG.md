@@ -5,11 +5,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Breaking Changes
+- Support Hyper 0.14 and match features
+  - Add new feature `tcp` to signal HTTP support
+  - Add new feature `tls` to signal HTTP(S) support
+  - Add new feature `client` to signal Client support
+  - Add new feature `server` to signal Server support
+
 ### Added
 
-### Changed
-
-### Removed
+### Fixes
+- Upgrade base64 to 0.13
+- Upgrade bytes to 1.0
+- Upgrade tokio to 1.0
 
 ## [5.0.2] - 2021-01-13
 ### Fixed
