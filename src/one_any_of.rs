@@ -1,8 +1,8 @@
 //! Implementations of OpenAPI `oneOf` and `anyOf` types, assuming rules are just types
 use serde::{
     de::Error,
-    private::de::{Content, ContentRefDeserializer},
     Deserialize, Deserializer, Serialize, Serializer,
+    __private::de::{Content, ContentRefDeserializer},
 };
 use std::str::FromStr;
 use std::string::ToString;
@@ -108,11 +108,12 @@ one_of!(OneOf7, A, B, C, D, E, F, G);
 one_of!(OneOf8, A, B, C, D, E, F, G, H);
 one_of!(OneOf9, A, B, C, D, E, F, G, H, I);
 one_of!(OneOf10, A, B, C, D, E, F, G, H, I, J);
-one_of!(OneOf12, A, B, C, D, E, F, G, H, I, J, K);
-one_of!(OneOf13, A, B, C, D, E, F, G, H, I, J, K, L);
-one_of!(OneOf14, A, B, C, D, E, F, G, H, I, J, K, L, M);
-one_of!(OneOf15, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-one_of!(OneOf16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+one_of!(OneOf11, A, B, C, D, E, F, G, H, I, J, K);
+one_of!(OneOf12, A, B, C, D, E, F, G, H, I, J, K, L);
+one_of!(OneOf13, A, B, C, D, E, F, G, H, I, J, K, L, M);
+one_of!(OneOf14, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+one_of!(OneOf15, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+one_of!(OneOf16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
 
 // Define a macro to define the `AnyOf` enum for a specific number of inner types.
 macro_rules! any_of {
@@ -163,8 +164,9 @@ any_of!(AnyOf7, A, B, C, D, E, F, G);
 any_of!(AnyOf8, A, B, C, D, E, F, G, H);
 any_of!(AnyOf9, A, B, C, D, E, F, G, H, I);
 any_of!(AnyOf10, A, B, C, D, E, F, G, H, I, J);
-any_of!(AnyOf12, A, B, C, D, E, F, G, H, I, J, K);
-any_of!(AnyOf13, A, B, C, D, E, F, G, H, I, J, K, L);
-any_of!(AnyOf14, A, B, C, D, E, F, G, H, I, J, K, L, M);
-any_of!(AnyOf15, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-any_of!(AnyOf16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+any_of!(AnyOf11, A, B, C, D, E, F, G, H, I, J, K);
+any_of!(AnyOf12, A, B, C, D, E, F, G, H, I, J, K, L);
+any_of!(AnyOf13, A, B, C, D, E, F, G, H, I, J, K, L, M);
+any_of!(AnyOf14, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+any_of!(AnyOf15, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+any_of!(AnyOf16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
