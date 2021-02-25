@@ -6,7 +6,9 @@ use serde::{
 };
 use std::str::FromStr;
 use std::string::ToString;
+#[cfg(feature="conversion")]
 use frunk_enum_derive::LabelledGenericEnum;
+#[cfg(feature="conversion")]
 use frunk::LabelledGeneric;
 
 // Define a macro to define the common parts between `OneOf` and `AnyOf` enums for a specific
@@ -17,7 +19,8 @@ macro_rules! common_one_any_of {
         $($i:ident),*
     ) => {
         /// $t
-        #[derive(Debug, PartialEq, Clone, LabelledGenericEnum)]
+        #[cfg_attr(feature = "conversion", derive(LabelledGenericEnum))]
+        #[derive(Debug, PartialEq, Clone)]
         pub enum $t<$($i),*> where
             $($i: PartialEq,)*
         {
