@@ -100,7 +100,8 @@ type CompositeServiceVec<ReqBody, ResBody, Error> = Vec<(
     Box<dyn CompositedService<ReqBody, ResBody, Error> + Send>,
 )>;
 
-type CompositeMakeServiceVec<Target, ReqBody, ResBody, Error, MakeError> = Vec<CompositeMakeServiceEntry<Target, ReqBody, ResBody, Error, MakeError>>;
+type CompositeMakeServiceVec<Target, ReqBody, ResBody, Error, MakeError> =
+    Vec<CompositeMakeServiceEntry<Target, ReqBody, ResBody, Error, MakeError>>;
 
 /// Service which can be composited with other services as part of a CompositeMakeService
 ///
