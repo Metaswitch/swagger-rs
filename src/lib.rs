@@ -31,7 +31,7 @@ pub mod connector;
 pub use connector::Connector;
 
 pub mod composites;
-pub use composites::{CompositeMakeService, CompositeService, NotFound};
+pub use composites::{CompositeMakeService, CompositeMakeServiceEntry, CompositeService, NotFound};
 
 pub mod add_context;
 pub use add_context::{AddContextMakeService, AddContextService};

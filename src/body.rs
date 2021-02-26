@@ -11,6 +11,7 @@ pub trait BodyExt {
     type Error;
 
     /// Collect the body into a raw form
+    #[allow(clippy::wrong_self_convention)]
     fn to_raw(self) -> futures::future::BoxFuture<'static, Result<Self::Raw, Self::Error>>;
 }
 
