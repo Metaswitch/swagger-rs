@@ -6,12 +6,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- Support conversion for AnyOf and OneOf
-- Expose CompositeMakeServiceEntry
 
 ### Changed
 
 ### Removed
+
+## [5.1.0] - 2021-03-04
+### Added
+- Support conversion for AnyOf and OneOf
+- Expose CompositeMakeServiceEntry
 
 ## [5.0.2] - 2021-01-13
 ### Fixed
@@ -161,7 +164,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/5.0.2...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/5.1.0...HEAD
+[5.1.0]: https://github.com/Metaswitch/swagger-rs/compare/5.0.2...5.1.0
 [5.0.2]: https://github.com/Metaswitch/swagger-rs/compare/5.0.1...5.0.2
 [5.0.1]: https://github.com/Metaswitch/swagger-rs/compare/5.0.0...5.0.1
 [5.0.0]: https://github.com/Metaswitch/swagger-rs/compare/4.0.2...5.0.0
