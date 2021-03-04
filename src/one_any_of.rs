@@ -1,4 +1,6 @@
 //! Implementations of OpenAPI `oneOf` and `anyOf` types, assuming rules are just types
+#[cfg(feature = "conversion")]
+use frunk_enum_derive::LabelledGenericEnum;
 use serde::{
     de::Error,
     Deserialize, Deserializer, Serialize, Serializer,
@@ -6,10 +8,6 @@ use serde::{
 };
 use std::str::FromStr;
 use std::string::ToString;
-#[cfg(feature="conversion")]
-use frunk_enum_derive::LabelledGenericEnum;
-#[cfg(feature="conversion")]
-use frunk::LabelledGeneric;
 
 // Define a macro to define the common parts between `OneOf` and `AnyOf` enums for a specific
 // number of inner types.
