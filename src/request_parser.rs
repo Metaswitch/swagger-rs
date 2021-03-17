@@ -16,7 +16,7 @@ macro_rules! request_parser_joiner {
         impl <B> RequestParser<B> for $name
             where $($T: RequestParser<B>, )*
         {
-            fn parse_operation_id(request: &Request<B>) -> Result<&'static str, ()> {
+            fn parse_operation_id(request: &Request<B>) -> Option<&'static str> {
                 __impl_request_parser_joiner!(request, $($T), *)
             }
         }
@@ -30,8 +30,8 @@ macro_rules! __impl_request_parser_joiner {
     ($argname:expr, $head:ty) => {<$head as RequestParser<B>>::parse_operation_id(&$argname)};
     ($argname:expr, $head:ty, $( $tail:ty), *) => {
         match <$head as RequestParser<B>>::parse_operation_id(&$argname) {
-                Ok(s) => Ok(s),
-                Err(_) => __impl_request_parser_joiner!($argname, $( $tail), *),
+                Some(s) => Some(s),
+                None => __impl_request_parser_joiner!($argname, $( $tail), *),
         }
     };
 }
@@ -46,10 +46,8 @@ macro_rules! __impl_request_parser_joiner {
 pub trait RequestParser<B> {
     /// Retrieve the Swagger operation identifier that matches this request.
     ///
-    /// Returns `Err(())` if this request does not match any known operation on this API.
-    // Allow this lint, as changing the signature is a breaking change.
-    #[allow(clippy::result_unit_err)]
-    fn parse_operation_id(req: &Request<B>) -> Result<&'static str, ()>;
+    /// Returns `None` if this request does not match any known operation on this API.
+    fn parse_operation_id(req: &Request<B>) -> Result<&'static str, Box<dyn std::error::Error>>;
 }
 
 #[cfg(test)]
@@ -61,11 +59,11 @@ mod context_tests {
     struct TestParser1;
 
     impl RequestParser<Body> for TestParser1 {
-        fn parse_operation_id(request: &Request<Body>) -> Result<&'static str, ()> {
+        fn parse_operation_id(request: &Request<Body>) -> Option<&'static str> {
             match request.uri().path() {
-                "/test/t11" => Ok("t11"),
-                "/test/t12" => Ok("t12"),
-                _ => Err(()),
+                "/test/t11" => Some("t11"),
+                "/test/t12" => Some("t12"),
+                _ => None,
             }
         }
     }
@@ -73,11 +71,11 @@ mod context_tests {
     struct TestParser2;
 
     impl RequestParser<Body> for TestParser2 {
-        fn parse_operation_id(request: &Request<Body>) -> Result<&'static str, ()> {
+        fn parse_operation_id(request: &Request<Body>) -> Option<&'static str> {
             match request.uri().path() {
-                "/test/t21" => Ok("t21"),
-                "/test/t22" => Ok("t22"),
-                _ => Err(()),
+                "/test/t21" => Some("t21"),
+                "/test/t22" => Some("t22"),
+                _ => None,
             }
         }
     }
@@ -95,8 +93,8 @@ mod context_tests {
 
         request_parser_joiner!(JoinedReqParser, TestParser1, TestParser2);
 
-        assert_eq!(JoinedReqParser::parse_operation_id(&req1), Ok("t11"));
-        assert_eq!(JoinedReqParser::parse_operation_id(&req2), Ok("t22"));
-        assert_eq!(JoinedReqParser::parse_operation_id(&req3), Err(()));
+        assert_eq!(JoinedReqParser::parse_operation_id(&req1), Some("t11"));
+        assert_eq!(JoinedReqParser::parse_operation_id(&req2), Some("t22"));
+        assert_eq!(JoinedReqParser::parse_operation_id(&req3), None);
     }
 }
