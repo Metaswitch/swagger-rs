@@ -1,4 +1,6 @@
 //! Implementations of OpenAPI `oneOf` and `anyOf` types, assuming rules are just types
+#[cfg(feature = "conversion")]
+use frunk_enum_derive::LabelledGenericEnum;
 use serde::{
     de::Error,
     Deserialize, Deserializer, Serialize, Serializer,
@@ -15,6 +17,7 @@ macro_rules! common_one_any_of {
         $($i:ident),*
     ) => {
         /// $t
+        #[cfg_attr(feature = "conversion", derive(LabelledGenericEnum))]
         #[derive(Debug, PartialEq, Clone)]
         pub enum $t<$($i),*> where
             $($i: PartialEq,)*

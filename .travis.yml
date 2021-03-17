@@ -42,6 +42,7 @@ branches:
   - staging
   - trying
   - master
+  - v5
 deploy:
 - provider: script
   script: bash deploy.sh
