@@ -5,11 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Breaking Changes
+- Remove implicit conversions for ApiError from `&str`, `String` and `serde_json::Error`
+- Update `mime_multipart` requirement from 0.5 to 0.6
+
 ### Added
 
-### Changed
-
-### Removed
 
 ## [6.0.0-alpha.1] - 2021-01-21
 ### Breaking Changes
