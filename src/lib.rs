@@ -79,22 +79,3 @@ impl error::Error for ApiError {
         "Failed to produce a valid response."
     }
 }
-
-impl<'a> From<&'a str> for ApiError {
-    fn from(e: &str) -> Self {
-        ApiError(e.to_string())
-    }
-}
-
-impl From<String> for ApiError {
-    fn from(e: String) -> Self {
-        ApiError(e)
-    }
-}
-
-#[cfg(feature = "serdejson")]
-impl From<serde_json::Error> for ApiError {
-    fn from(e: serde_json::Error) -> Self {
-        ApiError(format!("Response body did not match the schema: {}", e))
-    }
-}
