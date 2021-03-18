@@ -35,7 +35,7 @@ pub use connector::Connector;
 #[cfg(all(feature = "server", any(feature = "http1", feature = "http2")))]
 pub mod composites;
 #[cfg(all(feature = "server", any(feature = "http1", feature = "http2")))]
-pub use composites::{CompositeMakeService, CompositeService, NotFound};
+pub use composites::{CompositeMakeService, CompositeMakeServiceEntry, CompositeService, NotFound};
 
 pub mod add_context;
 pub use add_context::{AddContextMakeService, AddContextService};
