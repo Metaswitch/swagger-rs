@@ -5,23 +5,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-### Breaking Changes
-- Remove implicit conversions for ApiError from `&str`, `String` and `serde_json::Error`
-- Update `mime_multipart` requirement from 0.5 to 0.6
-
 ### Added
 
+### Changed
 
-## [6.0.0-alpha.1] - 2021-01-21
+### Removed
+
+## [6.0.0] - 2021-03-18
 ### Breaking Changes
+- Remove implicit conversions for ApiError from `&str`, `String` and `serde_json::Error`
 - Support Hyper 0.14 and match features
   - Add new feature `tcp` to signal HTTP support
   - Add new feature `tls` to signal HTTP(S) support
   - Add new feature `client` to signal Client support
   - Add new feature `server` to signal Server support
-
-### Fixes
 - Upgrade base64 to 0.13
+- Update `mime_multipart` requirement from 0.5 to 0.6
 - Upgrade bytes to 1.0
 - Upgrade tokio to 1.0
 
@@ -178,8 +177,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.0.0-alpha.1...HEAD
-[6.0.0-alpha.1]: https://github.com/Metaswitch/swagger-rs/compare/5.0.2...6.0.0-alpha.1
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.0.0...HEAD
+[6.0.0]: https://github.com/Metaswitch/swagger-rs/compare/5.1.0...6.0.0
 [5.1.0]: https://github.com/Metaswitch/swagger-rs/compare/5.0.2...5.1.0
 [5.0.2]: https://github.com/Metaswitch/swagger-rs/compare/5.0.1...5.0.2
 [5.0.1]: https://github.com/Metaswitch/swagger-rs/compare/5.0.0...5.0.1
