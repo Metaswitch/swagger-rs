@@ -47,7 +47,7 @@ pub trait RequestParser<B> {
     /// Retrieve the Swagger operation identifier that matches this request.
     ///
     /// Returns `None` if this request does not match any known operation on this API.
-    fn parse_operation_id(req: &Request<B>) -> Result<&'static str, Box<dyn std::error::Error>>;
+    fn parse_operation_id(req: &Request<B>) -> Option<&'static str>;
 }
 
 #[cfg(test)]
