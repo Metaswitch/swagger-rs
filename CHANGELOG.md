@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+## [6.1.0] - 2021-06-17
+### Added
+- Add support for Unix Domain Socket services as part of a Composite Service
+
 ## [6.0.0] - 2021-03-18
 ### Breaking Changes
 - Remove implicit conversions for ApiError from `&str`, `String` and `serde_json::Error`
@@ -177,7 +181,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.0.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.1.0...HEAD
+[6.1.0]: https://github.com/Metaswitch/swagger-rs/compare/6.0.0...6.1.0
 [6.0.0]: https://github.com/Metaswitch/swagger-rs/compare/5.1.0...6.0.0
 [5.1.0]: https://github.com/Metaswitch/swagger-rs/compare/5.0.2...5.1.0
 [5.0.2]: https://github.com/Metaswitch/swagger-rs/compare/5.0.1...5.0.2
