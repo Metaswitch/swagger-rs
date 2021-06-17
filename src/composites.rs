@@ -239,6 +239,52 @@ where
     }
 }
 
+#[cfg(feature = "uds")]
+impl<'a, ReqBody, ResBody, Error, MakeError> Service<&'a tokio::net::UnixStream>
+    for CompositeMakeService<Option<SocketAddr>, ReqBody, ResBody, Error, MakeError>
+where
+    ReqBody: 'static,
+    ResBody: NotFound<ResBody> + 'static,
+    MakeError: Send + 'static,
+    Error: 'static,
+{
+    type Error = MakeError;
+    type Response = CompositeService<ReqBody, ResBody, Error>;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        for service in &mut self.0 {
+            match service.1.poll_ready(cx) {
+                Poll::Ready(Ok(_)) => {}
+                Poll::Ready(Err(e)) => {
+                    return Poll::Ready(Err(e));
+                }
+                Poll::Pending => {
+                    return Poll::Pending;
+                }
+            }
+        }
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, target: &'a tokio::net::UnixStream) -> Self::Future {
+        let mut services = Vec::with_capacity(self.0.len());
+        for (path, service) in &mut self.0 {
+            let path: &'static str = path;
+            services.push(
+                service
+                    .call(None)
+                    .map_ok(move |s| (path, s)),
+            );
+        }
+        Box::pin(futures::future::join_all(services).map(|results| {
+            let services: Result<Vec<_>, MakeError> = results.into_iter().collect();
+
+            Ok(CompositeService(services?))
+        }))
+    }
+}
+
 impl<Target, ReqBody, ResBody, Error, MakeError> fmt::Debug
     for CompositeMakeService<Target, ReqBody, ResBody, Error, MakeError>
 where
