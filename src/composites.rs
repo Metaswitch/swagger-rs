@@ -267,7 +267,7 @@ where
         Poll::Ready(Ok(()))
     }
 
-    fn call(&mut self, target: &'a tokio::net::UnixStream) -> Self::Future {
+    fn call(&mut self, _target: &'a tokio::net::UnixStream) -> Self::Future {
         let mut services = Vec::with_capacity(self.0.len());
         for (path, service) in &mut self.0 {
             let path: &'static str = path;
