@@ -46,6 +46,9 @@ pub use drop_context::{DropContextMakeService, DropContextService};
 pub mod request_parser;
 pub use request_parser::RequestParser;
 
+#[cfg(feature = "serializers")]
+pub mod serde;
+
 mod header;
 pub use header::{XSpanIdString, X_SPAN_ID};
 

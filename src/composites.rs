@@ -271,11 +271,7 @@ where
         let mut services = Vec::with_capacity(self.0.len());
         for (path, service) in &mut self.0 {
             let path: &'static str = path;
-            services.push(
-                service
-                    .call(None)
-                    .map_ok(move |s| (path, s)),
-            );
+            services.push(service.call(None).map_ok(move |s| (path, s)));
         }
         Box::pin(futures::future::join_all(services).map(|results| {
             let services: Result<Vec<_>, MakeError> = results.into_iter().collect();
