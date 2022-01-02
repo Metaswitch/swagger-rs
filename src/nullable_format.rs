@@ -14,6 +14,7 @@ use std::mem;
 /// Note that this is distinct from a value that is optional and not present!
 ///
 /// Nullable implements many of the same methods as the Option type (map, unwrap, etc).
+#[cfg_attr(feature = "fuzz", derive(arbitrary::Arbitrary))]
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum Nullable<T> {
     /// Null value

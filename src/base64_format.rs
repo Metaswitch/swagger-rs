@@ -6,6 +6,7 @@ use serde::de::{Deserialize, Deserializer, Error};
 use serde::ser::{Serialize, Serializer};
 use std::ops::{Deref, DerefMut};
 
+#[cfg_attr(feature = "fuzz", derive(arbitrary::Arbitrary))]
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 /// Base64-encoded byte array
 pub struct ByteArray(pub Vec<u8>);

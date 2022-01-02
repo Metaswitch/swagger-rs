@@ -17,6 +17,7 @@ macro_rules! common_one_any_of {
         $($i:ident),*
     ) => {
         /// $t
+        #[cfg_attr(feature = "fuzz", derive(arbitrary::Arbitrary))]
         #[cfg_attr(feature = "conversion", derive(LabelledGenericEnum))]
         #[derive(Debug, PartialEq, Clone)]
         pub enum $t<$($i),*> where
