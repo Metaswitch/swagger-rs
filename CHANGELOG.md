@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 ### Fixed
+
+## [6.1.1] - 2022-02-01
+### Fixed
 - Remove private, unused dependency on `chrono`
 
 ## [6.1.0] - 2021-06-17
@@ -182,7 +185,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.1.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.1.1...HEAD
+[6.1.1]: https://github.com/Metaswitch/swagger-rs/compare/6.1.0...6.1.1
 [6.1.0]: https://github.com/Metaswitch/swagger-rs/compare/6.0.0...6.1.0
 [6.0.0]: https://github.com/Metaswitch/swagger-rs/compare/5.1.0...6.0.0
 [5.1.0]: https://github.com/Metaswitch/swagger-rs/compare/5.0.2...5.1.0
