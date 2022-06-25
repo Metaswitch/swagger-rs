@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 ### Added
+- Use a trait for connection on CompositeService to allow users to define
+  their own supported connection types
 
 ### Fixed
 
