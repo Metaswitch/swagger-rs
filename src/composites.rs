@@ -7,6 +7,7 @@ use hyper::service::Service;
 use hyper::{Request, Response, StatusCode};
 use std::fmt;
 use std::future::Future;
+use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
 use std::task::{Context, Poll};
 
@@ -24,6 +25,32 @@ impl<B: Default> NotFound<B> for B {
             .status(StatusCode::NOT_FOUND)
             .body(B::default())
             .unwrap()
+    }
+}
+
+/// Connection which has a remote address, which can thus be composited.
+pub trait HasRemoteAddr {
+    /// Get the remote address for the connection to pass
+    /// to the composited service
+    fn remote_addr(&self) -> Option<SocketAddr>;
+}
+
+impl<'a> HasRemoteAddr for &'a Option<SocketAddr> {
+    fn remote_addr(&self) -> Option<SocketAddr> {
+        **self
+    }
+}
+
+impl<'a> HasRemoteAddr for &'a hyper::server::conn::AddrStream {
+    fn remote_addr(&self) -> Option<SocketAddr> {
+        Some(hyper::server::conn::AddrStream::remote_addr(self))
+    }
+}
+
+#[cfg(feature = "uds")]
+impl HasRemoteAddr for &'a tokio::net::UnixStream {
+    fn remote_addr(&self) -> Option<SocketAddr> {
+        None
     }
 }
 
@@ -151,11 +178,10 @@ where
     }
 }
 
-use std::net::SocketAddr;
-
-impl<'a, ReqBody, ResBody, Error, MakeError> Service<&'a Option<SocketAddr>>
+impl<ReqBody, ResBody, Error, MakeError, Connection> Service<Connection>
     for CompositeMakeService<Option<SocketAddr>, ReqBody, ResBody, Error, MakeError>
 where
+    Connection: HasRemoteAddr,
     ReqBody: 'static,
     ResBody: NotFound<ResBody> + 'static,
     MakeError: Send + 'static,
@@ -180,102 +206,12 @@ where
         Poll::Ready(Ok(()))
     }
 
-    fn call(&mut self, target: &'a Option<SocketAddr>) -> Self::Future {
+    fn call(&mut self, target: Connection) -> Self::Future {
         let mut services = Vec::with_capacity(self.0.len());
+        let addr = target.remote_addr();
         for (path, service) in &mut self.0 {
             let path: &'static str = path;
-            services.push(service.call(*target).map_ok(move |s| (path, s)));
-        }
-        Box::pin(futures::future::join_all(services).map(|results| {
-            let services: Result<Vec<_>, MakeError> = results.into_iter().collect();
-
-            Ok(CompositeService(services?))
-        }))
-    }
-}
-
-impl<'a, ReqBody, ResBody, Error, MakeError> Service<&'a hyper::server::conn::AddrStream>
-    for CompositeMakeService<Option<SocketAddr>, ReqBody, ResBody, Error, MakeError>
-where
-    ReqBody: 'static,
-    ResBody: NotFound<ResBody> + 'static,
-    MakeError: Send + 'static,
-    Error: 'static,
-{
-    type Error = MakeError;
-    type Response = CompositeService<ReqBody, ResBody, Error>;
-    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
-
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        for service in &mut self.0 {
-            match service.1.poll_ready(cx) {
-                Poll::Ready(Ok(_)) => {}
-                Poll::Ready(Err(e)) => {
-                    return Poll::Ready(Err(e));
-                }
-                Poll::Pending => {
-                    return Poll::Pending;
-                }
-            }
-        }
-        Poll::Ready(Ok(()))
-    }
-
-    fn call(&mut self, target: &'a hyper::server::conn::AddrStream) -> Self::Future {
-        let mut services = Vec::with_capacity(self.0.len());
-        for (path, service) in &mut self.0 {
-            let path: &'static str = path;
-            services.push(
-                service
-                    .call(Some(target.remote_addr()))
-                    .map_ok(move |s| (path, s)),
-            );
-        }
-        Box::pin(futures::future::join_all(services).map(|results| {
-            let services: Result<Vec<_>, MakeError> = results.into_iter().collect();
-
-            Ok(CompositeService(services?))
-        }))
-    }
-}
-
-#[cfg(feature = "uds")]
-impl<'a, ReqBody, ResBody, Error, MakeError> Service<&'a tokio::net::UnixStream>
-    for CompositeMakeService<Option<SocketAddr>, ReqBody, ResBody, Error, MakeError>
-where
-    ReqBody: 'static,
-    ResBody: NotFound<ResBody> + 'static,
-    MakeError: Send + 'static,
-    Error: 'static,
-{
-    type Error = MakeError;
-    type Response = CompositeService<ReqBody, ResBody, Error>;
-    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
-
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        for service in &mut self.0 {
-            match service.1.poll_ready(cx) {
-                Poll::Ready(Ok(_)) => {}
-                Poll::Ready(Err(e)) => {
-                    return Poll::Ready(Err(e));
-                }
-                Poll::Pending => {
-                    return Poll::Pending;
-                }
-            }
-        }
-        Poll::Ready(Ok(()))
-    }
-
-    fn call(&mut self, _target: &'a tokio::net::UnixStream) -> Self::Future {
-        let mut services = Vec::with_capacity(self.0.len());
-        for (path, service) in &mut self.0 {
-            let path: &'static str = path;
-            services.push(
-                service
-                    .call(None)
-                    .map_ok(move |s| (path, s)),
-            );
+            services.push(service.call(addr).map_ok(move |s| (path, s)));
         }
         Box::pin(futures::future::join_all(services).map(|results| {
             let services: Result<Vec<_>, MakeError> = results.into_iter().collect();
