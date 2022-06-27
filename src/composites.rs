@@ -28,6 +28,32 @@ impl<B: Default> NotFound<B> for B {
     }
 }
 
+/// Connection which has a remote address, which can thus be composited.
+pub trait HasRemoteAddr {
+    /// Get the remote address for the connection to pass
+    /// to the composited service
+    fn remote_addr(&self) -> Option<SocketAddr>;
+}
+
+impl<'a> HasRemoteAddr for &'a Option<SocketAddr> {
+    fn remote_addr(&self) -> Option<SocketAddr> {
+        **self
+    }
+}
+
+impl<'a> HasRemoteAddr for &'a hyper::server::conn::AddrStream {
+    fn remote_addr(&self) -> Option<SocketAddr> {
+        Some(hyper::server::conn::AddrStream::remote_addr(self))
+    }
+}
+
+#[cfg(feature = "uds")]
+impl HasRemoteAddr for &'a tokio::net::UnixStream {
+    fn remote_addr(&self) -> Option<SocketAddr> {
+        None
+    }
+}
+
 /// Trait implemented by services which can be composited.
 ///
 /// Wraps tower_service::Service
@@ -152,26 +178,6 @@ where
     }
 }
 
-/// Connection which has a remote address, which can be
-/// and thus can be composited.
-pub trait HasRemoteAddr {
-    /// Get the remote address for the connection to pass
-    /// to the composited service
-    fn remote_addr(&self) -> Option<SocketAddr>;
-}
-
-impl<'a> HasRemoteAddr for &'a Option<SocketAddr> {
-    fn remote_addr(&self) -> Option<SocketAddr> {
-        **self
-    }
-}
-
-impl<'a> HasRemoteAddr for &'a hyper::server::conn::AddrStream {
-    fn remote_addr(&self) -> Option<SocketAddr> {
-        Some(hyper::server::conn::AddrStream::remote_addr(self))
-    }
-}
-
 impl<ReqBody, ResBody, Error, MakeError, Connection> Service<Connection>
     for CompositeMakeService<Option<SocketAddr>, ReqBody, ResBody, Error, MakeError>
 where
@@ -212,13 +218,6 @@ where
 
             Ok(CompositeService(services?))
         }))
-    }
-}
-
-#[cfg(feature = "uds")]
-impl HasRemoteAddr for &'a tokio::net::UnixStream {
-    fn remote_addr(&self) -> Option<SocketAddr> {
-        None
     }
 }
 
