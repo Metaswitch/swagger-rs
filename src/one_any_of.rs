@@ -13,17 +13,18 @@ use std::string::ToString;
 // number of inner types.
 macro_rules! common_one_any_of {
     (
+        $schema:ident,
         $t:ident,
         $($i:ident),*
     ) => {
-        /// $t
+        #[doc = concat!("`", stringify!($t), "` type.\n\nThis allows modelling of ", stringify!($schema), " JSON schemas.")]
         #[cfg_attr(feature = "conversion", derive(LabelledGenericEnum))]
         #[derive(Debug, PartialEq, Clone)]
         pub enum $t<$($i),*> where
             $($i: PartialEq,)*
         {
             $(
-                /// $i type
+                #[doc = concat!("`", stringify!($i), "` variant of `", stringify!($t), "`")]
                 $i($i)
             ),*
         }
@@ -56,7 +57,7 @@ macro_rules! one_of {
         $t:ident,
         $($i:ident),*
     ) => {
-        common_one_any_of!($t, $($i),*);
+        common_one_any_of!(oneOf, $t, $($i),*);
 
         impl<'b, $($i),*> Deserialize<'b> for $t<$($i),*> where
             $($i: PartialEq + for<'a> Deserialize<'a>,)*
@@ -122,7 +123,7 @@ macro_rules! any_of {
         $t:ident,
         $($i:ident),*
     ) => {
-        common_one_any_of!($t, $($i),*);
+        common_one_any_of!(anyOf, $t, $($i),*);
 
         impl<'b, $($i),*> Deserialize<'b> for $t<$($i),*> where
             $($i: PartialEq + for<'a> Deserialize<'a>,)*
