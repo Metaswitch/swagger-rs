@@ -48,7 +48,7 @@ impl<'a> HasRemoteAddr for &'a hyper::server::conn::AddrStream {
 }
 
 #[cfg(feature = "uds")]
-impl HasRemoteAddr for &'a tokio::net::UnixStream {
+impl<'a> HasRemoteAddr for &'a tokio::net::UnixStream {
     fn remote_addr(&self) -> Option<SocketAddr> {
         None
     }

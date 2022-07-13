@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+## [6.2.1] - 2022-07-13
+### Fixed
+- Fixed build when using `--features uds`
+
 ## [6.2.0] - 2022-06-25
 ### Added
 - Use a trait for connection on CompositeService to allow users to define
@@ -190,7 +194,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.2.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.2.1...HEAD
+[6.2.1]: https://github.com/Metaswitch/swagger-rs/compare/6.2.0...6.2.1
 [6.2.0]: https://github.com/Metaswitch/swagger-rs/compare/6.1.1...6.2.0
 [6.1.1]: https://github.com/Metaswitch/swagger-rs/compare/6.1.0...6.1.1
 [6.1.0]: https://github.com/Metaswitch/swagger-rs/compare/6.0.0...6.1.0
