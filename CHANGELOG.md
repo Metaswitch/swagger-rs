@@ -5,7 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ### Changed
+
+- *BREAKING* - Remove dependency and re-export of `hyper-old-types` which is no longer maintained.
+  - This changes the inner types of the `AuthData` enum and thus the various methods on it.
+      - The `hyper_old_types` are no longer re-exported, and the enums just wrap `String`s.
+  - The `auth::make_headers` function now returns an `Option<Credentials>` from the `headers` crate.
 
 ### Added
 

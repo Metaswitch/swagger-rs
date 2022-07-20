@@ -15,8 +15,7 @@ impl XSpanIdString {
         let x_span_id = req.headers().get(X_SPAN_ID);
 
         x_span_id
-            .map(|x| x.to_str().ok())
-            .flatten()
+            .and_then(|x| x.to_str().ok())
             .map(|x| XSpanIdString(x.to_string()))
             .unwrap_or_default()
     }
