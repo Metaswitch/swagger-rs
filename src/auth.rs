@@ -3,7 +3,7 @@
 use crate::context::Push;
 use futures::future::FutureExt;
 pub use headers::authorization::{Basic, Bearer, Credentials};
-pub use headers::Authorization as Header;
+use headers::Authorization as Header;
 use hyper::header::AUTHORIZATION;
 use hyper::service::Service;
 use hyper::{HeaderMap, Request};
