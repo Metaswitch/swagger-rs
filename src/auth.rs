@@ -2,7 +2,7 @@
 
 use crate::context::Push;
 use futures::future::FutureExt;
-pub use headers::authorization::{Basic, Bearer, Credentials};
+use headers::authorization::{Basic, Bearer, Credentials};
 use headers::Authorization as Header;
 use hyper::header::AUTHORIZATION;
 use hyper::service::Service;
@@ -62,8 +62,7 @@ pub enum AuthData {
 impl AuthData {
     /// Set Basic authentication
     pub fn basic(username: &str, password: &str) -> Self {
-        let basic = Header::basic(username, password);
-        AuthData::Basic(basic.username().to_owned(), basic.password().to_owned())
+        AuthData::Basic(username.to_owned(), password.to_owned())
     }
 
     /// Set Bearer token authentication.  Returns None if the token was invalid.
@@ -207,10 +206,19 @@ where
 }
 
 /// Retrieve an authorization scheme data from a set of headers
-pub fn from_headers<C: Credentials>(headers: &HeaderMap) -> Option<C> {
+pub fn from_headers(headers: &HeaderMap) -> Option<AuthData> {
     headers
         .get(AUTHORIZATION)
-        .and_then(|s| Credentials::decode(s))
+        .and_then(|s| match Basic::decode(s) {
+            Some(basic) => Some(AuthData::Basic(
+                basic.username().to_string(),
+                basic.password().to_string(),
+            )),
+            None => match Bearer::decode(s) {
+                Some(bearer) => Some(AuthData::Bearer(bearer.token().to_string())),
+                None => None,
+            },
+        })
 }
 
 /// Retrieve an API key from a header
