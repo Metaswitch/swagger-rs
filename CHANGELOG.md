@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - *BREAKING* - Remove dependency and re-export of `hyper-old-types` which is no longer maintained.
-  - This changes the inner types of the `AuthData` enum and thus the various methods on it.
+  - This changes the inner types of the `AuthData` enum and thus the various methods on it to avoid re-exports.
       - The `hyper_old_types` are no longer re-exported, and the enums just wrap `String`s.
-  - The `auth::make_headers` function now returns an `Option<Credentials>` from the `headers` crate.
+      - `AuthData::bearer()` now returns `Option`, returning `None` if the provided token is not valid base64.
+  - The `auth::make_headers` function now returns an `Option<AuthData>`.
 
 ### Added
 
