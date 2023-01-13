@@ -16,7 +16,7 @@ repository = "Metaswitch/swagger-rs"
 [features]
 default = ["serdejson"]
 multipart_form = ["mime"]
-multipart_related = ["mime_multipart", "hyper_0_10", "mime_0_2"]
+multipart_related = ["hyper_0_10", "mime_0_2", "httparse", "tempdir", "log", "encoding", "buf-read-ext"]
 serdejson = ["serde", "serde_json"]
 server = ["hyper/server"]
 http1 = ["hyper/http1"]
@@ -49,8 +49,12 @@ mime = { version = "0.3", optional = true }
 
 # multipart/related
 hyper_0_10 = {package = "hyper", version = "0.10", default-features = false, optional=true}
-mime_multipart = {version = "0.6", optional = true}
 mime_0_2 = { package = "mime", version = "0.2.6", optional = true }
+httparse = { version = "1.3", optional = true }
+tempdir = { version = "0.3", optional = true }
+log = { version = "0.4", optional = true }
+encoding = { version = "0.2", optional = true }
+buf-read-ext = { version = "0.4", optional = true }
 
 # UDS (Unix Domain Sockets)
 tokio = { version = "1.0", default-features = false, optional = true }
