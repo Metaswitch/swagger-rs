@@ -1,11 +1,17 @@
 // These functions are only used if the API uses Nullable properties, so allow them to be
 // dead code.
 #[cfg(feature = "serdejson")]
+use paste;
+#[cfg(feature = "serdejson")]
+use regex::Regex;
+#[cfg(feature = "serdejson")]
 use serde::de::Error as SerdeError;
 #[cfg(feature = "serdejson")]
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 #[cfg(feature = "serdejson")]
 use serde::ser::{Serialize, Serializer};
+#[cfg(feature = "serdejson")]
+use serde_valid::{validation, Validate};
 use std::clone::Clone;
 
 use std::mem;
@@ -614,6 +620,77 @@ where
     }
 }
 
+// Implement various traits to allow nullable to validate anything with serde_valid.
+#[cfg(feature = "serdejson")]
+impl<T> Validate for Nullable<T>
+where
+    T: Validate,
+{
+    fn validate(&self) -> Result<(), validation::Errors> {
+        match self {
+            Nullable::Present(val) => val.validate(),
+            Nullable::Null => Ok(()),
+        }
+    }
+}
+macro_rules! impl_generic_composited_validation_nullable {
+    (
+        $ErrorType:ident,
+        $limit_type:ty$(,)*
+    ) => {
+        paste::paste! {
+            #[cfg(feature = "serdejson")]
+            impl<T> validation::[<ValidateComposited $ErrorType >] for Nullable<T>
+            where
+                T: validation::[<ValidateComposited $ErrorType >],
+            {
+                fn [< validate_composited_ $ErrorType:snake>](
+                    &self,
+                    limit: $limit_type,
+                ) -> Result<(), validation::Composited<serde_valid::[<$ErrorType Error>]>> {
+                    match self {
+                        Nullable::Present(val) => val.[< validate_composited_ $ErrorType:snake>](limit),
+                        Nullable::Null => Ok(()),
+                    }
+                }
+            }
+        }
+    };
+    (
+        $ErrorType:ident<T>
+    ) => {
+        paste::paste! {
+            #[cfg(feature = "serdejson")]
+            impl<T, U> validation::[<ValidateComposited $ErrorType >]<T> for Nullable<U>
+            where
+                T: Copy,
+                U: validation::[<ValidateComposited $ErrorType >]<T>,
+            {
+                fn [< validate_composited_ $ErrorType:snake>](
+                    &self,
+                    limit: T,
+                ) -> Result<(), validation::Composited<serde_valid::[<$ErrorType Error>]>> {
+                    match self {
+                        Nullable::Present(val) => val.[< validate_composited_ $ErrorType:snake>](limit),
+                        Nullable::Null => Ok(()),
+                    }
+                }
+            }
+        }
+    };
+}
+impl_generic_composited_validation_nullable!(Maximum<T>);
+impl_generic_composited_validation_nullable!(Minimum<T>);
+impl_generic_composited_validation_nullable!(ExclusiveMaximum<T>);
+impl_generic_composited_validation_nullable!(ExclusiveMinimum<T>);
+impl_generic_composited_validation_nullable!(MultipleOf<T>);
+impl_generic_composited_validation_nullable!(MaxLength, usize);
+impl_generic_composited_validation_nullable!(MinLength, usize);
+impl_generic_composited_validation_nullable!(Pattern, &Regex);
+impl_generic_composited_validation_nullable!(MaxProperties, usize);
+impl_generic_composited_validation_nullable!(MinProperties, usize);
+impl_generic_composited_validation_nullable!(Enumerate<T>);
+
 /// Serde helper function to create a default `Option<Nullable<T>>` while
 /// deserializing
 pub fn default_optional_nullable<T>() -> Option<Nullable<T>> {
@@ -640,6 +717,7 @@ where
 mod serde_tests {
     use super::*;
     use serde::{Deserialize, Serialize};
+    use serde_json::json;
 
     // Set up:
     #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -663,6 +741,24 @@ mod serde_tests {
     #[derive(Clone, Debug, Deserialize, Serialize)]
     struct OptionalNullableObjectStruct {
         item: Option<Nullable<NullableStringStruct>>,
+    }
+
+    #[derive(Validate)]
+    struct ValidatedNullableItemsStruct {
+        // Number validations
+        #[validate(enumerate(5, 10, 15))]
+        #[validate(minimum = 5)]
+        #[validate(maximum = 15)]
+        #[validate(exclusive_minimum = 4)]
+        #[validate(exclusive_maximum = 16)]
+        #[validate(multiple_of = 5)]
+        number: Nullable<i32>,
+
+        // String validations
+        #[validate(pattern = "d")]
+        #[validate(max_length = 5)]
+        #[validate(min_length = 5)]
+        string: Nullable<String>,
     }
 
     // Helper:
@@ -741,5 +837,80 @@ mod serde_tests {
     fn object_nullable_value() {
         let string = "{\"item\":{\"item\":\"abc\"}}";
         round_trip!(NullableObjectStruct, string);
+    }
+
+    #[test]
+    fn validate_nullable_items() {
+        let valid = ValidatedNullableItemsStruct {
+            string: Nullable::Present("ddddd".to_string()),
+            number: Nullable::Present(5),
+        };
+        assert!(valid.validate().is_ok());
+
+        let valid_null = ValidatedNullableItemsStruct {
+            string: Nullable::Null,
+            number: Nullable::Null,
+        };
+        assert!(valid_null.validate().is_ok());
+
+        let invalid_low = ValidatedNullableItemsStruct {
+            string: Nullable::Present("f".to_string()),
+            number: Nullable::Present(3),
+        };
+        let errors_low = invalid_low.validate().unwrap_err().to_string();
+        assert_eq!(
+            errors_low,
+            json!({
+                "errors":[
+
+                ],
+                "properties":{
+                    "string":{
+                        "errors":[
+                            "The value must match the pattern of \"d\".",
+                            "The length of the value must be `>= 5`."
+                        ]
+                    },
+                    "number":{
+                        "errors":[
+                            "The value must be in [5, 10, 15].",
+                            "The number must be `>= 5`.",
+                            "The number must be `> 4`.",
+                            "The value must be multiple of `5`."
+                        ]
+                    }
+                }
+            })
+            .to_string()
+        );
+
+        let invalid_high = ValidatedNullableItemsStruct {
+            string: Nullable::Present("ddddddddd".to_string()),
+            number: Nullable::Present(25),
+        };
+        let errors_high = invalid_high.validate().unwrap_err().to_string();
+        assert_eq!(
+            errors_high,
+            json!({
+                "errors":[
+
+                ],
+                "properties":{
+                    "string":{
+                        "errors":[
+                            "The length of the value must be `<= 5`."
+                        ]
+                    },
+                    "number":{
+                        "errors":[
+                            "The value must be in [5, 10, 15].",
+                            "The number must be `<= 15`.",
+                            "The number must be `< 16`.",
+                        ]
+                    }
+                }
+            })
+            .to_string()
+        );
     }
 }

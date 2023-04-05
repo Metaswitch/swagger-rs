@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 ### Added
+- Added impls to make ByteArray and Nullable work with serde_valid
 
 ### Fixed
 
