@@ -1,8 +1,8 @@
 // These functions are only used if the API uses Nullable properties, so allow them to be
 // dead code.
-#[cfg(feature = "serdejson")]
+#[cfg(feature = "serdevalid")]
 use paste;
-#[cfg(feature = "serdejson")]
+#[cfg(feature = "serdevalid")]
 use regex::Regex;
 #[cfg(feature = "serdejson")]
 use serde::de::Error as SerdeError;
@@ -10,7 +10,7 @@ use serde::de::Error as SerdeError;
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 #[cfg(feature = "serdejson")]
 use serde::ser::{Serialize, Serializer};
-#[cfg(feature = "serdejson")]
+#[cfg(feature = "serdevalid")]
 use serde_valid::{validation, Validate};
 use std::clone::Clone;
 
@@ -621,7 +621,7 @@ where
 }
 
 // Implement various traits to allow nullable to validate anything with serde_valid.
-#[cfg(feature = "serdejson")]
+#[cfg(feature = "serdevalid")]
 impl<T> Validate for Nullable<T>
 where
     T: Validate,
@@ -633,13 +633,14 @@ where
         }
     }
 }
+#[cfg(feature = "serdevalid")]
 macro_rules! impl_generic_composited_validation_nullable {
     (
         $ErrorType:ident,
         $limit_type:ty$(,)*
     ) => {
         paste::paste! {
-            #[cfg(feature = "serdejson")]
+            #[cfg(feature = "serdevalid")]
             impl<T> validation::[<ValidateComposited $ErrorType >] for Nullable<T>
             where
                 T: validation::[<ValidateComposited $ErrorType >],
@@ -660,7 +661,7 @@ macro_rules! impl_generic_composited_validation_nullable {
         $ErrorType:ident<T>
     ) => {
         paste::paste! {
-            #[cfg(feature = "serdejson")]
+            #[cfg(feature = "serdevalid")]
             impl<T, U> validation::[<ValidateComposited $ErrorType >]<T> for Nullable<U>
             where
                 T: Copy,
@@ -679,16 +680,27 @@ macro_rules! impl_generic_composited_validation_nullable {
         }
     };
 }
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(Maximum<T>);
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(Minimum<T>);
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(ExclusiveMaximum<T>);
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(ExclusiveMinimum<T>);
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(MultipleOf<T>);
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(MaxLength, usize);
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(MinLength, usize);
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(Pattern, &Regex);
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(MaxProperties, usize);
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(MinProperties, usize);
+#[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(Enumerate<T>);
 
 /// Serde helper function to create a default `Option<Nullable<T>>` while
@@ -717,7 +729,6 @@ where
 mod serde_tests {
     use super::*;
     use serde::{Deserialize, Serialize};
-    use serde_json::json;
 
     // Set up:
     #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -743,6 +754,7 @@ mod serde_tests {
         item: Option<Nullable<NullableStringStruct>>,
     }
 
+    #[cfg(feature = "serdevalid")]
     #[derive(Validate)]
     struct ValidatedNullableItemsStruct {
         // Number validations
@@ -839,6 +851,7 @@ mod serde_tests {
         round_trip!(NullableObjectStruct, string);
     }
 
+    #[cfg(feature = "serdevalid")]
     #[test]
     fn validate_nullable_items() {
         let valid = ValidatedNullableItemsStruct {
@@ -860,7 +873,7 @@ mod serde_tests {
         let errors_low = invalid_low.validate().unwrap_err().to_string();
         assert_eq!(
             errors_low,
-            json!({
+            serde_json::json!({
                 "errors":[
 
                 ],
@@ -891,7 +904,7 @@ mod serde_tests {
         let errors_high = invalid_high.validate().unwrap_err().to_string();
         assert_eq!(
             errors_high,
-            json!({
+            serde_json::json!({
                 "errors":[
 
                 ],

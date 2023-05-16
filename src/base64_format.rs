@@ -1,14 +1,14 @@
 #[cfg(feature = "serdejson")]
 use base64::{decode, encode, DecodeError};
-#[cfg(feature = "serdejson")]
+#[cfg(feature = "serdevalid")]
 use paste;
-#[cfg(feature = "serdejson")]
+#[cfg(feature = "serdevalid")]
 use regex::Regex;
 #[cfg(feature = "serdejson")]
 use serde::de::{Deserialize, Deserializer, Error};
 #[cfg(feature = "serdejson")]
 use serde::ser::{Serialize, Serializer};
-#[cfg(feature = "serdejson")]
+#[cfg(feature = "serdevalid")]
 use serde_valid;
 use std::ops::{Deref, DerefMut};
 
@@ -41,6 +41,7 @@ impl<'de> Deserialize<'de> for ByteArray {
 }
 
 // Validation macro to create impls for serde_valid integration.
+#[cfg(feature = "serdevalid")]
 macro_rules! impl_validate_byte_array {
     (
         $ErrorType:ident,
@@ -49,7 +50,7 @@ macro_rules! impl_validate_byte_array {
 
     ) => {
         paste::paste! {
-            #[cfg(feature = "serdejson")]
+            #[cfg(feature = "serdevalid")]
             impl serde_valid::[<Validate $ErrorType >] for ByteArray {
                 fn [<validate_ $ErrorType:snake>](&self, limit: $limit_type) -> Result<(), serde_valid::[<$ErrorType Error>]> {
                     self.$DiveFn.[<validate_ $ErrorType:snake>](limit)
@@ -60,11 +61,14 @@ macro_rules! impl_validate_byte_array {
 }
 
 // Allow validation of encoded string.
+#[cfg(feature = "serdevalid")]
 impl_validate_byte_array!(Pattern, to_string(), &Regex);
+#[cfg(feature = "serdevalid")]
 impl_validate_byte_array!(MaxLength, to_string(), usize);
+#[cfg(feature = "serdevalid")]
 impl_validate_byte_array!(MinLength, to_string(), usize);
 
-#[cfg(feature = "serdejson")]
+#[cfg(feature = "serdevalid")]
 impl serde_valid::ValidateEnumerate<&'static str> for ByteArray {
     fn validate_enumerate(
         &self,
@@ -75,10 +79,12 @@ impl serde_valid::ValidateEnumerate<&'static str> for ByteArray {
 }
 
 // Also allow validation decoded internals.
+#[cfg(feature = "serdevalid")]
 impl_validate_byte_array!(MaxItems, 0, usize);
+#[cfg(feature = "serdevalid")]
 impl_validate_byte_array!(MinItems, 0, usize);
 
-#[cfg(feature = "serdejson")]
+#[cfg(feature = "serdevalid")]
 impl serde_valid::ValidateUniqueItems for ByteArray {
     fn validate_unique_items(&self) -> Result<(), serde_valid::UniqueItemsError> {
         self.0.validate_unique_items()
@@ -113,7 +119,7 @@ impl DerefMut for ByteArray {
 }
 
 #[cfg(test)]
-#[cfg(feature = "serdejson")]
+#[cfg(feature = "serdevalid")]
 mod serde_tests {
     use super::*;
     use serde_json::json;
