@@ -6,7 +6,7 @@ use hyper::header::{HeaderMap, CONTENT_TYPE};
 pub fn boundary(headers: &HeaderMap) -> Option<String> {
     headers.get(CONTENT_TYPE).and_then(|content_type| {
         match content_type.to_str() {
-            Ok(ref val) => val.parse::<mime::Mime>().ok(),
+            Ok(val) => val.parse::<mime::Mime>().ok(),
             _ => None,
         }
         .and_then(|ref mime| {
