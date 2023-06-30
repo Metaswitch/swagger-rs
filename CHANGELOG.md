@@ -8,9 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 ### Added
-- Added impls to make ByteArray and Nullable work with serde_valid
 
 ### Fixed
+
+## [6.3.0] - 2023-06-30
+### Added
+- Support validation via `serde_valid` for ByteArray and Nullable
+
+### Fixed
+- Fix clippy warnings for Rust 1.70
 
 ## [6.2.1] - 2022-07-13
 ### Fixed
@@ -195,7 +201,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.2.1...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.3.0...HEAD
+[6.3.0]: https://github.com/Metaswitch/swagger-rs/compare/6.2.1...6.3.0
 [6.2.1]: https://github.com/Metaswitch/swagger-rs/compare/6.2.0...6.2.1
 [6.2.0]: https://github.com/Metaswitch/swagger-rs/compare/6.1.1...6.2.0
 [6.1.1]: https://github.com/Metaswitch/swagger-rs/compare/6.1.0...6.1.1
