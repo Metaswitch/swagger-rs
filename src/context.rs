@@ -168,7 +168,7 @@ pub trait Push<T> {
 /// the empty context struct, and subsequent arguments are the types
 /// that can be stored in contexts built using these struct.
 ///
-/// A cons list built using the generated context type will implement Has<T> and Pop<T>
+/// A cons list built using the generated context type will implement `Has<T>` and `Pop<T>`
 /// for each type T that appears in the list, provided that the list only
 /// contains the types that were passed to the macro invocation after the context
 /// type name.

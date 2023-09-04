@@ -1,10 +1,43 @@
 //! Support crate for Swagger codegen.
+//!
+//! # Crate features
+//!
+//! Crate features exist to reduce the dependencies on the crate. Most features
+//! should be enabled by the generator when relevant.
+//!
+//! By default, the **serdejson** feature is enabled.
+//! 
+//! ## Format support
+//!
+//! - **multipart_form** - Enable support for `multipart/form-data` as described in RFC 7578
+//! - **multipart_related** - Enable support for `multipart/related` as described in RFC 2387
+//! - **serdejson** - Enable JSON serialization/deserialization support using serde.
+//!
+//! ## Feature support
+//!
+//! - **serdevalid** - Enable support for JSON schema based validation
+//! - **conversion** - Enable support for Frunk-based conversion - in particular,
+//!   [transmogrification](https://docs.rs/frunk/latest/frunk/#transmogrifying)
+//!
+//! ## Use case support
+//!
+//! - **client** - Enable support for providing an OpenAPI client
+//! - **server** - Enable support for providing an OpenAPI server
+//! - **http1** - Enable support for HTTP/1 based APIs - RFC 9112
+//! - **http2** - Enable support for HTTP/2 based APIs - RFC 9113
+//! - **tcp** - Enable support for HTTP over TCP
+//! - **tls** - Enable support for HTTP over TLS (HTTPS)
+//! - **uds** - Enable support for HTTP over UDS (Unix Domain Sockets)
+
 #![deny(
     missing_docs,
     missing_debug_implementations,
     unused_extern_crates,
     unused_qualifications
 )]
+// Enable doc_auto_cfg, but only on doc builds
+// See https://github.com/rust-lang/rust/issues/43781 for details
+#![cfg_attr(doc, feature(doc_auto_cfg))]
 
 use std::error;
 use std::fmt;
