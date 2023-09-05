@@ -2,13 +2,11 @@
 
 use crate::context::Push;
 use futures::future::FutureExt;
+use headers::authorization::{Basic, Bearer, Credentials};
+use headers::Authorization as Header;
 use hyper::header::AUTHORIZATION;
 use hyper::service::Service;
 use hyper::{HeaderMap, Request};
-pub use hyper_old_types::header::Authorization as Header;
-use hyper_old_types::header::Header as HeaderTrait;
-pub use hyper_old_types::header::{Basic, Bearer};
-use hyper_old_types::header::{Raw, Scheme};
 use std::collections::BTreeSet;
 use std::marker::PhantomData;
 use std::string::ToString;
@@ -53,10 +51,10 @@ pub struct Authorization {
 /// request authentication, and for authenticating outgoing client requests.
 #[derive(Clone, Debug, PartialEq)]
 pub enum AuthData {
-    /// HTTP Basic auth.
-    Basic(Basic),
-    /// HTTP Bearer auth, used for OAuth2.
-    Bearer(Bearer),
+    /// HTTP Basic auth - username and password.
+    Basic(String, String),
+    /// HTTP Bearer auth, used for OAuth2 - token.
+    Bearer(String),
     /// Header-based or query parameter-based API key auth.
     ApiKey(String),
 }
@@ -64,17 +62,14 @@ pub enum AuthData {
 impl AuthData {
     /// Set Basic authentication
     pub fn basic(username: &str, password: &str) -> Self {
-        AuthData::Basic(Basic {
-            username: username.to_owned(),
-            password: Some(password.to_owned()),
-        })
+        AuthData::Basic(username.to_owned(), password.to_owned())
     }
 
-    /// Set Bearer token authentication
-    pub fn bearer(token: &str) -> Self {
-        AuthData::Bearer(Bearer {
-            token: token.to_owned(),
-        })
+    /// Set Bearer token authentication.  Returns None if the token was invalid.
+    pub fn bearer(token: &str) -> Option<Self> {
+        Some(AuthData::Bearer(
+            Header::bearer(token).ok()?.token().to_owned(),
+        ))
     }
 
     /// Set ApiKey authentication
@@ -211,16 +206,19 @@ where
 }
 
 /// Retrieve an authorization scheme data from a set of headers
-pub fn from_headers<S: Scheme>(headers: &HeaderMap) -> Option<S>
-where
-    S: std::str::FromStr + 'static,
-    S::Err: 'static,
-{
+pub fn from_headers(headers: &HeaderMap) -> Option<AuthData> {
     headers
         .get(AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| Header::<S>::parse_header(&Raw::from(s)).ok())
-        .map(|a| a.0)
+        .and_then(|s| match Basic::decode(s) {
+            Some(basic) => Some(AuthData::Basic(
+                basic.username().to_string(),
+                basic.password().to_string(),
+            )),
+            None => match Bearer::decode(s) {
+                Some(bearer) => Some(AuthData::Bearer(bearer.token().to_string())),
+                None => None,
+            },
+        })
 }
 
 /// Retrieve an API key from a header
