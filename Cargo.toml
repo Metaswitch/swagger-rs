@@ -75,3 +75,4 @@ hyper = { version = "0.14", features = ["client", "http1", "tcp"] }
 [package.metadata.docs.rs]
 # Enable all features, pending https://github.com/rust-lang/rust/issues/43781 being resolved.
 all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

@@ -37,7 +37,7 @@
 )]
 // Enable doc_auto_cfg, but only on doc builds
 // See https://github.com/rust-lang/rust/issues/43781 for details
-#![cfg_attr(doc, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg, doc_cfg))]
 
 use std::error;
 use std::fmt;
