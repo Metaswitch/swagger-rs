@@ -6,7 +6,7 @@
 //! should be enabled by the generator when relevant.
 //!
 //! By default, the **serdejson** feature is enabled.
-//! 
+//!
 //! ## Format support
 //!
 //! - **multipart_form** - Enable support for `multipart/form-data` as described in RFC 7578

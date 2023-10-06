@@ -39,10 +39,10 @@ impl Builder {
     }
 
     /// Build a HTTP connector
-    #[cfg(feature = "tcp")]
-    pub fn build(self) -> hyper::client::connect::HttpConnector {
-        hyper::client::connect::HttpConnector::new()
-    }
+    // #[cfg(feature = "tcp")]
+    // pub fn build(self) -> hyper::client::connect::HttpConnector {
+    //     hyper::client::connect::HttpConnector::new()
+    // }
 }
 
 /// Builder for HTTPS connectors

@@ -3,7 +3,6 @@
 
 use hyper::Request;
 use std::marker::PhantomData;
-use std::task::Poll;
 
 use futures::future::FutureExt as _;
 
@@ -63,11 +62,7 @@ where
     type Error = Inner::Error;
     type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, target: Target) -> Self::Future {
+    fn call(&self, target: Target) -> Self::Future {
         Box::pin(
             self.inner
                 .call(target)
@@ -126,11 +121,7 @@ where
     type Error = Inner::Error;
     type Future = Inner::Future;
 
-    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, (req, _): (Request<Body>, Context)) -> Self::Future {
+    fn call(&self, (req, _): (Request<Body>, Context)) -> Self::Future {
         self.inner.call(req)
     }
 }
