@@ -20,7 +20,13 @@ multipart_related = ["mime_multipart", "hyper_0_10", "mime_0_2"]
 serdejson = ["serde", "serde_json"]
 serdevalid = ["serdejson", "serde_valid", "regex", "paste"]
 uds = ["tokio", "tokio/net"]
-conversion = ["frunk", "frunk_derives", "frunk_core", "frunk-enum-core", "frunk-enum-derive"]
+conversion = [
+    "frunk",
+    "frunk_derives",
+    "frunk_core",
+    "frunk-enum-core",
+    "frunk-enum-derive",
+]
 
 [dependencies]
 base64 = "0.13"
@@ -31,7 +37,10 @@ regex = { version = "1", optional = true }
 paste = { version = "1", optional = true }
 # import the new version of hyper 1 with all features enabled
 hyper = { version = "1", features = ["full"] }
-slog = { version = "2", features = [ "max_level_trace", "release_max_level_debug"] }
+slog = { version = "2", features = [
+    "max_level_trace",
+    "release_max_level_debug",
+] }
 uuid = { version = "0.8", features = ["serde", "v4"] }
 hyper-old-types = "0.11.0"
 futures = "0.3"
@@ -47,8 +56,8 @@ frunk-enum-core = { version = "0.2.1", optional = true }
 mime = { version = "0.3", optional = true }
 
 # multipart/related
-hyper_0_10 = {package = "hyper", version = "0.10", default-features = false, optional=true}
-mime_multipart = {version = "0.6", optional = true}
+hyper_0_10 = { package = "hyper", version = "0.10", default-features = false, optional = true }
+mime_multipart = { version = "0.6", optional = true }
 mime_0_2 = { package = "mime", version = "0.2.6", optional = true }
 
 # UDS (Unix Domain Sockets)
@@ -58,7 +67,7 @@ hyper-util = { version = "0.1.3", features = ["full"] }
 
 
 [dev-dependencies]
-tokio = {version = "1.0", features = ["macros", "rt"]}
+tokio = { version = "1.0", features = ["macros", "rt"] }
 bytes = "1.0"
 
 [package.metadata.docs.rs]
