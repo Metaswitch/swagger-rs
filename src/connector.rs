@@ -28,21 +28,20 @@ pub struct Builder {}
 
 impl Builder {
     /// Use HTTPS instead of HTTP
-    #[cfg(feature = "tls")]
-    pub fn https(self) -> HttpsBuilder {
-        HttpsBuilder {
-            #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-            server_cert: None,
-            #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-            client_cert: None,
-        }
-    }
+    // #[cfg(feature = "tls")]
+    // pub fn https(self) -> HttpsBuilder {
+    //     HttpsBuilder {
+    //         #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+    //         server_cert: None,
+    //         #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+    //         client_cert: None,
+    //     }
+    // }
 
     /// Build a HTTP connector
-    // #[cfg(feature = "tcp")]
-    // pub fn build(self) -> hyper::client::connect::HttpConnector {
-    //     hyper::client::connect::HttpConnector::new()
-    // }
+    pub fn build(self) -> hyper_util::client::legacy::connect::HttpConnector {
+        hyper_util::client::legacy::connect::HttpConnector::new()
+    }
 }
 
 /// Builder for HTTPS connectors
