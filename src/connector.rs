@@ -28,17 +28,18 @@ pub struct Builder {}
 
 impl Builder {
     /// Use HTTPS instead of HTTP
-    // #[cfg(feature = "tls")]
-    // pub fn https(self) -> HttpsBuilder {
-    //     HttpsBuilder {
-    //         #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-    //         server_cert: None,
-    //         #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
-    //         client_cert: None,
-    //     }
-    // }
+    #[cfg(feature = "tls")]
+    pub fn https(self) -> HttpsBuilder {
+        HttpsBuilder {
+            #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+            server_cert: None,
+            #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "ios")))]
+            client_cert: None,
+        }
+    }
 
     /// Build a HTTP connector
+    #[cfg(feature = "tcp")]
     pub fn build(self) -> hyper_util::client::legacy::connect::HttpConnector {
         hyper_util::client::legacy::connect::HttpConnector::new()
     }
@@ -95,7 +96,7 @@ impl HttpsBuilder {
     pub fn build(
         self,
     ) -> Result<
-        hyper_openssl::HttpsConnector<hyper::client::HttpConnector>,
+        hyper_openssl::client::legacy::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
         openssl::error::ErrorStack,
     > {
         // SSL implementation
@@ -113,9 +114,9 @@ impl HttpsBuilder {
             ssl.check_private_key()?;
         }
 
-        let mut connector = hyper::client::HttpConnector::new();
+        let mut connector =hyper_util::client::legacy::connect::HttpConnector::new();
         connector.enforce_http(false);
-        hyper_openssl::HttpsConnector::<hyper::client::HttpConnector>::with_connector(
+        hyper_openssl::client::legacy::HttpsConnector::<hyper_util::client::legacy::connect::HttpConnector>::with_connector(
             connector, ssl,
         )
     }
@@ -124,9 +125,9 @@ impl HttpsBuilder {
     /// Build the HTTPS connector. Will fail if the SSL connector can't be created.
     pub fn build(
         self,
-    ) -> Result<hyper_tls::HttpsConnector<hyper::client::HttpConnector>, native_tls::Error> {
+    ) -> Result<hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>, native_tls::Error> {
         let tls = native_tls::TlsConnector::new()?.into();
-        let mut connector = hyper::client::HttpConnector::new();
+        let mut connector = hyper_util::client::legacy::connect::HttpConnector::new();
         connector.enforce_http(false);
         let mut connector = hyper_tls::HttpsConnector::from((connector, tls));
         connector.https_only(true);
