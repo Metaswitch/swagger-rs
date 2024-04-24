@@ -265,7 +265,7 @@ mod tests {
                 });
 
                 if *auth == expected {
-                    Ok(Response::new(Full::new(Bytes::from(""))))
+                    Ok(Response::new(Full::default()))
                 } else {
                     Err(format!("{:?} != {:?}", auth, expected))
                 }
@@ -285,7 +285,7 @@ mod tests {
         let response = service
             .call((
                 Request::get("http://localhost")
-                    .body(Full::new(Bytes::from("")))
+                    .body(Full::default())
                     .unwrap(),
                 EmptyContext::default(),
             ))
