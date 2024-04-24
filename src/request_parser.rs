@@ -86,13 +86,13 @@ mod context_tests {
     #[test]
     fn test_macros() {
         let uri = Uri::from_str(&"https://www.rust-lang.org/test/t11").unwrap();
-        let req1 = Request::get(uri).body(Full::new(Bytes::from(""))).unwrap();
+        let req1 = Request::get(uri).body(Full::default()).unwrap();
 
         let uri = Uri::from_str(&"https://www.rust-lang.org/test/t22").unwrap();
-        let req2 = Request::get(uri).body(Full::new(Bytes::from(""))).unwrap();
+        let req2 = Request::get(uri).body(Full::default()).unwrap();
 
         let uri = Uri::from_str(&"https://www.rust-lang.org/test/t33").unwrap();
-        let req3 = Request::get(uri).body(Full::new(Bytes::from(""))).unwrap();
+        let req3 = Request::get(uri).body(Full::default()).unwrap();
 
         request_parser_joiner!(JoinedReqParser, TestParser1, TestParser2);
 
