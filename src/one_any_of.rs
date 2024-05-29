@@ -6,6 +6,8 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     __private::de::{Content, ContentRefDeserializer},
 };
+#[cfg(feature = "serdevalid")]
+use serde_valid::Validate;
 use std::str::FromStr;
 use std::string::ToString;
 
@@ -19,6 +21,7 @@ macro_rules! common_one_any_of {
     ) => {
         #[doc = concat!("`", stringify!($t), "` type.\n\nThis allows modelling of ", stringify!($schema), " JSON schemas.")]
         #[cfg_attr(feature = "conversion", derive(LabelledGenericEnum))]
+        #[cfg_attr(feature = "serdevalid", derive(Validate))]
         #[derive(Debug, PartialEq, Clone)]
         pub enum $t<$($i),*> where
             $($i: PartialEq,)*
