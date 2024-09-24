@@ -3,7 +3,6 @@
 
 use hyper::Request;
 use std::marker::PhantomData;
-use std::task::Poll;
 
 use futures::future::FutureExt as _;
 
@@ -63,11 +62,7 @@ where
     type Error = Inner::Error;
     type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, target: Target) -> Self::Future {
+    fn call(&self, target: Target) -> Self::Future {
         Box::pin(
             self.inner
                 .call(target)
@@ -83,13 +78,17 @@ where
 ///
 /// ## Client Usage
 ///
-/// ```edition2018
+/// ```
 /// # use swagger::DropContextService;
 /// # use hyper::service::Service as _;
-///
-/// let client = hyper::Client::new();
-/// let mut client = DropContextService::new(client);
-/// let request = (hyper::Request::get("http://www.google.com").body(hyper::Body::empty()).unwrap());
+/// # use hyper_util::client::legacy::Client;
+/// # use hyper_util::rt::TokioExecutor;
+/// # use hyper_util::service::TowerToHyperService;
+/// # use http_body_util::Empty;
+/// # use hyper::body::Bytes;
+/// let client = Client::builder(TokioExecutor::new()).build_http();
+/// let client = DropContextService::new(TowerToHyperService::new(client));
+/// let request = (hyper::Request::get("http://www.google.com").body(Empty::<Bytes>::new()).unwrap());
 /// let context = "Some Context".to_string();
 ///
 /// let response = client.call((request, context));
@@ -126,11 +125,7 @@ where
     type Error = Inner::Error;
     type Future = Inner::Future;
 
-    fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, (req, _): (Request<Body>, Context)) -> Self::Future {
+    fn call(&self, (req, _): (Request<Body>, Context)) -> Self::Future {
         self.inner.call(req)
     }
 }

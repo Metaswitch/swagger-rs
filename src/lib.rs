@@ -21,12 +21,7 @@
 //!
 //! ## Use case support
 //!
-//! - **client** - Enable support for providing an OpenAPI client
 //! - **server** - Enable support for providing an OpenAPI server
-//! - **http1** - Enable support for HTTP/1 based APIs - RFC 9112
-//! - **http2** - Enable support for HTTP/2 based APIs - RFC 9113
-//! - **tcp** - Enable support for HTTP over TCP
-//! - **tls** - Enable support for HTTP over TLS (HTTPS)
 //! - **uds** - Enable support for HTTP over UDS (Unix Domain Sockets)
 
 #![deny(

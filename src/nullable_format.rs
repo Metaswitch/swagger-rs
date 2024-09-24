@@ -150,7 +150,7 @@ impl<T> Nullable<T> {
     /// assert_eq!(x.expect("the world is ending"), "value");
     /// ```
     ///
-    /// ```{.should_panic}
+    /// ```should_panic
     /// # use ::swagger::Nullable;
     ///
     /// let x: Nullable<&str> = Nullable::Null;
@@ -185,7 +185,7 @@ impl<T> Nullable<T> {
     /// assert_eq!(x.unwrap(), "air");
     /// ```
     ///
-    /// ```{.should_panic}
+    /// ```should_panic
     /// # use ::swagger::Nullable;
     ///
     /// let x: Nullable<&str> = Nullable::Null;
@@ -758,7 +758,7 @@ mod serde_tests {
     #[derive(Validate)]
     struct ValidatedNullableItemsStruct {
         // Number validations
-        #[validate(enumerate(5, 10, 15))]
+        #[validate(enumerate = [5, 10, 15])]
         #[validate(minimum = 5)]
         #[validate(maximum = 15)]
         #[validate(exclusive_minimum = 4)]

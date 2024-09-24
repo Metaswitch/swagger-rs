@@ -10,8 +10,6 @@ use hyper::{HeaderMap, Request};
 use std::collections::BTreeSet;
 use std::marker::PhantomData;
 use std::string::ToString;
-use std::task::Context;
-use std::task::Poll;
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -122,11 +120,7 @@ where
     type Response = AllowAllAuthenticator<Inner::Response, RC>;
     type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, target: Target) -> Self::Future {
+    fn call(&self, target: Target) -> Self::Future {
         let subject = self.subject.clone();
         Box::pin(
             self.inner
@@ -189,11 +183,7 @@ where
     type Error = T::Error;
     type Future = T::Future;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, req: (Request<B>, RC)) -> Self::Future {
+    fn call(&self, req: (Request<B>, RC)) -> Self::Future {
         let (request, context) = req;
         let context = context.push(Some(Authorization {
             subject: self.subject.clone(),
@@ -214,10 +204,7 @@ pub fn from_headers(headers: &HeaderMap) -> Option<AuthData> {
                 basic.username().to_string(),
                 basic.password().to_string(),
             )),
-            None => match Bearer::decode(s) {
-                Some(bearer) => Some(AuthData::Bearer(bearer.token().to_string())),
-                None => None,
-            },
+            None => Bearer::decode(s).map(|bearer| AuthData::Bearer(bearer.token().to_string())),
         })
 }
 
@@ -234,13 +221,15 @@ mod tests {
     use super::*;
     use crate::context::{ContextBuilder, Has};
     use crate::EmptyContext;
+    use http_body_util::Full;
+    use hyper::body::Bytes;
     use hyper::service::Service;
-    use hyper::{Body, Response};
+    use hyper::Response;
 
     struct MakeTestService;
 
     type ReqWithAuth = (
-        Request<Body>,
+        Request<Full<Bytes>>,
         ContextBuilder<Option<Authorization>, EmptyContext>,
     );
 
@@ -249,11 +238,7 @@ mod tests {
         type Error = ();
         type Future = futures::future::Ready<Result<Self::Response, Self::Error>>;
 
-        fn poll_ready(&mut self, _cx: &mut Context) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-
-        fn call(&mut self, _target: Target) -> Self::Future {
+        fn call(&self, _target: Target) -> Self::Future {
             futures::future::ok(TestService)
         }
     }
@@ -261,15 +246,11 @@ mod tests {
     struct TestService;
 
     impl Service<ReqWithAuth> for TestService {
-        type Response = Response<Body>;
+        type Response = Response<Full<Bytes>>;
         type Error = String;
         type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-        fn poll_ready(&mut self, _cx: &mut Context) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-
-        fn call(&mut self, req: ReqWithAuth) -> Self::Future {
+        fn call(&self, req: ReqWithAuth) -> Self::Future {
             Box::pin(async move {
                 let auth: &Option<Authorization> = req.1.get();
                 let expected = Some(Authorization {
@@ -279,7 +260,7 @@ mod tests {
                 });
 
                 if *auth == expected {
-                    Ok(Response::new(Body::empty()))
+                    Ok(Response::new(Full::default()))
                 } else {
                     Err(format!("{:?} != {:?}", auth, expected))
                 }
@@ -291,17 +272,17 @@ mod tests {
     async fn test_make_service() {
         let make_svc = MakeTestService;
 
-        let mut a: MakeAllowAllAuthenticator<_, EmptyContext> =
+        let a: MakeAllowAllAuthenticator<_, EmptyContext> =
             MakeAllowAllAuthenticator::new(make_svc, "foo");
 
-        let mut service = a.call(&()).await.unwrap();
+        let service = a.call(&()).await.unwrap();
 
         let response = service
             .call((
                 Request::get("http://localhost")
-                    .body(Body::empty())
+                    .body(Full::default())
                     .unwrap(),
-                EmptyContext::default(),
+                EmptyContext,
             ))
             .await;
 
