@@ -40,6 +40,12 @@ impl<'a> HasRemoteAddr for &'a Option<SocketAddr> {
     }
 }
 
+impl HasRemoteAddr for Option<SocketAddr> {
+    fn remote_addr(&self) -> Option<SocketAddr> {
+        *self
+    }
+}
+
 #[cfg(feature = "uds")]
 impl<'a> HasRemoteAddr for &'a tokio::net::UnixStream {
     fn remote_addr(&self) -> Option<SocketAddr> {
