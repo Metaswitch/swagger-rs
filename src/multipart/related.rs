@@ -32,7 +32,7 @@ pub fn create_multipart_headers(content_type: Option<&HeaderValue>) -> Result<He
     let mut multipart_headers = HeaderMap::new();
     multipart_headers.append(
         CONTENT_TYPE,
-        HeaderValue::from_str(&content_type.to_string())
+        HeaderValue::from_str(content_type.as_ref())
             .map_err(|_e| "Couldn't parse Content-Type header value".to_string())?,
     );
 
@@ -42,7 +42,7 @@ pub fn create_multipart_headers(content_type: Option<&HeaderValue>) -> Result<He
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hyper_10::header::{ContentType, Headers};
+    use hyper_10::header::Headers;
     use mime_multipart::Node;
 
     // Test that we can parse the body using read_multipart_body

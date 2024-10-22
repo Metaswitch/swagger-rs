@@ -197,15 +197,25 @@ where
 
 /// Retrieve an authorization scheme data from a set of headers
 pub fn from_headers(headers: &HeaderMap) -> Option<AuthData> {
-    headers
-        .get(AUTHORIZATION)
-        .and_then(|s| match Basic::decode(s) {
-            Some(basic) => Some(AuthData::Basic(
-                basic.username().to_string(),
-                basic.password().to_string(),
-            )),
-            None => Bearer::decode(s).map(|bearer| AuthData::Bearer(bearer.token().to_string())),
-        })
+    headers.get(AUTHORIZATION).and_then(|value| {
+        if let Ok(value_str) = value.to_str() {
+            // Auth schemes in HTTP are case insensitive so we match on lowercase.
+            // Ideally we would use decode without checking for a hardcoded string.
+            // Unfortunately `decode` has a debug_assert that verifies the header starts with the scheme.
+            // We therefore can only call `decode` if we have a header with a matching scheme.
+            if value_str.to_lowercase().starts_with("basic ") {
+                Basic::decode(value).map(|basic| {
+                    AuthData::Basic(basic.username().to_string(), basic.password().to_string())
+                })
+            } else if value_str.to_lowercase().starts_with("bearer ") {
+                Bearer::decode(value).map(|bearer| AuthData::Bearer(bearer.token().to_string()))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    })
 }
 
 /// Retrieve an API key from a header
@@ -287,5 +297,31 @@ mod tests {
             .await;
 
         response.unwrap();
+    }
+
+    #[test]
+    fn test_from_headers_basic() {
+        let mut headers = HeaderMap::new();
+        headers.append(
+            AUTHORIZATION,
+            headers::HeaderValue::from_static("Basic Zm9vOmJhcg=="),
+        );
+        assert_eq!(
+            from_headers(&headers),
+            Some(AuthData::Basic("foo".to_string(), "bar".to_string()))
+        )
+    }
+
+    #[test]
+    fn test_from_headers_bearer() {
+        let mut headers = HeaderMap::new();
+        headers.append(
+            AUTHORIZATION,
+            headers::HeaderValue::from_static("Bearer foo"),
+        );
+        assert_eq!(
+            from_headers(&headers),
+            Some(AuthData::Bearer("foo".to_string()))
+        )
     }
 }
