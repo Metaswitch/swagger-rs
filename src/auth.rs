@@ -10,6 +10,7 @@ use hyper::{HeaderMap, Request};
 use std::collections::BTreeSet;
 use std::marker::PhantomData;
 use std::string::ToString;
+use zeroize::ZeroizeOnDrop;
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -47,7 +48,8 @@ pub struct Authorization {
 
 /// Storage of raw authentication data, used both for storing incoming
 /// request authentication, and for authenticating outgoing client requests.
-#[derive(Clone, Debug, PartialEq)]
+// Derive Zeroize for AuthData to prevent any sensitive data from being left in memory.
+#[derive(Clone, Debug, PartialEq, ZeroizeOnDrop)]
 pub enum AuthData {
     /// HTTP Basic auth - username and password.
     Basic(String, String),
