@@ -71,7 +71,8 @@ where
     }
 }
 
-type FutureService<ReqBody, ResBody, Error, MakeError> = BoxFuture<
+/// Type alias for the future returned by a `MakeService`
+pub type FutureService<ReqBody, ResBody, Error, MakeError> = BoxFuture<
     'static,
     Result<Box<dyn CompositedService<ReqBody, ResBody, Error> + Send>, MakeError>,
 >;
@@ -159,10 +160,9 @@ where
     }
 }
 
-impl<ReqBody, ResBody, Error, MakeError, Connection> Service<Connection>
+impl<ReqBody, ResBody, Error, MakeError> Service<Option<SocketAddr>>
     for CompositeMakeService<Option<SocketAddr>, ReqBody, ResBody, Error, MakeError>
 where
-    Connection: HasRemoteAddr,
     ReqBody: 'static,
     ResBody: NotFound<ResBody> + 'static,
     MakeError: Send + 'static,
@@ -172,12 +172,11 @@ where
     type Response = CompositeService<ReqBody, ResBody, Error>;
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn call(&self, target: Connection) -> Self::Future {
+    fn call(&self, target: Option<SocketAddr>) -> Self::Future {
         let mut services = Vec::with_capacity(self.0.len());
-        let addr = target.remote_addr();
         for (path, service) in &self.0 {
             let path: &'static str = path;
-            services.push(service.call(addr).map_ok(move |s| (path, s)));
+            services.push(service.call(target).map_ok(move |s| (path, s)));
         }
         Box::pin(futures::future::join_all(services).map(|results| {
             let services: Result<Vec<_>, MakeError> = results.into_iter().collect();
