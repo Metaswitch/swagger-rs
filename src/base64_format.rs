@@ -1,5 +1,5 @@
 #[cfg(feature = "serdejson")]
-use base64::{decode, encode, DecodeError};
+use base64::{engine::general_purpose::STANDARD, DecodeError, Engine};
 #[cfg(feature = "serdevalid")]
 use paste;
 #[cfg(feature = "serdevalid")]
@@ -10,6 +10,7 @@ use serde::de::{Deserialize, Deserializer, Error};
 use serde::ser::{Serialize, Serializer};
 #[cfg(feature = "serdevalid")]
 use serde_valid;
+use std::fmt;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -22,7 +23,7 @@ impl Serialize for ByteArray {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&encode(&self.0))
+        serializer.serialize_str(&STANDARD.encode(&self.0))
     }
 }
 
@@ -33,7 +34,7 @@ impl<'de> Deserialize<'de> for ByteArray {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        match decode(s) {
+        match STANDARD.decode(s) {
             Ok(bin) => Ok(ByteArray(bin)),
             _ => Err(D::Error::custom("invalid base64")),
         }
@@ -95,13 +96,13 @@ impl std::str::FromStr for ByteArray {
     type Err = DecodeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(decode(s)?))
+        Ok(Self(STANDARD.decode(s)?))
     }
 }
 
-impl ToString for ByteArray {
-    fn to_string(&self) -> String {
-        encode(&self.0)
+impl fmt::Display for ByteArray {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", STANDARD.encode(&self.0))
     }
 }
 
@@ -129,7 +130,7 @@ mod serde_tests {
     #[derive(Validate)]
     struct ValidateByteArrayStruct {
         // Validate encoded as string
-        #[validate(enumerate("YWJjZGU="))]
+        #[validate(enumerate = ["YWJjZGU=" ])]
         #[validate(max_length = 8)]
         #[validate(min_length = 8)]
         #[validate(pattern = ".*=")]

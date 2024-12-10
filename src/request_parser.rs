@@ -53,13 +53,14 @@ pub trait RequestParser<B> {
 #[cfg(test)]
 mod context_tests {
     use super::*;
-    use hyper::{Body, Uri};
+    use http_body_util::Full;
+    use hyper::body::Bytes;
+    use hyper::Uri;
     use std::str::FromStr;
-
     struct TestParser1;
 
-    impl RequestParser<Body> for TestParser1 {
-        fn parse_operation_id(request: &Request<Body>) -> Option<&'static str> {
+    impl RequestParser<Full<Bytes>> for TestParser1 {
+        fn parse_operation_id(request: &Request<Full<Bytes>>) -> Option<&'static str> {
             match request.uri().path() {
                 "/test/t11" => Some("t11"),
                 "/test/t12" => Some("t12"),
@@ -70,8 +71,8 @@ mod context_tests {
 
     struct TestParser2;
 
-    impl RequestParser<Body> for TestParser2 {
-        fn parse_operation_id(request: &Request<Body>) -> Option<&'static str> {
+    impl RequestParser<Full<Bytes>> for TestParser2 {
+        fn parse_operation_id(request: &Request<Full<Bytes>>) -> Option<&'static str> {
             match request.uri().path() {
                 "/test/t21" => Some("t21"),
                 "/test/t22" => Some("t22"),
@@ -82,14 +83,14 @@ mod context_tests {
 
     #[test]
     fn test_macros() {
-        let uri = Uri::from_str(&"https://www.rust-lang.org/test/t11").unwrap();
-        let req1: Request<Body> = Request::get(uri).body(Body::empty()).unwrap();
+        let uri = Uri::from_str("https://www.rust-lang.org/test/t11").unwrap();
+        let req1: Request<Full<Bytes>> = Request::get(uri).body(Full::default()).unwrap();
 
-        let uri = Uri::from_str(&"https://www.rust-lang.org/test/t22").unwrap();
-        let req2: Request<Body> = Request::get(uri).body(Body::empty()).unwrap();
+        let uri = Uri::from_str("https://www.rust-lang.org/test/t22").unwrap();
+        let req2: Request<Full<Bytes>> = Request::get(uri).body(Full::default()).unwrap();
 
-        let uri = Uri::from_str(&"https://www.rust-lang.org/test/t33").unwrap();
-        let req3: Request<Body> = Request::get(uri).body(Body::empty()).unwrap();
+        let uri = Uri::from_str("https://www.rust-lang.org/test/t33").unwrap();
+        let req3: Request<Full<Bytes>> = Request::get(uri).body(Full::default()).unwrap();
 
         request_parser_joiner!(JoinedReqParser, TestParser1, TestParser2);
 

@@ -8,9 +8,6 @@
 
 use crate::auth::{AuthData, Authorization};
 use crate::XSpanIdString;
-use hyper::{service::Service, Request, Response};
-use std::future::Future;
-use std::pin::Pin;
 
 /// Defines methods for accessing, modifying, adding and removing the data stored
 /// in a context. Used to specify the requirements that a hyper service makes on
@@ -21,8 +18,9 @@ use std::pin::Pin;
 /// # use std::future::Future;
 /// # use std::marker::PhantomData;
 /// # use std::pin::Pin;
-/// # use std::task::{Context, Poll};
 /// # use swagger::context::*;
+/// # use hyper::body::Bytes;
+/// # use http_body_util::Empty;
 /// #
 /// # struct MyItem;
 /// # fn do_something_with_my_item(item: &MyItem) {}
@@ -31,21 +29,17 @@ use std::pin::Pin;
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<C> hyper::service::Service<(hyper::Request<hyper::Body>, C)> for MyService<C>
+/// impl<C, B> hyper::service::Service<(hyper::Request<B>, C)> for MyService<C>
 ///     where C: Has<MyItem> + Send + 'static
 /// {
-///     type Response = hyper::Response<hyper::Body>;
+///     type Response = hyper::Response<Empty<Bytes>>;
 ///     type Error = std::io::Error;
 ///     type Future = Pin<Box<dyn Future<Output=Result<Self::Response, Self::Error>>>>;
 ///
-///     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-///         Poll::Ready(Ok(()))
-///     }
-///
-///     fn call(&mut self, req : (hyper::Request<hyper::Body>, C)) -> Self::Future {
+///     fn call(&self, req : (hyper::Request<B>, C)) -> Self::Future {
 ///         let (_, context) = req;
 ///         do_something_with_my_item(Has::<MyItem>::get(&context));
-///         Box::pin(ok(hyper::Response::new(hyper::Body::empty())))
+///         Box::pin(ok(hyper::Response::new(Empty::<Bytes>::new())))
 ///     }
 /// }
 /// ```
@@ -64,7 +58,6 @@ pub trait Has<T> {
 ///
 /// ```rust
 /// # use futures::future::{Future, ok};
-/// # use std::task::{Context, Poll};
 /// # use std::marker::PhantomData;
 /// # use swagger::context::*;
 /// #
@@ -77,23 +70,19 @@ pub trait Has<T> {
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<T, C, D, E> hyper::service::Service<(hyper::Request<hyper::Body>, C)> for MiddlewareService<T, C>
+/// impl<T, C, D, E, B> hyper::service::Service<(hyper::Request<B>, C)> for MiddlewareService<T, C>
 ///     where
 ///         C: Pop<MyItem1, Result=D> + Send + 'static,
 ///         D: Pop<MyItem2, Result=E>,
 ///         E: Pop<MyItem3>,
 ///         E::Result: Send + 'static,
-///         T: hyper::service::Service<(hyper::Request<hyper::Body>, E::Result)>
+///         T: hyper::service::Service<(hyper::Request<B>, E::Result)>
 /// {
 ///     type Response = T::Response;
 ///     type Error = T::Error;
 ///     type Future = T::Future;
 ///
-///     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-///         self.inner.poll_ready(cx)
-///     }
-///
-///     fn call(&mut self, req : (hyper::Request<hyper::Body>, C)) -> Self::Future {
+///     fn call(&self, req : (hyper::Request<B>, C)) -> Self::Future {
 ///         let (request, context) = req;
 ///
 ///         // type annotations optional, included for illustrative purposes
@@ -129,23 +118,19 @@ pub trait Pop<T> {
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<T, C, D, E> hyper::service::Service<(hyper::Request<hyper::Body>, C)> for MiddlewareService<T, C>
+/// impl<T, C, D, E, B> hyper::service::Service<(hyper::Request<B>, C)> for MiddlewareService<T, C>
 ///     where
 ///         C: Push<MyItem1, Result=D> + Send + 'static,
 ///         D: Push<MyItem2, Result=E>,
 ///         E: Push<MyItem3>,
 ///         E::Result: Send + 'static,
-///         T: hyper::service::Service<(hyper::Request<hyper::Body>, E::Result)>
+///         T: hyper::service::Service<(hyper::Request<B>, E::Result)>
 /// {
 ///     type Response = T::Response;
 ///     type Error = T::Error;
 ///     type Future = T::Future;
 ///
-///     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-///         self.inner.poll_ready(cx)
-///     }
-///
-///     fn call(&mut self, req : (hyper::Request<hyper::Body>, C)) -> Self::Future {
+///     fn call(&self, req : (hyper::Request<B>, C)) -> Self::Future {
 ///         let (request, context) = req;
 ///         let context = context
 ///             .push(MyItem1{})
@@ -494,79 +479,6 @@ impl<T: Clone, C: Clone> Clone for ContextWrapper<T, C> {
     }
 }
 
-/// Trait designed to ensure consistency in context used by swagger middlewares
-///
-/// ```rust
-/// # use swagger::context::*;
-/// # use std::marker::PhantomData;
-/// # use std::task::{Context, Poll};
-/// # use swagger::auth::{AuthData, Authorization};
-/// # use swagger::XSpanIdString;
-///
-/// struct ExampleMiddleware<T, C> {
-///     inner: T,
-///     marker: PhantomData<C>,
-/// }
-///
-/// impl<T, C> hyper::service::Service<(hyper::Request<hyper::Body>, C)> for ExampleMiddleware<T, C>
-///     where
-///         T: SwaggerService<hyper::Body, hyper::Body, C>,
-///         C: Has<Option<AuthData>> +
-///            Has<Option<Authorization>> +
-///            Has<XSpanIdString> +
-///            Clone +
-///            Send +
-///            'static,
-/// {
-///     type Response = T::Response;
-///     type Error = T::Error;
-///     type Future = T::Future;
-///
-///     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-///         self.inner.poll_ready(cx)
-///     }
-///
-///     fn call(&mut self, req: (hyper::Request<hyper::Body>, C)) -> Self::Future {
-///         self.inner.call(req)
-///     }
-/// }
-/// ```
-pub trait SwaggerService<RequestBody, ResponseBody, Context>:
-    Clone
-    + Service<
-        (Request<RequestBody>, Context),
-        Response = Response<ResponseBody>,
-        Error = hyper::Error,
-        Future = Pin<Box<dyn Future<Output = Result<Response<ResponseBody>, hyper::Error>>>>,
-    >
-where
-    Context: Has<Option<AuthData>>
-        + Has<Option<Authorization>>
-        + Has<XSpanIdString>
-        + Clone
-        + 'static
-        + Send,
-{
-}
-
-impl<ReqB, ResB, Context, T> SwaggerService<ReqB, ResB, Context> for T
-where
-    T: Clone
-        + Service<
-            (Request<ReqB>, Context),
-            Response = Response<ResB>,
-            Error = hyper::Error,
-            Future = Pin<Box<dyn Future<Output = Result<Response<ResB>, hyper::Error>>>>,
-        >,
-    Context: Has<Option<AuthData>>
-        + Has<Option<Authorization>>
-        + Has<XSpanIdString>
-        + Clone
-        + 'static
-        + Send,
-{
-}
-
 #[cfg(test)]
 mod context_tests {
     use super::Has;
@@ -592,7 +504,7 @@ mod context_tests {
 
     #[test]
     fn send_request() {
-        let t = MyEmptyContext::default();
+        let t = MyEmptyContext;
 
         let t = t.push(ContextItem1 { val: 1 });
         let t = t.push(ContextItem2);

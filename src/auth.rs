@@ -2,18 +2,15 @@
 
 use crate::context::Push;
 use futures::future::FutureExt;
+use headers::authorization::{Basic, Bearer, Credentials};
+use headers::Authorization as Header;
 use hyper::header::AUTHORIZATION;
 use hyper::service::Service;
 use hyper::{HeaderMap, Request};
-pub use hyper_old_types::header::Authorization as Header;
-use hyper_old_types::header::Header as HeaderTrait;
-pub use hyper_old_types::header::{Basic, Bearer};
-use hyper_old_types::header::{Raw, Scheme};
 use std::collections::BTreeSet;
 use std::marker::PhantomData;
 use std::string::ToString;
-use std::task::Context;
-use std::task::Poll;
+use zeroize::ZeroizeOnDrop;
 
 /// Authorization scopes.
 #[derive(Clone, Debug, PartialEq)]
@@ -51,12 +48,13 @@ pub struct Authorization {
 
 /// Storage of raw authentication data, used both for storing incoming
 /// request authentication, and for authenticating outgoing client requests.
-#[derive(Clone, Debug, PartialEq)]
+// Derive Zeroize for AuthData to prevent any sensitive data from being left in memory.
+#[derive(Clone, Debug, PartialEq, ZeroizeOnDrop)]
 pub enum AuthData {
-    /// HTTP Basic auth.
-    Basic(Basic),
-    /// HTTP Bearer auth, used for OAuth2.
-    Bearer(Bearer),
+    /// HTTP Basic auth - username and password.
+    Basic(String, String),
+    /// HTTP Bearer auth, used for OAuth2 - token.
+    Bearer(String),
     /// Header-based or query parameter-based API key auth.
     ApiKey(String),
 }
@@ -64,17 +62,14 @@ pub enum AuthData {
 impl AuthData {
     /// Set Basic authentication
     pub fn basic(username: &str, password: &str) -> Self {
-        AuthData::Basic(Basic {
-            username: username.to_owned(),
-            password: Some(password.to_owned()),
-        })
+        AuthData::Basic(username.to_owned(), password.to_owned())
     }
 
-    /// Set Bearer token authentication
-    pub fn bearer(token: &str) -> Self {
-        AuthData::Bearer(Bearer {
-            token: token.to_owned(),
-        })
+    /// Set Bearer token authentication.  Returns None if the token was invalid.
+    pub fn bearer(token: &str) -> Option<Self> {
+        Some(AuthData::Bearer(
+            Header::bearer(token).ok()?.token().to_owned(),
+        ))
     }
 
     /// Set ApiKey authentication
@@ -127,11 +122,7 @@ where
     type Response = AllowAllAuthenticator<Inner::Response, RC>;
     type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, target: Target) -> Self::Future {
+    fn call(&self, target: Target) -> Self::Future {
         let subject = self.subject.clone();
         Box::pin(
             self.inner
@@ -194,11 +185,7 @@ where
     type Error = T::Error;
     type Future = T::Future;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, req: (Request<B>, RC)) -> Self::Future {
+    fn call(&self, req: (Request<B>, RC)) -> Self::Future {
         let (request, context) = req;
         let context = context.push(Some(Authorization {
             subject: self.subject.clone(),
@@ -211,16 +198,26 @@ where
 }
 
 /// Retrieve an authorization scheme data from a set of headers
-pub fn from_headers<S: Scheme>(headers: &HeaderMap) -> Option<S>
-where
-    S: std::str::FromStr + 'static,
-    S::Err: 'static,
-{
-    headers
-        .get(AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| Header::<S>::parse_header(&Raw::from(s)).ok())
-        .map(|a| a.0)
+pub fn from_headers(headers: &HeaderMap) -> Option<AuthData> {
+    headers.get(AUTHORIZATION).and_then(|value| {
+        if let Ok(value_str) = value.to_str() {
+            // Auth schemes in HTTP are case insensitive so we match on lowercase.
+            // Ideally we would use decode without checking for a hardcoded string.
+            // Unfortunately `decode` has a debug_assert that verifies the header starts with the scheme.
+            // We therefore can only call `decode` if we have a header with a matching scheme.
+            if value_str.to_lowercase().starts_with("basic ") {
+                Basic::decode(value).map(|basic| {
+                    AuthData::Basic(basic.username().to_string(), basic.password().to_string())
+                })
+            } else if value_str.to_lowercase().starts_with("bearer ") {
+                Bearer::decode(value).map(|bearer| AuthData::Bearer(bearer.token().to_string()))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    })
 }
 
 /// Retrieve an API key from a header
@@ -236,13 +233,15 @@ mod tests {
     use super::*;
     use crate::context::{ContextBuilder, Has};
     use crate::EmptyContext;
+    use http_body_util::Full;
+    use hyper::body::Bytes;
     use hyper::service::Service;
-    use hyper::{Body, Response};
+    use hyper::Response;
 
     struct MakeTestService;
 
     type ReqWithAuth = (
-        Request<Body>,
+        Request<Full<Bytes>>,
         ContextBuilder<Option<Authorization>, EmptyContext>,
     );
 
@@ -251,11 +250,7 @@ mod tests {
         type Error = ();
         type Future = futures::future::Ready<Result<Self::Response, Self::Error>>;
 
-        fn poll_ready(&mut self, _cx: &mut Context) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-
-        fn call(&mut self, _target: Target) -> Self::Future {
+        fn call(&self, _target: Target) -> Self::Future {
             futures::future::ok(TestService)
         }
     }
@@ -263,15 +258,11 @@ mod tests {
     struct TestService;
 
     impl Service<ReqWithAuth> for TestService {
-        type Response = Response<Body>;
+        type Response = Response<Full<Bytes>>;
         type Error = String;
         type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-        fn poll_ready(&mut self, _cx: &mut Context) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-
-        fn call(&mut self, req: ReqWithAuth) -> Self::Future {
+        fn call(&self, req: ReqWithAuth) -> Self::Future {
             Box::pin(async move {
                 let auth: &Option<Authorization> = req.1.get();
                 let expected = Some(Authorization {
@@ -281,7 +272,7 @@ mod tests {
                 });
 
                 if *auth == expected {
-                    Ok(Response::new(Body::empty()))
+                    Ok(Response::new(Full::default()))
                 } else {
                     Err(format!("{:?} != {:?}", auth, expected))
                 }
@@ -293,20 +284,46 @@ mod tests {
     async fn test_make_service() {
         let make_svc = MakeTestService;
 
-        let mut a: MakeAllowAllAuthenticator<_, EmptyContext> =
+        let a: MakeAllowAllAuthenticator<_, EmptyContext> =
             MakeAllowAllAuthenticator::new(make_svc, "foo");
 
-        let mut service = a.call(&()).await.unwrap();
+        let service = a.call(&()).await.unwrap();
 
         let response = service
             .call((
                 Request::get("http://localhost")
-                    .body(Body::empty())
+                    .body(Full::default())
                     .unwrap(),
-                EmptyContext::default(),
+                EmptyContext,
             ))
             .await;
 
         response.unwrap();
+    }
+
+    #[test]
+    fn test_from_headers_basic() {
+        let mut headers = HeaderMap::new();
+        headers.append(
+            AUTHORIZATION,
+            headers::HeaderValue::from_static("Basic Zm9vOmJhcg=="),
+        );
+        assert_eq!(
+            from_headers(&headers),
+            Some(AuthData::Basic("foo".to_string(), "bar".to_string()))
+        )
+    }
+
+    #[test]
+    fn test_from_headers_bearer() {
+        let mut headers = HeaderMap::new();
+        headers.append(
+            AUTHORIZATION,
+            headers::HeaderValue::from_static("Bearer foo"),
+        );
+        assert_eq!(
+            from_headers(&headers),
+            Some(AuthData::Bearer("foo".to_string()))
+        )
     }
 }

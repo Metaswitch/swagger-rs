@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+## [7.0.0-rc.1] - 2024-05-09
+### Changed
+- Remove dependency and re-export of `hyper-old-types` which is no longer maintained.
+  - This changes the inner types of the `AuthData` enum and thus the various methods on it to avoid re-exports.
+      - The `hyper_old_types` are no longer re-exported, and the enums just wrap `String`s.
+      - `AuthData::bearer()` now returns `Option`, returning `None` if the provided token is not valid base64.
+  - The `auth::make_headers` function now returns an `Option<AuthData>`.
+- Update to hyper 1.x
+  - The `tcp` feature has been removed, to match the new hyper feature set.
+- Remove `SwaggerService` trait due to lack of usage.
+
 ## [6.5.0] - 2024-05-09
 ### Added
 - Support `serde_valid::Validate` for `OneOf` and `AnyOf` types.

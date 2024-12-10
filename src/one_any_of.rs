@@ -8,6 +8,7 @@ use serde::{
 };
 #[cfg(feature = "serdevalid")]
 use serde_valid::Validate;
+use std::fmt;
 use std::str::FromStr;
 use std::string::ToString;
 
@@ -42,12 +43,12 @@ macro_rules! common_one_any_of {
             }
         }
 
-        impl<$($i),*> ToString for $t<$($i),*> where
+        impl<$($i),*> fmt::Display for $t<$($i),*> where
             $($i: PartialEq + ToString,)*
         {
-            fn to_string(&self) -> String {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 match self {
-                    $(Self::$i(inner) => inner.to_string()),*
+                    $(Self::$i(inner) => write!(f, "{}", inner.to_string())),*
                 }
             }
         }

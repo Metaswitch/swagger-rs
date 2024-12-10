@@ -6,7 +6,7 @@
 //! should be enabled by the generator when relevant.
 //!
 //! By default, the **serdejson** feature is enabled.
-//! 
+//!
 //! ## Format support
 //!
 //! - **multipart_form** - Enable support for `multipart/form-data` as described in RFC 7578
@@ -20,12 +20,10 @@
 //!   [transmogrification](https://docs.rs/frunk/latest/frunk/#transmogrifying)
 //!
 //! ## Use case support
-//!
 //! - **client** - Enable support for providing an OpenAPI client
 //! - **server** - Enable support for providing an OpenAPI server
 //! - **http1** - Enable support for HTTP/1 based APIs - RFC 9112
 //! - **http2** - Enable support for HTTP/2 based APIs - RFC 9113
-//! - **tcp** - Enable support for HTTP over TCP
 //! - **tls** - Enable support for HTTP over TLS (HTTPS)
 //! - **uds** - Enable support for HTTP over UDS (Unix Domain Sockets)
 
@@ -88,9 +86,9 @@ mod one_any_of;
 pub use one_any_of::*;
 
 /// Helper Bound for Errors for MakeService/Service wrappers
-pub trait ErrorBound: Into<Box<dyn std::error::Error + Send + Sync>> {}
+pub trait ErrorBound: Into<Box<dyn error::Error + Send + Sync>> {}
 
-impl<T> ErrorBound for T where T: Into<Box<dyn std::error::Error + Send + Sync>> {}
+impl<T> ErrorBound for T where T: Into<Box<dyn error::Error + Send + Sync>> {}
 
 /// Very simple error type - just holds a description of the error. This is useful for human
 /// diagnosis and troubleshooting, but not for applications to parse. The justification for this
