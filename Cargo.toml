@@ -56,7 +56,7 @@ hyper-util = { version = "0.1.8", features = [
 mime = { version = "0.3", optional = true }
 
 # multipart/related
-mime_multipart = { version = "0.6", optional = true }
+mime_multipart = { git = "https://github.com/gw-de/mime-multipart.git", optional = true }
 paste = { version = "1", optional = true }
 regex = { version = "1", optional = true }
 serde = { version = "1.0.119", optional = true, features = ["derive"] }
@@ -83,8 +83,6 @@ native-tls = { version = "0.2", optional = true }
 bytes = "1.8.0"
 http-body-util = "0.1.2"
 hyper-util = { version = "0.1.8", features = ["full"] }
-hyper_10 = { package = "hyper", version = "0.10" }
-mime_026 = { package = "mime", version = "0.2.6" }
 tokio = { version = "1.0", features = ["macros", "rt"] }
 tokio-test = "0.4.4"
 

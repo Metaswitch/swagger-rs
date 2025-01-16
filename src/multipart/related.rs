@@ -42,7 +42,6 @@ pub fn create_multipart_headers(content_type: Option<&HeaderValue>) -> Result<He
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hyper_10::header::Headers;
     use mime_multipart::Node;
 
     // Test that we can parse the body using read_multipart_body
@@ -53,20 +52,14 @@ mod tests {
 
         let body: &[u8] =
             b"--example\r\nContent-Type: text/plain\r\n\r\nHello, World!\r\n--example--";
-        // Map Headers to hyper_10::header::Headers
-        let mut old_headers: Headers = Headers::new();
-        headers.iter().for_each(|(h, v)| {
-            let name = h.to_string();
-            let value = v.as_bytes();
-            old_headers.append_raw(name, value.to_vec());
-        });
-        let res = mime_multipart::read_multipart_body(&mut &body[..], &old_headers, false);
+        let res = mime_multipart::read_multipart_body(&mut &body[..], &headers, false);
         // Check our content types are valid
         match res.unwrap().first().unwrap() {
             Node::Part(h) => {
-                let res: mime_026::Mime = h.content_type().unwrap();
-                let mime: mime_026::Mime = "text/plain".parse().unwrap();
-                assert_eq!(res, mime);
+                assert_eq!(
+                    h.headers.get(CONTENT_TYPE).unwrap(),
+                    &HeaderValue::from_static("text/plain")
+                );
             }
             _ => panic!("Expected Node::Multipart"),
         }
