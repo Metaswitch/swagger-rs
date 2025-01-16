@@ -1,23 +1,23 @@
 //! Hyper service that drops a context to an incoming request and passes it on
 //! to a wrapped service.
 
-use hyper::Request;
+use http::Request;
 use std::marker::PhantomData;
 
 use futures::future::FutureExt as _;
 
 /// Middleware wrapper service that drops the context from the incoming request
-/// and passes the plain `hyper::Request` to the wrapped service.
+/// and passes the plain `http::Request` to the wrapped service.
 ///
-/// This service can be used to to include services that take a plain `hyper::Request`
+/// This service can be used to to include services that take a plain `http::Request`
 /// in a `CompositeService` wrapped in an `AddContextService`.
 ///
 /// Example Usage
 /// =============
 ///
 /// In the following example `SwaggerService` implements `hyper::service::MakeService`
-/// with `Request = (hyper::Request, SomeContext)`, and `PlainService` implements it
-/// with `Request = hyper::Request`
+/// with `Request = (http::Request, SomeContext)`, and `PlainService` implements it
+/// with `Request = http::Request`
 ///
 /// ```ignore
 /// let swagger_service_one = SwaggerService::new();
@@ -85,10 +85,10 @@ where
 /// # use hyper_util::rt::TokioExecutor;
 /// # use hyper_util::service::TowerToHyperService;
 /// # use http_body_util::Empty;
-/// # use hyper::body::Bytes;
+/// # use bytes::Bytes;
 /// let client = Client::builder(TokioExecutor::new()).build_http();
 /// let client = DropContextService::new(TowerToHyperService::new(client));
-/// let request = (hyper::Request::get("http://www.google.com").body(Empty::<Bytes>::new()).unwrap());
+/// let request = (http::Request::get("http://www.google.com").body(Empty::<Bytes>::new()).unwrap());
 /// let context = "Some Context".to_string();
 ///
 /// let response = client.call((request, context));

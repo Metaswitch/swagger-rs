@@ -1,5 +1,5 @@
 //! Methods for retrieving swagger-related information from an HTTP request.
-use hyper::Request;
+use http::Request;
 
 /// A macro for joining together two or more RequestParsers to create a struct that implements
 /// RequestParser with a function parse_operation_id that matches hyper requests against the different
@@ -53,9 +53,9 @@ pub trait RequestParser<B> {
 #[cfg(test)]
 mod context_tests {
     use super::*;
+    use bytes::Bytes;
+    use http::Uri;
     use http_body_util::Full;
-    use hyper::body::Bytes;
-    use hyper::Uri;
     use std::str::FromStr;
     struct TestParser1;
 

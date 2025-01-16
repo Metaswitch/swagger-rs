@@ -19,7 +19,7 @@ use crate::XSpanIdString;
 /// # use std::marker::PhantomData;
 /// # use std::pin::Pin;
 /// # use swagger::context::*;
-/// # use hyper::body::Bytes;
+/// # use bytes::Bytes;
 /// # use http_body_util::Empty;
 /// #
 /// # struct MyItem;
@@ -29,17 +29,17 @@ use crate::XSpanIdString;
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<C, B> hyper::service::Service<(hyper::Request<B>, C)> for MyService<C>
+/// impl<C, B> hyper::service::Service<(http::Request<B>, C)> for MyService<C>
 ///     where C: Has<MyItem> + Send + 'static
 /// {
-///     type Response = hyper::Response<Empty<Bytes>>;
+///     type Response = http::Response<Empty<Bytes>>;
 ///     type Error = std::io::Error;
 ///     type Future = Pin<Box<dyn Future<Output=Result<Self::Response, Self::Error>>>>;
 ///
-///     fn call(&self, req : (hyper::Request<B>, C)) -> Self::Future {
+///     fn call(&self, req : (http::Request<B>, C)) -> Self::Future {
 ///         let (_, context) = req;
 ///         do_something_with_my_item(Has::<MyItem>::get(&context));
-///         Box::pin(ok(hyper::Response::new(Empty::<Bytes>::new())))
+///         Box::pin(ok(http::Response::new(Empty::<Bytes>::new())))
 ///     }
 /// }
 /// ```
@@ -70,19 +70,19 @@ pub trait Has<T> {
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<T, C, D, E, B> hyper::service::Service<(hyper::Request<B>, C)> for MiddlewareService<T, C>
+/// impl<T, C, D, E, B> hyper::service::Service<(http::Request<B>, C)> for MiddlewareService<T, C>
 ///     where
 ///         C: Pop<MyItem1, Result=D> + Send + 'static,
 ///         D: Pop<MyItem2, Result=E>,
 ///         E: Pop<MyItem3>,
 ///         E::Result: Send + 'static,
-///         T: hyper::service::Service<(hyper::Request<B>, E::Result)>
+///         T: hyper::service::Service<(http::Request<B>, E::Result)>
 /// {
 ///     type Response = T::Response;
 ///     type Error = T::Error;
 ///     type Future = T::Future;
 ///
-///     fn call(&self, req : (hyper::Request<B>, C)) -> Self::Future {
+///     fn call(&self, req : (http::Request<B>, C)) -> Self::Future {
 ///         let (request, context) = req;
 ///
 ///         // type annotations optional, included for illustrative purposes
@@ -118,19 +118,19 @@ pub trait Pop<T> {
 ///     marker: PhantomData<C>,
 /// }
 ///
-/// impl<T, C, D, E, B> hyper::service::Service<(hyper::Request<B>, C)> for MiddlewareService<T, C>
+/// impl<T, C, D, E, B> hyper::service::Service<(http::Request<B>, C)> for MiddlewareService<T, C>
 ///     where
 ///         C: Push<MyItem1, Result=D> + Send + 'static,
 ///         D: Push<MyItem2, Result=E>,
 ///         E: Push<MyItem3>,
 ///         E::Result: Send + 'static,
-///         T: hyper::service::Service<(hyper::Request<B>, E::Result)>
+///         T: hyper::service::Service<(http::Request<B>, E::Result)>
 /// {
 ///     type Response = T::Response;
 ///     type Error = T::Error;
 ///     type Future = T::Future;
 ///
-///     fn call(&self, req : (hyper::Request<B>, C)) -> Self::Future {
+///     fn call(&self, req : (http::Request<B>, C)) -> Self::Future {
 ///         let (request, context) = req;
 ///         let context = context
 ///             .push(MyItem1{})

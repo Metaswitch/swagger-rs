@@ -1,5 +1,5 @@
 //! Helper functions for multipart/form-data support
-use hyper::header::{HeaderMap, CONTENT_TYPE};
+use http::header::{HeaderMap, CONTENT_TYPE};
 
 /// Utility function to get the multipart boundary marker (if any) from the Headers.
 pub fn boundary(headers: &HeaderMap) -> Option<String> {

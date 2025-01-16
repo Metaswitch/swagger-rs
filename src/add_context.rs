@@ -3,11 +3,11 @@
 
 use crate::{Push, XSpanIdString};
 use futures::FutureExt;
-use hyper::Request;
+use http::Request;
 use std::marker::PhantomData;
 
 /// Middleware wrapper service, that should be used as the outermost layer in a
-/// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
+/// stack of hyper services. Adds a context to a plain `http::Request` that can be
 /// used by subsequent layers in the stack.
 #[derive(Debug)]
 pub struct AddContextMakeService<T, C>
@@ -55,7 +55,7 @@ where
 }
 
 /// Middleware wrapper service, that should be used as the outermost layer in a
-/// stack of hyper services. Adds a context to a plain `hyper::Request` that can be
+/// stack of hyper services. Adds a context to a plain `http::Request` that can be
 /// used by subsequent layers in the stack. The `AddContextService` struct should
 /// not usually be used directly - when constructing a hyper stack use
 /// `AddContextMakeService`, which will create `AddContextService` instances as needed.

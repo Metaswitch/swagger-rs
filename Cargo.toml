@@ -35,6 +35,12 @@ conversion = [
 
 [dependencies]
 base64 = "0.22"
+futures = "0.3"
+headers = "0.4.0"
+http = "1"
+bytes = "1.8.0"
+http-body-util = "0.1.2"
+hyper = "1"
 
 # Conversion
 frunk = { version = "0.4", optional = true }
@@ -42,9 +48,6 @@ frunk-enum-core = { version = "0.3", optional = true }
 frunk-enum-derive = { version = "0.3", optional = true }
 frunk_core = { version = "0.4", optional = true }
 frunk_derives = { version = "0.4", optional = true }
-futures = "0.3"
-headers = "0.4.0"
-hyper = { version = "1" }
 
 # Client
 hyper-util = { version = "0.1.8", features = [
@@ -57,6 +60,8 @@ mime = { version = "0.3", optional = true }
 
 # multipart/related
 mime_multipart = { git = "https://github.com/gw-de/mime-multipart.git", optional = true }
+
+# serde
 paste = { version = "1", optional = true }
 regex = { version = "1", optional = true }
 serde = { version = "1.0.119", optional = true, features = ["derive"] }
@@ -80,8 +85,6 @@ hyper-tls = { version = "0.6", optional = true }
 native-tls = { version = "0.2", optional = true }
 
 [dev-dependencies]
-bytes = "1.8.0"
-http-body-util = "0.1.2"
 hyper-util = { version = "0.1.8", features = ["full"] }
 tokio = { version = "1.0", features = ["macros", "rt"] }
 tokio-test = "0.4.4"

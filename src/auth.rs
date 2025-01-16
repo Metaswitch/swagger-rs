@@ -4,9 +4,9 @@ use crate::context::Push;
 use futures::future::FutureExt;
 use headers::authorization::{Basic, Bearer, Credentials};
 use headers::Authorization as Header;
-use hyper::header::AUTHORIZATION;
+use http::header::AUTHORIZATION;
+use http::{HeaderMap, Request};
 use hyper::service::Service;
-use hyper::{HeaderMap, Request};
 use std::collections::BTreeSet;
 use std::marker::PhantomData;
 use std::string::ToString;
@@ -233,10 +233,10 @@ mod tests {
     use super::*;
     use crate::context::{ContextBuilder, Has};
     use crate::EmptyContext;
+    use bytes::Bytes;
+    use http::Response;
     use http_body_util::Full;
-    use hyper::body::Bytes;
     use hyper::service::Service;
-    use hyper::Response;
 
     struct MakeTestService;
 

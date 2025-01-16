@@ -1,7 +1,7 @@
 //! Helper functions for multipart/related support
 
-use hyper::header::{HeaderValue, CONTENT_TYPE};
-use hyper::HeaderMap;
+use http::header::{HeaderValue, CONTENT_TYPE};
+use http::HeaderMap;
 use mime::Mime;
 
 /// Construct the Body for a multipart/related request. The mime 0.2.6 library
