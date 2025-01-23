@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+## [7.0.0-rc.2] - 2025-01-23
+### Changed
+- Replace `mime_multipart` with fork for hyper 1.x
+
 ## [7.0.0-rc.1] - 2024-05-09
 ### Changed
 - Remove dependency and re-export of `hyper-old-types` which is no longer maintained.
