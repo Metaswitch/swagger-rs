@@ -39,7 +39,6 @@ futures = "0.3"
 headers = "0.4.0"
 http = "1"
 bytes = "1.8.0"
-http-body-util = "0.1.2"
 hyper = "1"
 
 # Conversion
@@ -88,6 +87,7 @@ native-tls = { version = "0.2", optional = true }
 hyper-util = { version = "0.1.8", features = ["full"] }
 tokio = { version = "1.0", features = ["macros", "rt"] }
 tokio-test = "0.4.4"
+http-body-util = "0.1.2"
 
 [package.metadata.docs.rs]
 # Enable all features, pending https://github.com/rust-lang/rust/issues/43781 being resolved.
