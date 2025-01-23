@@ -16,7 +16,7 @@ repository = "Metaswitch/swagger-rs"
 [features]
 default = ["serdejson"]
 multipart_form = ["mime"]
-multipart_related = ["mime_multipart"]
+multipart_related = ["mime_multipart", "mime"]
 serdejson = ["serde", "serde_json"]
 serdevalid = ["serdejson", "serde_valid", "regex", "paste"]
 server = ["hyper/server"]
