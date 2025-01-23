@@ -59,7 +59,7 @@ hyper-util = { version = "0.1.8", features = [
 mime = { version = "0.3", optional = true }
 
 # multipart/related
-mime-multipart-hyper1 = { version = "0.10", optional = true }
+mime_multipart = { version = "0.10", package = "mime-multipart-hyper1", optional = true }
 
 # serde
 paste = { version = "1", optional = true }
