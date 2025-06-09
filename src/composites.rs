@@ -41,6 +41,7 @@ impl<'a> HasRemoteAddr for &'a Option<SocketAddr> {
     }
 }
 
+#[cfg(feature = "tcp")]
 impl<'a> HasRemoteAddr for &'a hyper::server::conn::AddrStream {
     fn remote_addr(&self) -> Option<SocketAddr> {
         Some(hyper::server::conn::AddrStream::remote_addr(self))

@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+## [6.5.1] - 2025-06-09
+### Fixed
+- `HasRemoteAddr` impl for `hyper::server::conn::AddrStream` now correctly requires `tcp` feature
+  - Fixes compilation of swagger when `server` and `http1` features are enabled but not `tcp`, with 2024 edition.
+
 ## [6.5.0] - 2024-05-09
 ### Added
 - Support `serde_valid::Validate` for `OneOf` and `AnyOf` types.
@@ -213,7 +218,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.5.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.5.1...HEAD
+[6.5.1]: https://github.com/Metaswitch/swagger-rs/compare/6.5.0...6.5.1
 [6.5.0]: https://github.com/Metaswitch/swagger-rs/compare/6.4.1...6.5.0
 [6.4.1]: https://github.com/Metaswitch/swagger-rs/compare/6.4.0...6.4.1
 [6.4.0]: https://github.com/Metaswitch/swagger-rs/compare/6.3.0...6.4.0
