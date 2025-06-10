@@ -96,6 +96,21 @@ where
     marker: PhantomData<RC>,
 }
 
+impl<T, RC> Clone for MakeAllowAllAuthenticator<T, RC>
+where
+    T: Clone,
+    RC: RcBound,
+    RC::Result: Send + 'static,
+{
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            subject: self.subject.clone(),
+            marker: PhantomData,
+        }
+    }
+}
+
 impl<T, RC> MakeAllowAllAuthenticator<T, RC>
 where
     RC: RcBound,
