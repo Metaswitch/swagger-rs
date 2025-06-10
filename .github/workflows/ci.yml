@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - run: cargo fmt -- --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - name: Check CHANGELOG
+        run: |
+          ROOT_PACKAGE=swagger;
+          RUST_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -er "[.packages[] | select(.name == \"$ROOT_PACKAGE\") | .version][0]");
+          (grep -q "## \[$RUST_VERSION\] -" CHANGELOG.md || (echo "Missing CHANGELOG entry for version $RUST_VERSION"; /bin/false)) &&
+          (grep -q "\[Unreleased\]: .*/$RUST_VERSION\.\.\.HEAD$" CHANGELOG.md || (echo "Unreleased tag in CHANGELOG footer not updated for version $RUST_VERSION"; /bin/false)) &&
+          (grep -q "\[$RUST_VERSION\]: .*\.\.\.$RUST_VERSION$" CHANGELOG.md || (echo "Missing tag for version $RUST_VERSION in CHANGELOG footer"; /bin/false)) &&
+          echo "CHANGELOG is up-to-date for version $RUST_VERSION."
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test

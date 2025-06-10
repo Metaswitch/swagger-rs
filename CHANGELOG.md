@@ -224,7 +224,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.5.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/7.0.0-rc1...HEAD
+[7.0.0-rc1]: https://github.com/Metaswitch/swagger-rs/compare/6.5.0...7.0.0-rc1
 [6.5.0]: https://github.com/Metaswitch/swagger-rs/compare/6.4.1...6.5.0
 [6.4.1]: https://github.com/Metaswitch/swagger-rs/compare/6.4.0...6.4.1
 [6.4.0]: https://github.com/Metaswitch/swagger-rs/compare/6.3.0...6.4.0
