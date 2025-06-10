@@ -34,7 +34,7 @@ pub trait HasRemoteAddr {
     fn remote_addr(&self) -> Option<SocketAddr>;
 }
 
-impl<'a> HasRemoteAddr for &'a Option<SocketAddr> {
+impl HasRemoteAddr for &Option<SocketAddr> {
     fn remote_addr(&self) -> Option<SocketAddr> {
         **self
     }
@@ -47,7 +47,7 @@ impl HasRemoteAddr for Option<SocketAddr> {
 }
 
 #[cfg(feature = "uds")]
-impl<'a> HasRemoteAddr for &'a tokio::net::UnixStream {
+impl HasRemoteAddr for &tokio::net::UnixStream {
     fn remote_addr(&self) -> Option<SocketAddr> {
         None
     }

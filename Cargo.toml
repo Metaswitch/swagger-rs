@@ -10,9 +10,6 @@ readme = "README.md"
 keywords = ["swagger"]
 edition = "2021"
 
-[badges.travis-ci]
-repository = "Metaswitch/swagger-rs"
-
 [features]
 default = ["serdejson"]
 multipart_form = ["mime"]
@@ -30,7 +27,7 @@ conversion = [
     "frunk_derives",
     "frunk_core",
     "frunk-enum-core",
-    "frunk-enum-derive"
+    "frunk-enum-derive",
 ]
 
 [dependencies]
