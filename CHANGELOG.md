@@ -7,14 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Changed
 
-### Added
-- Implement `Clone` on `MakeAllowAllAuthenticator`.
-
 ### Fixed
 
-## [7.0.0-rc.2] - 2025-06-10
+## [7.0.0-rc2] - 2025-06-10
 ### Changed
 - Replace `mime_multipart` with fork for hyper 1.x
+
+### Added
+- Implement `Clone` on `MakeAllowAllAuthenticator`.
 
 ## [7.0.0-rc1] - 2024-05-09
 ### Changed
