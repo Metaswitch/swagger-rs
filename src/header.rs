@@ -11,7 +11,7 @@ pub struct XSpanIdString(pub String);
 impl XSpanIdString {
     /// Extract an X-Span-ID from a request header if present, and if not
     /// generate a new one.
-    pub fn get_or_generate<T>(req: &hyper::Request<T>) -> Self {
+    pub fn get_or_generate<T>(req: &http::Request<T>) -> Self {
         let x_span_id = req.headers().get(X_SPAN_ID);
 
         x_span_id

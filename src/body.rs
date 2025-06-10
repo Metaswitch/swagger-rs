@@ -1,8 +1,8 @@
-/// Helper methods to act on hyper::Body
+/// Helper methods for processing body
+use bytes::Bytes;
 use futures::stream::{Stream, StreamExt};
-use hyper::body::Bytes;
 
-/// Additional function for hyper::Body
+/// Additional function for converting body stream into Vec<u8>
 pub trait BodyExt {
     /// Raw body type
     type Raw;

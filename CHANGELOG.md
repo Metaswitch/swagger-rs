@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+## [7.0.0-rc.2] - 2025-06-10
+### Changed
+- Replace `mime_multipart` with fork for hyper 1.x
+
 ## [7.0.0-rc1] - 2024-05-09
 ### Changed
 - Remove dependency and re-export of `hyper-old-types` which is no longer maintained.
@@ -225,7 +229,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/7.0.0-rc1...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/7.0.0-rc2...HEAD
+[7.0.0-rc2]: https://github.com/Metaswitch/swagger-rs/compare/7.0.0-rc1...7.0.0-rc2
 [7.0.0-rc1]: https://github.com/Metaswitch/swagger-rs/compare/6.5.0...7.0.0-rc1
 [6.5.0]: https://github.com/Metaswitch/swagger-rs/compare/6.4.1...6.5.0
 [6.4.1]: https://github.com/Metaswitch/swagger-rs/compare/6.4.0...6.4.1
