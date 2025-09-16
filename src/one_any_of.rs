@@ -8,7 +8,6 @@ use std::fmt;
 use std::str::FromStr;
 use std::string::ToString;
 
-#[cfg(feature = "serdejson")]
 use serde_value::Value as SerdeValue;
 
 // Define a macro to define the common parts between `OneOf` and `AnyOf` enums for a specific
@@ -286,8 +285,6 @@ mod tests {
 
     #[test]
     fn null_ambiguity_oneof() {
-        #[derive(Debug, PartialEq, Deserialize)]
-        struct Unit;
         let json = "null";
         // Option<Unit> deserializes to None from null; Unit also deserializes from null? (No, unit struct expects object usually) -> To create ambiguity, use Option<String> and Option<u32> both None
         let res: Result<OneOf2<Option<u32>, Option<String>>, _> = serde_json::from_str(json);
