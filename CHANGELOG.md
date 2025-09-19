@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 ### Fixed
+- Replace usage of `serde` `__private` module with `serde-value` crate to avoid breakage after  `serde` 1.0.220.
 
 ## [6.5.2] - 2025-09-16
 ### Fixed
@@ -223,7 +224,7 @@ No changes. We now think we've got enough to declare this crate stable.
 - Start of changelog.
 
 [Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/6.5.2...HEAD
-[6.5.2]: https://github.com/Metaswitch/swagger-rs/compare/6.5.1...6.5.2
+[6.5.2]: https://github.com/Metaswitch/swagger-rs/compare/6.5.1...6.5.1
 [6.5.1]: https://github.com/Metaswitch/swagger-rs/compare/6.5.0...6.5.1
 [6.5.0]: https://github.com/Metaswitch/swagger-rs/compare/6.4.1...6.5.0
 [6.4.1]: https://github.com/Metaswitch/swagger-rs/compare/6.4.0...6.4.1

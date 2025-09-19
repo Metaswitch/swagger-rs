@@ -150,7 +150,7 @@ impl<T> Nullable<T> {
     /// assert_eq!(x.expect("the world is ending"), "value");
     /// ```
     ///
-    /// ```{.should_panic}
+    /// ```rust,should_panic
     /// # use ::swagger::Nullable;
     ///
     /// let x: Nullable<&str> = Nullable::Null;
@@ -185,7 +185,7 @@ impl<T> Nullable<T> {
     /// assert_eq!(x.unwrap(), "air");
     /// ```
     ///
-    /// ```{.should_panic}
+    /// ```rust,should_panic
     /// # use ::swagger::Nullable;
     ///
     /// let x: Nullable<&str> = Nullable::Null;
