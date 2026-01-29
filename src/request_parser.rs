@@ -13,11 +13,11 @@ macro_rules! request_parser_joiner {
     ($name:ident ,$($T:ty), *) => {
         struct $name;
 
-        impl <B> RequestParser<B> for $name
-            where $($T: RequestParser<B>, )*
+        impl <B> $crate::RequestParser<B> for $name
+            where $($T: $crate::RequestParser<B>, )*
         {
             fn parse_operation_id(request: &Request<B>) -> Option<&'static str> {
-                __impl_request_parser_joiner!(request, $($T), *)
+                $crate::__impl_request_parser_joiner!(request, $($T), *)
             }
         }
     };
@@ -27,11 +27,11 @@ macro_rules! request_parser_joiner {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __impl_request_parser_joiner {
-    ($argname:expr, $head:ty) => {<$head as RequestParser<B>>::parse_operation_id(&$argname)};
+    ($argname:expr, $head:ty) => {<$head as $crate::RequestParser<B>>::parse_operation_id(&$argname)};
     ($argname:expr, $head:ty, $( $tail:ty), *) => {
-        match <$head as RequestParser<B>>::parse_operation_id(&$argname) {
+        match <$head as $crate::RequestParser<B>>::parse_operation_id(&$argname) {
                 Some(s) => Some(s),
-                None => __impl_request_parser_joiner!($argname, $( $tail), *),
+                None => $crate::__impl_request_parser_joiner!($argname, $( $tail), *),
         }
     };
 }

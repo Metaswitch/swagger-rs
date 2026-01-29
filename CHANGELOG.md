@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 ### Fixed
+- Fix request_parser so that macro_use is not required.
+  - Add "external" tests to ensure backward compatibility.
 
 ## [7.0.0] - 2025-11-12
 ### Changed
