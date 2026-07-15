@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Changed
 
+### Added
+
+### Fixed
+
+## [7.0.1] - 2026-07-15
 ### Fixed
 - Fix request_parser so that macro_use is not required.
   - Add "external" tests to ensure backward compatibility.
+- Frunk 0.5.0
 
 ## [7.0.0] - 2025-11-12
 ### Changed
@@ -239,7 +245,8 @@ No changes. We now think we've got enough to declare this crate stable.
 ## [0.5.0] - 2017-09-18
 - Start of changelog.
 
-[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/7.0.0...HEAD
+[Unreleased]: https://github.com/Metaswitch/swagger-rs/compare/7.0.1...HEAD
+[7.0.1]: https://github.com/Metaswitch/swagger-rs/compare/7.0.0...7.0.1
 [7.0.0]: https://github.com/Metaswitch/swagger-rs/compare/7.0.0-rc3...7.0.0
 [7.0.0-rc3]: https://github.com/Metaswitch/swagger-rs/compare/7.0.0-rc2...7.0.0-rc3
 [7.0.0-rc2]: https://github.com/Metaswitch/swagger-rs/compare/7.0.0-rc1...7.0.0-rc2
