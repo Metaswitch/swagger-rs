@@ -701,7 +701,7 @@ impl_generic_composited_validation_nullable!(MaxProperties, usize);
 #[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(MinProperties, usize);
 #[cfg(feature = "serdevalid")]
-impl_generic_composited_validation_nullable!(Enumerate<T>);
+impl_generic_composited_validation_nullable!(Enum<T>);
 
 /// Serde helper function to create a default `Option<Nullable<T>>` while
 /// deserializing
@@ -758,7 +758,7 @@ mod serde_tests {
     #[derive(Validate)]
     struct ValidatedNullableItemsStruct {
         // Number validations
-        #[validate(enumerate = [5, 10, 15])]
+        #[validate(r#enum = [5, 10, 15])]
         #[validate(minimum = 5)]
         #[validate(maximum = 15)]
         #[validate(exclusive_minimum = 4)]

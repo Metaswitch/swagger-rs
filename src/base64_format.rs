@@ -70,12 +70,9 @@ impl_validate_byte_array!(MaxLength, to_string(), usize);
 impl_validate_byte_array!(MinLength, to_string(), usize);
 
 #[cfg(feature = "serdevalid")]
-impl serde_valid::ValidateEnumerate<&'static str> for ByteArray {
-    fn validate_enumerate(
-        &self,
-        enumerate: &[&'static str],
-    ) -> Result<(), serde_valid::EnumerateError> {
-        self.to_string().validate_enumerate(enumerate)
+impl serde_valid::ValidateEnum<&'static str> for ByteArray {
+    fn validate_enum(&self, enumerate: &[&'static str]) -> Result<(), serde_valid::EnumError> {
+        self.to_string().validate_enum(enumerate)
     }
 }
 
@@ -130,7 +127,7 @@ mod serde_tests {
     #[derive(Validate)]
     struct ValidateByteArrayStruct {
         // Validate encoded as string
-        #[validate(enumerate = ["YWJjZGU=" ])]
+        #[validate(r#enum = ["YWJjZGU=" ])]
         #[validate(max_length = 8)]
         #[validate(min_length = 8)]
         #[validate(pattern = ".*=")]

@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fix request_parser so that macro_use is not required.
   - Add "external" tests to ensure backward compatibility.
 - Frunk 0.5.0
+- Fix `serde_valid` integration to support serde_valid >=2.0.2.
+  - If you use `#[validate(enumerate = ...)]` on a `ByteArray` or `Nullable<T>` field, switch to `#[validate(r#enum = ...)]`.
+    **Note this is a breaking change in `serde_valid` 2.0.2, therefore we're releasing this as a fix here to retain compatibility.**
 
 ## [7.0.0] - 2025-11-12
 ### Changed
