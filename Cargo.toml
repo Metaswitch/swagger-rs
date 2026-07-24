@@ -31,7 +31,7 @@ conversion = [
 ]
 
 [dependencies]
-base64 = "0.22"
+base64 = "0.23"
 futures = "0.3"
 headers = "0.4.0"
 http = "1"
