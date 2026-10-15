@@ -20,7 +20,6 @@ macro_rules! common_one_any_of {
     ) => {
         #[doc = concat!("`", stringify!($t), "` type.\n\nThis allows modelling of ", stringify!($schema), " JSON schemas.")]
         #[cfg_attr(feature = "conversion", derive(LabelledGenericEnum))]
-        #[cfg_attr(feature = "serdevalid", derive(Validate))]
         #[derive(Debug, PartialEq, Clone)]
         pub enum $t<$($i),*> where
             $($i: PartialEq,)*
@@ -29,6 +28,17 @@ macro_rules! common_one_any_of {
                 #[doc = concat!("`", stringify!($i), "` variant of `", stringify!($t), "`")]
                 $i($i)
             ),*
+        }
+
+        #[cfg(feature = "serdevalid")]
+        impl<$($i),*> Validate for $t<$($i),*> where
+            $($i: PartialEq + Validate,)*
+        {
+            fn validate(&self) -> Result<(), serde_valid::validation::Errors> {
+                match self {
+                    $(Self::$i(inner) => inner.validate()),*
+                }
+            }
         }
 
         impl<$($i),*> Serialize for $t<$($i),*> where
