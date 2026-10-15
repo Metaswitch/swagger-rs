@@ -703,6 +703,26 @@ impl_generic_composited_validation_nullable!(MinProperties, usize);
 #[cfg(feature = "serdevalid")]
 impl_generic_composited_validation_nullable!(Enum<T>);
 
+#[cfg(feature = "serdevalid")]
+impl<T: serde_valid::ValidateMinItems> serde_valid::ValidateMinItems for Nullable<T> {
+    fn validate_min_items(&self, min_items: usize) -> Result<(), serde_valid::MinItemsError> {
+        match self {
+            Self::Null => Ok(()),
+            Self::Present(value) => value.validate_min_items(min_items),
+        }
+    }
+}
+
+#[cfg(feature = "serdevalid")]
+impl<T: serde_valid::ValidateMaxItems> serde_valid::ValidateMaxItems for Nullable<T> {
+    fn validate_max_items(&self, max_items: usize) -> Result<(), serde_valid::MaxItemsError> {
+        match self {
+            Self::Null => Ok(()),
+            Self::Present(value) => value.validate_max_items(max_items),
+        }
+    }
+}
+
 /// Serde helper function to create a default `Option<Nullable<T>>` while
 /// deserializing
 pub fn default_optional_nullable<T>() -> Option<Nullable<T>> {
